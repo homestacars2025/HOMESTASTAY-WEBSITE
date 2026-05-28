@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Charcoal rounded-square background -->
+  <rect width="48" height="48" rx="10" fill="#0E0E10"/>
+  <!-- Homesta arch mark in Stay red, centered in the square -->
+  <path
+    d="M9 42 L9 23 A15 15 0 0 1 39 23 L39 42"
+    stroke="#E52851"
+    stroke-width="4"
+    fill="none"
+    stroke-linecap="round"
+  />
+</svg>

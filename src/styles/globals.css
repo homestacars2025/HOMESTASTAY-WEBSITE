@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@theme {
+  /* Accent — Stay Red (1st in hierarchy: CTAs, prices, ratings, confirmations) */
+  --color-stay: #E52851;
+  --color-stay-ink: #8C0E2A;
+
+  /* Ink — Black family (2nd in hierarchy: primary text, dark surfaces) */
+  --color-ink: #0E0E10;
+  --color-ink-2: #1B1B1F;
+  --color-ink-soft: #45454B;
+
+  /* White — Pure (3rd in hierarchy: clean surfaces, modals, cards on dark bg) */
+  --color-white: #FFFFFF;
+
+  /* Paper — pure white background (intentional brand update; was #FAFAF7) */
+  --color-paper: #FFFFFF;
+  --color-paper-warm: #F2EEE6;
+  --color-paper-cool: #F0F2F5;
+
+  /* Structure */
+  --color-rule: #E2DED4;
+  --color-mute: #8C8881;
+  --color-hairline-dark: #25252A;
+
+  /* Typography — Geist loaded via next/font, injected as CSS variables */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "Courier New", monospace;
+
+  /* Border radius — 14px "soft, not playful"; 999px for pills */
+  --radius: 14px;
+
+  /* Motion — 240ms "slow exhale" (directly from brand file) */
+  --default-transition-duration: 240ms;
+  --default-transition-timing-function: ease;
+}
+
+/* CSS custom properties for direct var() use in components (per CLAUDE.md §7) */
+:root {
+  --stay: #E52851;
+  --stay-ink: #8C0E2A;
+  --ink: #0E0E10;
+  --ink-2: #1B1B1F;
+  --ink-soft: #45454B;
+  --white: #FFFFFF;
+  --paper: #FFFFFF;
+  --paper-warm: #F2EEE6;
+  --paper-cool: #F0F2F5;
+  --rule: #E2DED4;
+  --mute: #8C8881;
+  --hairline-dark: #25252A;
+}
+
+/* Arabic locale typography — Tajawal for all text including headings.
+   --font-tajawal / --font-cairo are only defined when locale=ar (injected by next/font via html className).
+   [lang="ar"] matches the <html> element; CSS custom property inheritance flows to all children.
+   Cairo is kept imported as a fallback but nothing explicitly renders in it. */
+[lang="ar"] {
+  --font-sans: var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Hero doodle wall — fade in from transparent to final 13% opacity */
+@keyframes hero-doodle-fade {
+  from { opacity: 0; }
+  to   { opacity: 0.13; }
+}
+
+.hero-doodles-wrapper {
+  animation: hero-doodle-fade 1.6s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-doodles-wrapper { opacity: 0.13; animation: none; }
+}
+
+/* Hide edge doodles on small screens — keeps mobile hero uncluttered */
+@media (max-width: 640px) {
+  .doodle-desktop { display: none; }
+}
+
+/* ── Doodle floating animations ─────────────────────────────────
+   Two keyframes (standard 8px / wider 10px travel) × 6 stagger
+   classes give each doodle a different phase, duration, and feel.
+   Negative delays start them mid-cycle immediately on load.      */
+@keyframes doodle-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes doodle-float-wide {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+.doodle-f1 { animation: doodle-float      8.0s ease-in-out infinite  0.0s; }
+.doodle-f2 { animation: doodle-float      7.2s ease-in-out infinite -1.4s; }
+.doodle-f3 { animation: doodle-float-wide 9.0s ease-in-out infinite -3.1s; }
+.doodle-f4 { animation: doodle-float      7.6s ease-in-out infinite -5.2s; }
+.doodle-f5 { animation: doodle-float-wide 8.4s ease-in-out infinite -2.2s; }
+.doodle-f6 { animation: doodle-float      9.2s ease-in-out infinite -4.0s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .doodle-f1, .doodle-f2, .doodle-f3,
+  .doodle-f4, .doodle-f5, .doodle-f6 { animation: none; }
+}
+
+/* Base resets */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  /* Mobile-first: 16–18px */
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+@media (min-width: 768px) {
+  body {
+    /* Desktop: 20–22px */
+    font-size: 21px;
+  }
+}
+
+/* Custom utilities */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Wordmark typography — per CLAUDE.md §7 */
+@utility wordmark {
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  font-feature-settings: "ss01", "cv11", "cv06";
+}

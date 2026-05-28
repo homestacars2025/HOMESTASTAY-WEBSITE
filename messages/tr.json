@@ -1,0 +1,470 @@
+{
+  "nav": {
+    "signIn": "Giriş yap",
+    "createAccount": "Hesap oluştur",
+    "signOut": "Çıkış yap",
+    "stays": "Konaklamalar",
+    "blog": "Blog",
+    "contact": "İletişim",
+    "becomeHost": "Ev sahibi ol",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat"
+  },
+  "hero": {
+    "headline": "Bir sonraki konaklamanız burada başlıyor",
+    "subline": "Kısa süreli kiralıklar — özenle seçilmiş, hızlı rezervasyon."
+  },
+  "search": {
+    "whereLabel": "Nerede",
+    "wherePlaceholder": "İstanbul, Türkiye",
+    "whenLabel": "Ne zaman",
+    "whenPlaceholder": "Tarih ekle",
+    "whoLabel": "Kim",
+    "whoPlaceholder": "Misafir ekle",
+    "guestCount": "{count, plural, other {# misafir}}",
+    "guestsDecrement": "Misafir azalt",
+    "guestsIncrement": "Misafir artır",
+    "cta": "Konaklama ara"
+  },
+  "categories": {
+    "all": "Tümü",
+    "apartments": "Apartmanlar",
+    "villas": "Villalar",
+    "cabins": "Kabin",
+    "hotels": "Oteller",
+    "farms": "Çiftlikler"
+  },
+  "sections": {
+    "featured": "Öne çıkan konaklamalar",
+    "topRated": "En yüksek puanlı",
+    "cities": "Şehirleri keşfet"
+  },
+  "cities": {
+    "istanbul": "İstanbul",
+    "trabzon": "Trabzon",
+    "sapanca": "Sapanca",
+    "antalya": "Antalya",
+    "fethiye": "Fethiye",
+    "bodrum": "Bodrum"
+  },
+  "card": {
+    "perNight": "/ gece",
+    "save": "Kaydet",
+    "unsave": "Kaydedilenlerden kaldır"
+  },
+  "pages": {
+    "stays": {
+      "title": "Konaklamalar",
+      "comingSoon": "Tam listeleme görünümünü hazırlıyoruz. Yakında burada.",
+      "noResults": "Bu filtreye uyan konaklama yok."
+    },
+    "blog": {
+      "title": "Blog",
+      "comingSoon": "Hikayeler, rehberler ve yerel ipuçları — yakında."
+    },
+    "contact": {
+      "metaTitle": "Bize Ulaşın — Homesta Stay",
+      "metaDescription": "Homesta Stay ile iletişime geçin. Rezervasyonlar, mülk listeleme ve İstanbul'daki konaklamanıza ilişkin sorularınızda yardımcıyız.",
+      "heading": "Bize ulaşın",
+      "subheading": "Yardım etmek için buradayız — istediğiniz zaman bize ulaşın.",
+      "infoTitle": "İletişim",
+      "infoEmailLabel": "E-posta",
+      "infoInstagramLabel": "Instagram",
+      "infoFacebookLabel": "Facebook",
+      "infoWhatsappLabel": "WhatsApp",
+      "infoWhatsappNote": "Yakında",
+      "formTitle": "Bize mesaj gönderin",
+      "nameLabel": "Adınız",
+      "namePlaceholder": "Ayşe Kaya",
+      "formEmailLabel": "E-posta adresiniz",
+      "formEmailPlaceholder": "siz@ornek.com",
+      "subjectLabel": "Konu",
+      "subjectPlaceholder": "Rezervasyon sorusu, mülk listeleme…",
+      "messageLabel": "Mesaj",
+      "messagePlaceholder": "Size nasıl yardımcı olabiliriz?",
+      "submitCta": "Mesaj gönder",
+      "sending": "Gönderiliyor…",
+      "successTitle": "Mesajınız iletildi!",
+      "successBody": "Teşekkürler — en kısa sürede size döneceğiz.",
+      "sendAnother": "Başka bir mesaj gönder",
+      "errorRequired": "Lütfen tüm zorunlu alanları doldurun.",
+      "errorEmailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
+      "errorGeneric": "Bir sorun oluştu. Lütfen tekrar deneyin veya doğrudan e-posta ile bize ulaşın.",
+      "faqTitle": "Sık sorulan sorular",
+      "faq1Q": "Ne kadar sürede yanıt veriyorsunuz?",
+      "faq1A": "2–4 saat içinde yanıt vermeyi hedefliyoruz. WhatsApp aktif olduğunda acil durumlar için en hızlı kanal o olacaktır.",
+      "faq2Q": "Nasıl rezervasyon yapabilirim?",
+      "faq2A": "İlanlarımıza göz atın, tarihlerinizi seçin ve Rezervasyon yap'a tıklayın. Rezervasyonu tamamlamak için ücretsiz bir hesap gereklidir.",
+      "faq3Q": "Site Türkçe dil desteği sunuyor mu?",
+      "faq3A": "Evet — site Türkçe, Arapça, Rusça ve İngilizce olarak tam destek sunmaktadır.",
+      "faq4Q": "Mülkümü nasıl listeleyebilirim?",
+      "faq4A": "Ev sahibi başvuru formumuzu doldurun, 24 saat içinde sizinle iletişime geçeceğiz.",
+      "faq5Q": "Homesta Stay nedir?",
+      "faq5A": "Homesta Stay, İstanbul'daki kaliteli mülkleri misafirlerle buluşturan kısa süreli kiralama platformudur.",
+      "listProperty": "Mülkünüzü listelemek ister misiniz?",
+      "browseStays": "Tüm konaklamalara göz at"
+    },
+    "host": {
+      "title": "Ev sahibi ol",
+      "comingSoon": "Mülkünüzü listelemek için bizimle iş birliği yapın. Ev sahibi kaydı yakında açılıyor.",
+      "headline": "Mülkünüzü Homesta Stay ile listeleyin",
+      "subline": "Seçkin misafirler, hızlı rezervasyonlar ve gerçek destek ile daha fazla kazanın.",
+      "trust": {
+        "free": "Ücretsiz listeleme",
+        "guests": "Misafirlerle biz ilgileniriz",
+        "bookings": "Hızlı rezervasyonlar"
+      },
+      "form": {
+        "nameLabel": "Ad soyad",
+        "namePlaceholder": "Adınız soyadınız",
+        "phoneLabel": "Telefon numarası",
+        "phoneSearchPlaceholder": "Ülke ara…",
+        "emailLabel": "E-posta adresi",
+        "emailPlaceholder": "siz@ornek.com",
+        "unitTypeLabel": "Konaklama türü",
+        "unitTypePlaceholder": "Bir tür seçin",
+        "unitsCountLabel": "Birim sayısı",
+        "unitsCountPlaceholder": "1",
+        "cityLabel": "Şehir",
+        "cityPlaceholder": "Şehir seçin",
+        "districtLabel": "İlçe / bölge",
+        "districtPlaceholder": "İlçe seçin",
+        "districtOther": "Diğer",
+        "districtManualPlaceholder": "Bölgenizi veya ilçenizi girin",
+        "contactMethodLabel": "Tercih edilen iletişim yöntemi",
+        "contactWhatsapp": "WhatsApp",
+        "contactPhone": "Telefon görüşmesi",
+        "contactEmail": "E-posta",
+        "noteLabel": "Not veya mesaj",
+        "notePlaceholder": "Mülkünüz hakkında bilgi verin…",
+        "listingLinkLabel": "Mevcut ilan bağlantısı",
+        "listingLinkPlaceholder": "https://airbnb.com/rooms/…",
+        "submit": "Başvuru gönder",
+        "sending": "Gönderiliyor…"
+      },
+      "unitTypes": {
+        "apartment": "Daire",
+        "villa": "Villa",
+        "cabin": "Kabin",
+        "hotel": "Otel",
+        "farm": "Çiftlik"
+      },
+      "success": {
+        "title": "Başvurunuz alındı!",
+        "body": "Teşekkürler, {name}. Bilgilerinizi inceleyip en kısa sürede sizinle iletişime geçeceğiz.",
+        "back": "Ana sayfaya dön"
+      },
+      "error": {
+        "required": "Lütfen tüm zorunlu alanları doldurun.",
+        "emailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
+        "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
+        "unitsMin": "Birim sayısı en az 1 olmalıdır.",
+        "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+      }
+    },
+    "terms": {
+      "metaTitle": "Hizmet Şartları — Homesta Stay",
+      "metaDescription": "Homesta Stay Hizmet Şartlarını okuyun. Kısa süreli kiralama platformumuzu kullanırken hak ve sorumluluklarınızı öğrenin.",
+      "heading": "Hizmet Şartları",
+      "lastUpdated": "Son güncelleme: 28 Mayıs 2026",
+      "intro": "Homesta Stay'i kullanmadan önce lütfen bu Hizmet Şartlarını dikkatlice okuyunuz. Platformumuza erişerek veya onu kullanarak bu Şartlara ve Gizlilik Politikamıza bağlı olmayı kabul etmiş olursunuz.",
+      "tocTitle": "İçindekiler",
+      "s1Title": "1. Koşulların Kabulü",
+      "s1Body": "Homesta Stay web sitesi ve rezervasyon platformuna (\"Platform\") erişerek veya bunları kullanarak, bu Hizmet Şartlarını (\"Şartlar\") ve Gizlilik Politikamızı okuduğunuzu, anladığınızı ve bunlara uymayı kabul ettiğinizi beyan edersiniz. Kabul etmiyorsanız lütfen Platformu kullanmayınız.\n\nBu Şartlar, Platformun tüm ziyaretçileri, kullanıcıları ve kayıtlı misafirleri için geçerlidir. Şartları her zaman güncelleme hakkımızı saklı tutarız; bir güncellemeden sonra Platformu kullanmaya devam etmek, revize edilmiş Şartları kabul ettiğiniz anlamına gelir.",
+      "s2Title": "2. Hizmetin Tanımı",
+      "s2Body": "Homesta Stay, kısa süreli ve turistik konaklama kiralamalarına yönelik çevrimiçi bir aracılık ve komisyon platformudur. Platformumuzda konaklama arayan misafirlerle mülklerini listeleyen mülk sahipleri ve yöneticilerini bir araya getiriyoruz. Türkiye merkezli olup şu anda Türk şehirlerine odaklanmaktayız; ilerleyen dönemde yeni destinasyonlara genişlemeyi planlamaktayız.\n\nHomesta Stay bir aracı ve kolaylaştırıcı olarak hareket etmektedir. İlanda açıkça belirtilmedikçe listelenen mülklerin sahibi veya işletmecisi değiliz. Konaklama sözleşmesi misafir ile mülk sahibi ya da yöneticisi arasında kurulur.",
+      "s3Title": "3. Kullanıcı Hesapları",
+      "s3Body": "Rezervasyon yapma veya favori ilanları kaydetme gibi Platform özelliklerine erişmek için bir hesap oluşturmanız gerekebilir. Giriş bilgilerinizin gizliliğini korumak ve hesabınız üzerinden gerçekleştirilen tüm faaliyetlerden sorumlu olmak size aittir.\n\nKayıt sırasında doğru, güncel ve eksiksiz bilgi sağlamalısınız. Hesap oluşturmak ve rezervasyon yapmak için en az 18 yaşında olmanız gerekmektedir. Homesta Stay, bu Şartları ihlal ettiği tespit edilen hesapları askıya alma veya feshetme hakkını saklı tutar.",
+      "s4Title": "4. Rezervasyon ve Talep Süreci",
+      "s4Body": "Platform üzerinden bir rezervasyon talebi gönderdiğinizde, Homesta Stay aracılığıyla müsaitlik sorgusu başlatmış ve bir talep sürecine girmiş olursunuz. Rezervasyon, tarafımızdan açık bir onay alınana kadar kesinleşmiş sayılmaz.\n\nÇevrimiçi ödeme işlevinin sunulduğu durumlarda ödemeler, güvenli üçüncü taraf ödeme hizmet sağlayıcıları aracılığıyla işlenebilir; tam kart bilgileri sunucularımızda saklanmaz. Para birimi ve zamanlama dahil ödeme koşulları rezervasyon sırasında açıkça sunulacaktır.\n\nFiyatlandırma, iptal koşulları ve ev kuralları dahil rezervasyona özgü koşullar her ilan sayfasında belirtilir ve misafir ile ev sahibi arasındaki anlaşmanın bir parçasını oluşturur.",
+      "s5Title": "5. Aracı Olarak Rolümüz",
+      "s5Body": "Homesta Stay bir komisyoncu ve aracı olarak faaliyet göstermektedir. Misafirler ile mülk sahipleri arasında bağlantı kurmayı kolaylaştırır; rezervasyon altyapısını, iletişim araçlarını ve destek hizmetlerini sağlarız.\n\nİlan bilgilerinin doğruluğunu teyit etmek için makul çabalar sarf ederiz; ancak ev sahipleri tarafından sağlanan tüm bilgilerin rezervasyon sırasında eksiksiz, doğru veya güncel olduğunu garanti edemeyiz. Misafirlerin rezervasyonu onaylamadan önce ilan ayrıntılarını dikkatle okumaları ve sorularını bize iletmeleri tavsiye edilir.\n\nKonaklama sırasında ortaya çıkan her türlü anlaşmazlık — mülk durumu, ev sahibinin davranışı veya hizmet kalitesi dahil — aracı olan bize iletilmeli; iyi niyetle arabuluculuk yapmaya çalışacağız.",
+      "s6Title": "6. Ev Sahibi Başvurusu",
+      "s6Body": "Mülk sahipleri ve yöneticileri, ev sahibi başvuru formu göndererek mülklerini Platformda listelemek için başvurabilirler. Başvuru göndererek mülkü listeleme ve kiralama konusunda yasal hakka sahip olduğunuzu, sağlanan bilgilerin doğru olduğunu ve geçerli tüm yasa ve yönetmeliklere uymayı kabul ettiğinizi beyan etmiş olursunuz.\n\nİlanlar inceleme ve onaya tabidir. Homesta Stay, herhangi bir ilanı kendi takdirine bağlı olarak reddetme, askıya alma veya kaldırma hakkını saklı tutar. Platformda listelemek, iş ilişkisi, franchise veya acente ilişkisi doğurmaz.",
+      "s7Title": "7. Kabul Edilebilir Kullanım",
+      "s7Body": "Platformu yasa dışı bir amaçla veya Homesta Stay'e, kullanıcılarına ya da üçüncü taraflara zarar verecek şekilde kullanmamayı kabul edersiniz. Yasak davranışlar şunları kapsar (ancak bunlarla sınırlı değildir): yanlış veya yanıltıcı bilgi vermek; başkasının kimliğine bürünmek; Platforma yetkisiz erişim sağlamaya çalışmak; izinsiz içerik kazımak veya kopyalamak; sahte rezervasyon veya ödeme kötüye kullanımı; ve zararlı, saldırgan veya ihlal edici içerik yüklemek.\n\nBu kuralları ihlal eden kullanıcılara karşı hesap askıya alma ve yasal yollara başvurma dahil uygun önlemleri alma hakkımızı saklı tutarız.",
+      "s8Title": "8. Fikri Mülkiyet",
+      "s8Body": "Platformdaki tüm içerikler — metin, grafik, logo, yazılım ve Homesta Stay marka kimliği dahil — Homesta Stay'e veya lisans verenlerine aittir ve geçerli fikri mülkiyet yasaları kapsamında korunmaktadır.\n\nÖnceden yazılı iznimiz olmaksızın Platform içeriklerini yeniden üretemez, dağıtamaz, değiştiremez veya türev çalışmalar oluşturamazsınız. Platforma içerik göndererek (ev sahibi fotoğrafları veya mülk açıklamaları gibi), bu içeriği Platformun işletilmesi ve tanıtılması amacıyla kullanmamız için bize münhasır olmayan bir lisans vermiş olursunuz.",
+      "s9Title": "9. Sorumluluk Reddi ve Sınırlaması",
+      "s9Body": "Platform ve hizmetleri, yürürlükteki yasaların izin verdiği azami ölçüde, açık veya zımni her türlü garantiden bağımsız olarak \"olduğu gibi\" ve \"mevcut olduğu şekliyle\" sunulmaktadır.\n\nHomesta Stay şunlardan sorumlu değildir: mülk sahiplerinin veya misafirlerin eylem ya da ihmalleri; listelenen herhangi bir mülkün durumu, uygunluğu veya doğruluğu; Platformun kullanımından ya da kullanılamamasından kaynaklanan kayıp veya hasar; ve yasaların izin verdiği ölçüde dolaylı, arızi, sonuç doğurucu veya cezai zararlar.\n\nİlgili rezervasyonla bağlantılı olarak Platform aracılığıyla tarafınızdan ödenen toplam ücretleri aşmayacak şekilde, size karşı herhangi bir talep için toplam sorumluluğumuz sınırlıdır.",
+      "s10Title": "10. İptal, İade ve Rezervasyon Politikaları",
+      "s10Body": "İptal, iade ve değişiklik politikaları ilana göre değişir ve mülk sahibi tarafından belirlenebilir. Her rezervasyon için geçerli politika, rezervasyonu onaylamadan önce açıkça sunulacaktır.\n\nİptal veya iadelerle ilgili anlaşmazlıklarda Homesta Stay, misafir ile ev sahibi arasında iyi niyetle arabuluculuk yapmaya çalışacaktır. Çevrimiçi ödeme yapılmış olması durumunda iadeler, geçerli rezervasyon politikasına ve ödeme hizmet sağlayıcısının koşullarına uygun olarak gerçekleştirilecektir.\n\nHomesta Stay, yeni ödeme yöntemlerinin eklenmesi dahil platformun gelişimiyle birlikte genel rezervasyon ve iade politikalarını güncelleme hakkını saklı tutar. Önemli değişiklikler kayıtlı kullanıcılara bildirilecektir.",
+      "s11Title": "11. Yürürlükteki Hukuk ve Yetki Alanı",
+      "s11Body": "Bu Şartlar, Türkiye Cumhuriyeti kanunlarına göre yönetilir ve yorumlanır. Bu Şartlar kapsamında veya bu Şartlarla ilgili ortaya çıkan her türlü anlaşmazlık, ikamet ettiğiniz ülkedeki tüketici koruma mevzuatının aksini zorunlu kılmaması kaydıyla, Türkiye mahkemelerinin münhasır yargı yetkisine tabi olacaktır.",
+      "s12Title": "12. Şartlardaki Değişiklikler",
+      "s12Body": "Bu Şartları, hizmetlerimizde, yasal gerekliliklerimizde veya iş uygulamalarımızdaki değişiklikleri yansıtmak amacıyla zaman zaman güncelleyebiliriz. Bu sayfanın üst kısmındaki \"son güncelleme\" tarihini değiştireceğiz ve önemli değişiklikler için kayıtlı kullanıcıları bilgilendirmek amacıyla makul adımlar atacağız.\n\nHerhangi bir değişiklikten sonra Platformu kullanmaya devam etmek, güncellenmiş Şartları kabul ettiğiniz anlamına gelir. Bir güncellemeye katılmıyorsanız lütfen Platformu kullanmayı bırakınız.",
+      "s13Title": "13. İletişim",
+      "s13Body": "Bu Şartlar hakkında sorularınız varsa, lütfen web sitemizin iletişim formu aracılığıyla bizimle iletişime geçin. Tüm taleplere makul bir süre içinde yanıt vermeyi hedefliyoruz.",
+      "crossLinkLabel": "Gizlilik Politikası",
+      "crossLinkPrefix": "Ayrıca okuyun:"
+    },
+    "privacy": {
+      "metaTitle": "Gizlilik Politikası — Homesta Stay",
+      "metaDescription": "Homesta Stay'in kişisel verilerinizi nasıl topladığını, kullandığını ve koruduğunu öğrenin. KVKK ve GDPR kapsamındaki haklarınız açıklanmaktadır.",
+      "heading": "Gizlilik Politikası",
+      "lastUpdated": "Son güncelleme: 28 Mayıs 2026",
+      "intro": "Homesta Stay, kişisel verilerinizi korumayı ve gizliliğinize saygı göstermeyi taahhüt etmektedir. Bu Gizlilik Politikası, hangi bilgileri topladığımızı, bunları nasıl kullandığımızı, kimlerle paylaştığımızı ve haklarınızın neler olduğunu açıklamaktadır.",
+      "tocTitle": "İçindekiler",
+      "s1Title": "1. Giriş",
+      "s1Body": "Bu Politika, ilanları görüntülediğinizde, hesap oluşturduğunuzda, rezervasyon talebi ilettiğinizde, ev sahibi başvurusu yaptığınızda veya bizimle iletişime geçtiğinizde dahil olmak üzere web sitemiz ve rezervasyon platformumuz aracılığıyla toplanan tüm veriler için geçerlidir.\n\nPolitika, Türkiye'nin Kişisel Verilerin Korunması Kanunu (KVKK) ve Avrupa Birliği'nin Genel Veri Koruma Yönetmeliği'nin (GDPR) ilkeleriyle uyumlu olacak şekilde hazırlanmıştır. Verilerinizi nasıl işlediğimize ilişkin sorularınız için web sitemizin iletişim formunu kullanabilirsiniz.",
+      "s2Title": "2. Topladığımız Bilgiler",
+      "s2Body": "Doğrudan tarafınızdan sağladığınız bilgileri toplarız; bunlar arasında şunlar yer alır: iletişim formu kullandığınızda veya ev sahibi başvurusu yaptığınızda adınız, e-posta adresiniz ve telefon numaranız; kayıt sırasında hesap bilgileriniz (ad, e-posta ve güvenli biçimde şifrelenmiş parola); tarihler, misafir sayısı ve eklediğiniz notlar dahil rezervasyon ayrıntıları; ve Platform aracılığıyla bize gönderdiğiniz mesajlar.\n\nAyrıca web sitemizi ziyaret ettiğinizde otomatik olarak bazı teknik veriler toplarız; bunlar IP adresinizi, tarayıcı türünüzü, cihaz bilgilerinizi, ziyaret edilen sayfaları ve IP adresinden türetilen yaklaşık konumu kapsar. Bu veriler standart sunucu altyapısı ve güvenilir hizmet sağlayıcılarımız tarafından işletilen analitik araçları aracılığıyla toplanır.",
+      "s3Title": "3. Bilgilerinizi Nasıl Kullanıyoruz",
+      "s3Body": "Topladığımız bilgileri şu amaçlarla kullanırız: Platformu ve rezervasyon hizmetlerini sağlamak ve işletmek; taleplerinize ve destek isteklerinize yanıt vermek; rezervasyonları ve uygun olduğu durumlarda ödeme hizmet sağlayıcılarıyla koordinasyonu yönetmek; rezervasyon onayları, doğrulama kodları ve hizmet bildirimleri gibi işlemsel iletişimler göndermek; ev sahibi başvurularını incelemek ve işlemek; kullanım kalıplarına dayalı olarak Platformu geliştirmek ve kişiselleştirmek; yasal yükümlülüklere uymak; sahtekârlık ve kötüye kullanımı tespit etmek ve önlemek.\n\nKişisel verilerinizi, açık rızanız olmaksızın hukuki veya benzer nitelikte önemli etkiler doğuran otomatik karar alma veya profil oluşturma amacıyla kullanmayız.",
+      "s4Title": "4. İşlemenin Hukuki Dayanakları",
+      "s4Body": "Kişisel verilerinizi aşağıdaki hukuki dayanaklar çerçevesinde işleriz:\n\n— Sözleşmenin ifası: Hesap yönetimi, rezervasyon işleme ve taleplere yanıt verme dahil olmak üzere talep ettiğiniz hizmetleri sunmak için.\n\n— Meşru menfaatler: Platformu işletmek ve geliştirmek, sahtekârlığı önlemek ve haklarınızı ve özgürlüklerinizi gözetecek şekilde kullanıcılarla iletişim kurmak için.\n\n— Hukuki yükümlülük: Geçerli yasa ve yönetmeliklere uymak için.\n\n— Rıza: Gerekli olduğu durumlarda, örneğin ileride sunulabilecek bazı pazarlama iletişimleri için.",
+      "s5Title": "5. Çerezler ve Analitik",
+      "s5Body": "Web sitemiz, temel site işlevlerini desteklemek, tercihlerinizi hatırlamak ve — rızanıza bağlı olarak — ziyaretçilerin Platformu nasıl kullandığını anlamak için çerezler ve benzer izleme teknolojileri kullanabilir.\n\nZorunlu çerezler, Platformun düzgün çalışması için gereklidir ve rızanızı gerektirmez. Analitik veya kişiselleştirme amaçlı çerezler gibi zorunlu olmayan çerezler, yalnızca yasanın gerektirdiği durumlarda önceden rızanız alınarak etkinleştirilir. Çerez tercihlerinizi tarayıcı ayarlarınız veya Platform üzerindeki herhangi bir onay aracı aracılığıyla istediğiniz zaman yönetebilir ya da geri çekebilirsiniz.",
+      "s6Title": "6. Bilgilerinizi Nasıl Paylaşıyoruz",
+      "s6Body": "Kişisel verilerinizi satmıyoruz. Bilgilerinizi aşağıdaki durumlarda paylaşabiliriz:\n\n— Uygun veri işleme sözleşmeleri kapsamında verilerimizi adımıza işleyen güvenilir hizmet sağlayıcılarla: bunlar arasında barındırma ve altyapı sağlayıcıları, e-posta gönderim hizmet sağlayıcımız ve uygun olduğunda ödeme işleme sağlayıcıları yer alır. Bu sağlayıcılar, verilerinizi korumak ve yalnızca belirlediğimiz amaçlar doğrultusunda kullanmakla sözleşmesel olarak yükümlüdür.\n\n— Mülk sahipleriyle, rezervasyonunuzu veya talebinizi kolaylaştırmak için gerekli ölçüde — örneğin adınızı, iletişim bilgilerinizi ve rezervasyon tarihlerinizi ilgili ev sahibiyle paylaşmak.\n\n— Yürürlükteki yasanın gerektirdiği durumlarda veya kullanıcılarımızın ve kamuoyunun hak ve güvenliğini korumak amacıyla kolluk kuvvetleri ya da düzenleyici makamlarla.\n\nVeri paylaştığımız tüm üçüncü tarafların yürürlükteki veri koruma mevzuatına uymasını şart koşarız.",
+      "s7Title": "7. Uluslararası Veri Transferleri",
+      "s7Body": "Homesta Stay uluslararası düzeyde misafir ve ev sahiplerine hizmet vermektedir; bazı hizmet sağlayıcılarımız Türkiye veya Avrupa Ekonomik Alanı dışındaki ülkelerde bulunabilir ya da verileri orada işleyebilir. Verilerin uluslararası transferi söz konusu olduğunda, standart sözleşme maddeleri veya diğer tanınan transfer mekanizmaları gibi geçerli veri koruma yasalarına uygun güvencelerin mevcut olduğundan emin oluruz.",
+      "s8Title": "8. Veri Saklama",
+      "s8Body": "Kişisel verilerinizi toplandıkları amaçları yerine getirmek için gerekli olduğu sürece saklarız; bu süre hizmetlerimizin sunulmasını, yasal yükümlülüklerin yerine getirilmesini, uyuşmazlıkların çözümünü ve sözleşmelerimizin uygulanmasını kapsar.\n\nHesap verileri, hesabınızın aktif olduğu süre boyunca ve hesap kapatıldıktan sonra makul bir süre daha saklanır. Rezervasyon kayıtları, vergi, hukuki veya uyuşmazlık çözüm gereklilikleri nedeniyle daha uzun süre tutulabilir. İletişim formu mesajları, talebinize yanıt vermek ve makul bir takip süresi için gerektiği kadar saklanır.",
+      "s9Title": "9. Veri Güvenliği",
+      "s9Body": "Kişisel verilerinizi kazara veya hukuka aykırı yok etme, kayıp, değiştirme, yetkisiz ifşa veya erişime karşı korumak için uygun teknik ve organizasyonel önlemleri uygularız. Bu önlemler arasında şifreli veri iletimi, sıkı erişim kontrolleri ve düzenli güvenlik denetimleri yer almaktadır.\n\nVeri güvenliğine önem verdiğimiz hâlde hiçbir sistem tamamen risksiz değildir. Haklarınız ve özgürlükleriniz açısından risk oluşturması muhtemel bir veri ihlali yaşanması durumunda, yürürlükteki hukuka uygun olarak ilgili denetim makamını bilgilendirip gerektiğinde sizinle doğrudan iletişime geçeceğiz.",
+      "s10Title": "10. Haklarınız",
+      "s10Body": "Bulunduğunuz yere ve uygulanabilir hukuka bağlı olarak kişisel verileriniz konusunda şu haklara sahip olabilirsiniz: verilerinizin bir kopyasına erişim hakkı; hatalı verilerin düzeltilmesini talep hakkı; silme hakkı (\"unutulma hakkı\"); işlemeyi kısıtlama hakkı; veri taşınabilirliği hakkı; meşru menfaate dayalı işlemeye itiraz hakkı; ve işlemenin rızaya dayandığı durumlarda rızanızı her zaman geri çekme hakkı.\n\nBu haklardan herhangi birini kullanmak için lütfen web sitemizin iletişim formu aracılığıyla bizimle iletişime geçin. Uygulanabilir hukukun öngördüğü süre içinde (genellikle 30 gün) yanıt vereceğiz. Talebinizi işleme almadan önce kimliğinizi doğrulamamız gerekebilir.\n\nTürkiye'de ikamet ediyorsanız Kişisel Verileri Koruma Kurumu'na (KVKK) da başvurabilirsiniz. Avrupa Ekonomik Alanı'nda bulunuyorsanız yerel veri koruma denetim kuruluşuna şikâyette bulunma hakkınız vardır.",
+      "s11Title": "11. Çocukların Gizliliği",
+      "s11Body": "Platformumuz 18 yaşın altındaki kişilere yönelik değildir. 18 yaşından küçük çocuklara ait kişisel verileri bilerek toplamayız. Bir çocuğun uygun ebeveyn izni olmaksızın bize kişisel veri sağladığına inanıyorsanız, lütfen iletişim formu aracılığıyla bizimle iletişime geçin; gerekli adımları atarak söz konusu verileri derhal sileceğiz.",
+      "s12Title": "12. Politikadaki Değişiklikler",
+      "s12Body": "Bu Gizlilik Politikasını, uygulamalarımızdaki, hizmetlerimizdeki veya yasal gerekliliklerimizideki değişiklikleri yansıtmak amacıyla zaman zaman güncelleyebiliriz. Bu sayfadaki \"son güncelleme\" tarihini değiştireceğiz ve önemli değişiklikler için kayıtlı kullanıcıları bilgilendirmek amacıyla makul adımlar atacağız. Bu Politikayı periyodik olarak gözden geçirmenizi öneririz.",
+      "s13Title": "13. Bize Ulaşın",
+      "s13Body": "Gizlilikle ilgili sorularınız, talepleriniz veya endişeleriniz için lütfen web sitemizin iletişim formu aracılığıyla bizimle iletişime geçin. Gizlilik taleplerine önem veriyor ve en kısa sürede yanıt vermeye çalışıyoruz.",
+      "crossLinkLabel": "Hizmet Şartları",
+      "crossLinkPrefix": "Ayrıca okuyun:"
+    }
+  },
+  "unit": {
+    "notFound": "Konaklama bulunamadı",
+    "notFoundSub": "Aradığınız ilan mevcut değil veya kaldırılmış.",
+    "backToStays": "Tüm konaklama ilanlarına dön",
+    "perNight": "/ gece",
+    "checkIn": "Giriş tarihi",
+    "checkOut": "Çıkış tarihi",
+    "guestsLabel": "Misafirler",
+    "addDates": "Tarih ekle",
+    "addGuests": "Misafir ekle",
+    "guestCount": "{count, plural, other {# misafir}}",
+    "guestsDecrement": "Misafir azalt",
+    "guestsIncrement": "Misafir artır",
+    "reserve": "Rezervasyon yap",
+    "booking": {
+      "modalTitle": "Tarih ve misafir seçin",
+      "continue": "Devam et",
+      "selectDatesHint": "Devam etmek için lütfen bir giriş tarihi seçin.",
+      "confirmTitle": "Neredeyse tamam",
+      "confirmBody": "Online ödeme yakında geliyor. Ekibimiz rezervasyonunuzu onaylamak için sizinle iletişime geçecek.",
+      "done": "Anladım",
+      "nights": "{count, plural, other {# gece}}"
+    },
+    "about": "Bu yer hakkında",
+    "reviews": "değerlendirme",
+    "unitTypes": {
+      "apartment": "Daire",
+      "room": "Oda",
+      "suite": "Suit",
+      "studio": "Stüdyo",
+      "villa": "Villa",
+      "cabin": "Kabin",
+      "farm": "Çiftlik",
+      "bed": "Özel oda",
+      "other": "Yer"
+    },
+    "specsTitle": "Mülk detayları",
+    "specs": {
+      "bedroomsZero": "Stüdyo",
+      "bedroom": "yatak odası",
+      "bedrooms": "yatak odası",
+      "bed": "yatak",
+      "beds": "yatak",
+      "bathroom": "banyo",
+      "bathrooms": "banyo",
+      "guests": "misafir",
+      "sqm": "m²",
+      "nightMin": "gece min.",
+      "nightsMin": "gece min.",
+      "floor": "Kat",
+      "balcony": "Balkon",
+      "balconies": "Balkonlar",
+      "kitchen": "Mutfak",
+      "kitchens": "Mutfaklar",
+      "size": "Alan",
+      "distanceMall": "AVM mesafesi",
+      "distanceTransport": "Toplu taşıma",
+      "type": "Tür",
+      "minStay": "Min. konaklama"
+    },
+    "amenitiesTitle": "Bu yerin sunduğu imkânlar",
+    "amenityGroups": {
+      "connectivity": "Bağlantı ve Eğlence",
+      "climate": "İklim",
+      "kitchenLaundry": "Mutfak ve Çamaşır",
+      "bathroomComfort": "Banyo ve Konfor",
+      "buildingAccess": "Bina ve Erişim"
+    },
+    "amenities": {
+      "tv": "TV",
+      "wifi": "Wi-Fi",
+      "air_conditioning": "Klima",
+      "heating": "Isıtma",
+      "kitchen": "Mutfak",
+      "dishwasher": "Bulaşık makinesi",
+      "washing_machine": "Çamaşır makinesi",
+      "hot_water": "Sıcak su",
+      "hair_dryer": "Saç kurutma makinesi",
+      "iron": "Ütü",
+      "extra_bed": "Ekstra yatak",
+      "parking": "Ücretsiz otopark",
+      "elevator": "Asansör",
+      "pool": "Havuz",
+      "gym": "Spor salonu",
+      "self_check_in": "Kendi başına giriş"
+    },
+    "rulesTitle": "Ev kuralları",
+    "rules": {
+      "allow_parties": "Parti ve etkinlikler",
+      "allow_pets": "Evcil hayvanlar",
+      "allow_smoking": "Sigara içme",
+      "allow_unregistered_guests": "Kayıtsız misafirler",
+      "family_friendly": "Aile dostu",
+      "id_required": "Kimlik gerekli",
+      "quiet_hours": "Sessizlik saatleri",
+      "additional_rules": "Ek kurallar",
+      "allowed": "İzinli",
+      "not_allowed": "İzinsiz",
+      "yes": "Evet",
+      "no": "Hayır"
+    },
+    "cancellationTitle": "İptal politikası",
+    "locationTitle": "Konum",
+    "address": "Adres",
+    "viewOnMaps": "Google Haritalar'da görüntüle"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Giriş yap",
+      "subtitle": "Homesta Stay'e hoş geldiniz",
+      "emailLabel": "E-posta",
+      "emailPlaceholder": "siz@ornek.com",
+      "passwordLabel": "Şifre",
+      "submit": "Giriş yap",
+      "loading": "Giriş yapılıyor…",
+      "forgotPassword": "Şifrenizi mi unuttunuz?",
+      "noAccount": "Hesabınız yok mu?",
+      "createAccount": "Hesap oluştur",
+      "error": {
+        "requiredField": "Lütfen tüm zorunlu alanları doldurun.",
+        "emailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
+        "invalidCredentials": "E-posta veya şifre hatalı.",
+        "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+      }
+    },
+    "signUp": {
+      "title": "Hesap oluştur",
+      "subtitle": "Homesta Stay'e katılın",
+      "firstNameLabel": "Ad",
+      "lastNameLabel": "Soyad",
+      "emailLabel": "E-posta",
+      "emailPlaceholder": "siz@ornek.com",
+      "passwordLabel": "Şifre",
+      "confirmPasswordLabel": "Şifreyi onayla",
+      "submit": "Hesap oluştur",
+      "loading": "Hesap oluşturuluyor…",
+      "phoneLabel": "Telefon numarası",
+      "phoneSearchPlaceholder": "Ülke ara…",
+      "hasAccount": "Zaten hesabınız var mı?",
+      "signIn": "Giriş yap",
+      "error": {
+        "requiredField": "Lütfen tüm zorunlu alanları doldurun.",
+        "emailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
+        "passwordTooShort": "Şifre en az 8 karakter olmalıdır.",
+        "passwordMismatch": "Şifreler eşleşmiyor.",
+        "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
+        "emailAlreadyRegistered": "Bu e-posta adresi zaten kayıtlı.",
+        "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+      }
+    },
+    "verifyEmail": {
+      "title": "E-postanızı doğrulayın",
+      "subtitle": "{email} adresine 6 haneli bir kod gönderdik",
+      "codeLabel": "Doğrulama kodu",
+      "submit": "E-postayı doğrula",
+      "loading": "Doğrulanıyor…",
+      "resend": "Kodu yeniden gönder",
+      "resendIn": "{seconds}s içinde yeniden gönder",
+      "noEmail": "E-posta adresi bulunamadı. Lütfen tekrar kayıt olun.",
+      "backToSignUp": "Kayıta geri dön",
+      "error": {
+        "incompleteCode": "Lütfen tüm 6 haneyi girin.",
+        "invalidCode": "Geçersiz veya süresi dolmuş kod. Lütfen tekrar deneyin.",
+        "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+      }
+    },
+    "userMenu": {
+      "signOut": "Çıkış yap",
+      "myBookings": "Rezervasyonlarım",
+      "account": "Hesap"
+    },
+    "authGate": {
+      "title": "Devam etmek için giriş yapın",
+      "subtitle": "Yer kaydetmek ve rezervasyon yapmak için ücretsiz hesap oluşturun veya giriş yapın.",
+      "signIn": "Giriş yap",
+      "createAccount": "Hesap oluştur"
+    }
+  },
+  "myBookings": {
+    "title": "Rezervasyonlarım",
+    "emptyTitle": "Henüz rezervasyonunuz yok",
+    "emptySubtitle": "Bir rezervasyon yaptığınızda burada görünecektir.",
+    "browseStays": "Konaklamalara göz at"
+  },
+  "whyHomesta": {
+    "title": "Neden Homesta",
+    "booking": {
+      "title": "Anında Rezervasyon",
+      "text": "Dakikalar içinde rezervasyon, hızlı onay."
+    },
+    "verified": {
+      "title": "Doğrulanmış Konaklamalar",
+      "text": "Her yer ekibimiz tarafından kontrol edilir."
+    },
+    "support": {
+      "title": "Yerel Destek",
+      "text": "Arapça, Türkçe ve İngilizce destek."
+    },
+    "pricing": {
+      "title": "Şeffaf Fiyatlar",
+      "text": "Şeffaf fiyatlar, gizli ücret yok."
+    }
+  },
+  "howItWorks": {
+    "title": "Nasıl çalışır",
+    "step1": {
+      "title": "Ara",
+      "text": "Şehir, tarih ve misafir sayısına göre konaklamanı bul."
+    },
+    "step2": {
+      "title": "Rezervasyon Yap",
+      "text": "Güvenli ödeme ile anında rezervasyon yap."
+    },
+    "step3": {
+      "title": "Keyif Çıkar",
+      "text": "Anahtarları al ve konaklamanın tadını çıkar."
+    }
+  },
+  "footer": {
+    "tagline": "Bir sonraki konaklamanız burada başlıyor.",
+    "copyright": "© 2026 Homesta Stay",
+    "quickLinks": "Hızlı bağlantılar",
+    "company": "Şirket",
+    "contactUs": "Bize ulaşın",
+    "about": "Hakkımızda",
+    "terms": "Şartlar",
+    "privacy": "Gizlilik",
+    "emailLabel": "E-posta gönderin",
+    "socialInstagram": "Instagram'da Homesta Stay",
+    "socialFacebook": "Facebook'ta Homesta Stay",
+    "socialWhatsapp": "WhatsApp'tan bize ulaşın"
+  }
+}

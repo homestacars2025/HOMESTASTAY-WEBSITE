@@ -1,0 +1,470 @@
+{
+  "nav": {
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "signOut": "Sign out",
+    "stays": "Stays",
+    "blog": "Blog",
+    "contact": "Contact",
+    "becomeHost": "Become a host",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "hero": {
+    "headline": "Your next stay starts here",
+    "subline": "Short-term and touristic rentals — handpicked, fast to book."
+  },
+  "search": {
+    "whereLabel": "Where",
+    "wherePlaceholder": "Istanbul, Turkey",
+    "whenLabel": "When",
+    "whenPlaceholder": "Add dates",
+    "whoLabel": "Who",
+    "whoPlaceholder": "Add guests",
+    "guestCount": "{count, plural, one {# guest} other {# guests}}",
+    "guestsDecrement": "Fewer guests",
+    "guestsIncrement": "More guests",
+    "cta": "Search stays"
+  },
+  "categories": {
+    "all": "All",
+    "apartments": "Apartments",
+    "villas": "Villas",
+    "cabins": "Cabins",
+    "hotels": "Hotels",
+    "farms": "Farms"
+  },
+  "sections": {
+    "featured": "Featured stays",
+    "topRated": "Top rated",
+    "cities": "Explore cities"
+  },
+  "cities": {
+    "istanbul": "Istanbul",
+    "trabzon": "Trabzon",
+    "sapanca": "Sapanca",
+    "antalya": "Antalya",
+    "fethiye": "Fethiye",
+    "bodrum": "Bodrum"
+  },
+  "card": {
+    "perNight": "/ night",
+    "save": "Save",
+    "unsave": "Remove from saved"
+  },
+  "pages": {
+    "stays": {
+      "title": "Stays",
+      "comingSoon": "We're putting together the full listing view. Check back soon.",
+      "noResults": "No stays match this filter."
+    },
+    "blog": {
+      "title": "Blog",
+      "comingSoon": "Stories, guides, and local tips — coming soon."
+    },
+    "contact": {
+      "metaTitle": "Contact Us — Homesta Stay",
+      "metaDescription": "Get in touch with Homesta Stay. We help with bookings, property listings, and any questions about your stay in Istanbul, Turkey.",
+      "heading": "Contact us",
+      "subheading": "We're here to help — reach out anytime.",
+      "infoTitle": "Reach out",
+      "infoEmailLabel": "Email",
+      "infoInstagramLabel": "Instagram",
+      "infoFacebookLabel": "Facebook",
+      "infoWhatsappLabel": "WhatsApp",
+      "infoWhatsappNote": "Coming soon",
+      "formTitle": "Send us a message",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Sara Hassan",
+      "formEmailLabel": "Your email",
+      "formEmailPlaceholder": "you@example.com",
+      "subjectLabel": "Subject",
+      "subjectPlaceholder": "Booking question, listing a property…",
+      "messageLabel": "Message",
+      "messagePlaceholder": "Tell us how we can help…",
+      "submitCta": "Send message",
+      "sending": "Sending…",
+      "successTitle": "Message sent!",
+      "successBody": "Thanks — we'll get back to you soon.",
+      "sendAnother": "Send another message",
+      "errorRequired": "Please fill in all required fields.",
+      "errorEmailInvalid": "Please enter a valid email address.",
+      "errorGeneric": "Something went wrong. Please try again or email us directly.",
+      "faqTitle": "Common questions",
+      "faq1Q": "How quickly do you reply?",
+      "faq1A": "We aim to respond within 2–4 hours. For urgent help, WhatsApp will be the fastest channel once it's live.",
+      "faq2Q": "How do I book a stay?",
+      "faq2A": "Browse our listings, pick your dates, and click Reserve. You'll need a free account to complete the booking.",
+      "faq3Q": "Do you support Arabic and Turkish?",
+      "faq3A": "Yes — the site is fully available in Arabic, Turkish, Russian, and English.",
+      "faq4Q": "How do I list my property?",
+      "faq4A": "Fill in our host application and we'll be in touch within 24 hours.",
+      "faq5Q": "What is Homesta Stay?",
+      "faq5A": "Homesta Stay is a short-term rental platform connecting guests with quality properties in Istanbul, Turkey.",
+      "listProperty": "Want to list your property?",
+      "browseStays": "Browse all stays"
+    },
+    "host": {
+      "title": "Become a host",
+      "comingSoon": "Partner with us to list your property. Host onboarding is coming soon.",
+      "headline": "List your property with Homesta Stay",
+      "subline": "Earn more with curated guests, fast bookings, and real support.",
+      "trust": {
+        "free": "Free to list",
+        "guests": "We handle guests",
+        "bookings": "Fast bookings"
+      },
+      "form": {
+        "nameLabel": "Full name",
+        "namePlaceholder": "Your full name",
+        "phoneLabel": "Phone number",
+        "phoneSearchPlaceholder": "Search country…",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "you@example.com",
+        "unitTypeLabel": "Unit type",
+        "unitTypePlaceholder": "Select a type",
+        "unitsCountLabel": "Number of units",
+        "unitsCountPlaceholder": "1",
+        "cityLabel": "City",
+        "cityPlaceholder": "Select a city",
+        "districtLabel": "District / area",
+        "districtPlaceholder": "Select district",
+        "districtOther": "Other",
+        "districtManualPlaceholder": "Enter your area or district",
+        "contactMethodLabel": "Preferred contact method",
+        "contactWhatsapp": "WhatsApp",
+        "contactPhone": "Phone call",
+        "contactEmail": "Email",
+        "noteLabel": "Note or message",
+        "notePlaceholder": "Tell us about your property…",
+        "listingLinkLabel": "Existing listing link",
+        "listingLinkPlaceholder": "https://airbnb.com/rooms/…",
+        "submit": "Send application",
+        "sending": "Sending…"
+      },
+      "unitTypes": {
+        "apartment": "Apartment",
+        "villa": "Villa",
+        "cabin": "Cabin",
+        "hotel": "Hotel",
+        "farm": "Farm"
+      },
+      "success": {
+        "title": "Application received!",
+        "body": "Thank you, {name}. We'll review your details and be in touch very soon.",
+        "back": "Back to home"
+      },
+      "error": {
+        "required": "Please fill in all required fields.",
+        "emailInvalid": "Please enter a valid email address.",
+        "phoneInvalid": "Please enter a valid phone number.",
+        "unitsMin": "Number of units must be at least 1.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "terms": {
+      "metaTitle": "Terms of Service — Homesta Stay",
+      "metaDescription": "Read the Terms of Service for Homesta Stay. Understand your rights and responsibilities when using our short-term rental booking platform in Türkiye.",
+      "heading": "Terms of Service",
+      "lastUpdated": "Last updated: 28 May 2026",
+      "intro": "Please read these Terms of Service carefully before using Homesta Stay. By accessing or using our platform, you agree to be bound by these Terms and our Privacy Policy.",
+      "tocTitle": "Contents",
+      "s1Title": "1. Acceptance of Terms",
+      "s1Body": "By accessing or using the Homesta Stay website and booking platform (the \"Platform\"), you confirm that you have read, understood, and agree to be bound by these Terms of Service (\"Terms\") and our Privacy Policy. If you do not agree, please do not use the Platform.\n\nThese Terms apply to all visitors, users, and registered guests of the Platform. We reserve the right to update these Terms at any time; continued use of the Platform after an update constitutes acceptance of the revised Terms.",
+      "s2Title": "2. Description of Service",
+      "s2Body": "Homesta Stay is an online booking intermediary and brokerage platform for short-term and touristic accommodation rentals. We connect guests looking for accommodation with property owners and managers who list their spaces on our Platform. We are based in Türkiye and currently focus on Turkish cities, with plans to expand to additional destinations.\n\nHomesta Stay acts as an intermediary and facilitator. We are not the owner or operator of the listed properties unless explicitly stated on the listing. The contract for accommodation is formed between the guest and the property owner or manager.",
+      "s3Title": "3. User Accounts",
+      "s3Body": "To access certain features of the Platform — such as making a booking or saving favourite listings — you may be required to create an account. You are responsible for keeping your login credentials confidential and for all activity that occurs under your account.\n\nYou must provide accurate, current, and complete information when registering. You must be at least 18 years of age to create an account and make bookings. Homesta Stay reserves the right to suspend or terminate accounts that are found to violate these Terms.",
+      "s4Title": "4. Booking and Inquiry Process",
+      "s4Body": "When you submit a booking inquiry or reservation request through the Platform, you are requesting availability and entering an inquiry process facilitated by Homesta Stay. A booking is not confirmed until you receive an explicit confirmation from us.\n\nWhere online payment functionality is offered, payments may be processed by secure third-party payment service providers. We do not store full card details on our servers. Payment terms, including currency and timing, will be clearly presented at the time of booking.\n\nBooking-specific terms — including pricing, cancellation conditions, and house rules — are described on each listing page and form part of the agreement between the guest and the property host.",
+      "s5Title": "5. Our Role as Intermediary",
+      "s5Body": "Homesta Stay acts as a broker and intermediary. We facilitate connections between guests and property hosts and provide the booking infrastructure, communication tools, and support services.\n\nWe make reasonable efforts to verify the accuracy of listing information; however, we cannot guarantee that all information provided by hosts is complete, accurate, or up to date at the time of booking. Guests are encouraged to read listing details carefully and to contact us with any questions before confirming a reservation.\n\nAny disputes arising from the stay — including property condition, host conduct, or service quality — should be raised with us as the facilitating intermediary, and we will work to mediate in good faith.",
+      "s6Title": "6. Host Application",
+      "s6Body": "Property owners and managers may apply to list their properties on the Platform by submitting a host application form. By submitting an application, you represent that you have the legal right to list and rent the property, that the information provided is accurate, and that you agree to comply with all applicable laws and regulations.\n\nListings are subject to review and approval. Homesta Stay reserves the right to decline, suspend, or remove any listing at its discretion. Listing on the Platform does not create an employment, franchise, or agency relationship.",
+      "s7Title": "7. Acceptable Use",
+      "s7Body": "You agree not to use the Platform for any unlawful purpose or in a way that could harm Homesta Stay, its users, or third parties. Prohibited conduct includes, but is not limited to: providing false or misleading information; impersonating another person; attempting to gain unauthorised access to any part of the Platform; scraping or reproducing content without permission; engaging in fraudulent bookings or payment abuse; and uploading harmful, offensive, or infringing content.\n\nWe reserve the right to take appropriate action — including account suspension and legal recourse — against users who violate these rules.",
+      "s8Title": "8. Intellectual Property",
+      "s8Body": "All content on the Platform — including text, graphics, logos, software, and the Homesta Stay brand identity — is the property of Homesta Stay or its licensors and is protected by applicable intellectual property laws.\n\nYou may not reproduce, distribute, modify, or create derivative works of any Platform content without our prior written consent. By submitting content to the Platform (such as host photos or property descriptions), you grant Homesta Stay a non-exclusive licence to use that content for the purpose of operating and promoting the Platform.",
+      "s9Title": "9. Disclaimers and Limitation of Liability",
+      "s9Body": "The Platform and its services are provided \"as is\" and \"as available\" without warranties of any kind, express or implied, to the fullest extent permitted by applicable law.\n\nHomesta Stay is not liable for: the acts or omissions of property hosts or guests; the condition, suitability, or accuracy of any listed property; any loss or damage arising from your use of, or inability to use, the Platform; or any indirect, incidental, consequential, or punitive damages, to the extent permitted by law.\n\nOur total liability to you for any claim arising out of or relating to your use of the Platform shall not exceed the total fees, if any, paid by you through the Platform in connection with the relevant booking.",
+      "s10Title": "10. Cancellation, Refund and Booking Policies",
+      "s10Body": "Cancellation, refund, and modification policies vary by listing and may be specified by the property host. The applicable policy for each booking will be clearly presented before you confirm a reservation.\n\nIn the event of disputes regarding cancellations or refunds, Homesta Stay will endeavour to mediate between the guest and the host in good faith. Where online payment has been processed, refunds will be issued in accordance with the applicable booking policy and the terms of the payment service provider.\n\nHomesta Stay reserves the right to update its general booking and refund policies as the platform evolves, including upon the introduction of new payment methods. Notice of material changes will be communicated to registered users.",
+      "s11Title": "11. Governing Law and Jurisdiction",
+      "s11Body": "These Terms are governed by and construed in accordance with the laws of the Republic of Türkiye. Any disputes arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts of Türkiye, unless applicable consumer protection laws in your country of residence require otherwise.",
+      "s12Title": "12. Changes to These Terms",
+      "s12Body": "We may update these Terms from time to time to reflect changes to our services, legal requirements, or business practices. We will update the \"last updated\" date at the top of this page and, for material changes, we will take reasonable steps to notify registered users.\n\nYour continued use of the Platform after any change to these Terms constitutes your acceptance of the updated Terms. If you do not agree with an update, please discontinue using the Platform.",
+      "s13Title": "13. Contact",
+      "s13Body": "If you have questions about these Terms, please contact us through the contact form on our website. We aim to respond to all enquiries within a reasonable timeframe.",
+      "crossLinkLabel": "Privacy Policy",
+      "crossLinkPrefix": "Also read our"
+    },
+    "privacy": {
+      "metaTitle": "Privacy Policy — Homesta Stay",
+      "metaDescription": "Learn how Homesta Stay collects, uses, and protects your personal data. Your privacy rights under KVKK and GDPR explained.",
+      "heading": "Privacy Policy",
+      "lastUpdated": "Last updated: 28 May 2026",
+      "intro": "Homesta Stay is committed to protecting your personal data and respecting your privacy. This Privacy Policy explains what information we collect, how we use it, with whom we share it, and what rights you have.",
+      "tocTitle": "Contents",
+      "s1Title": "1. Introduction",
+      "s1Body": "This Policy applies to all data collected through our website and booking platform, including when you browse listings, create an account, make a booking inquiry, submit a host application, or contact us.\n\nIt is designed to align with the principles of Türkiye's Personal Data Protection Law (KVKK) and the European Union's General Data Protection Regulation (GDPR). If you have any questions about how we handle your data, please use the contact form on our website.",
+      "s2Title": "2. Information We Collect",
+      "s2Body": "We collect information you provide to us directly, including: your name, email address, and phone number when you use our contact form or submit a host application; account information (name, email, and a securely hashed password) when you register; booking details including dates, guest count, and any notes you include; and communications you send us through the Platform.\n\nWe also collect certain technical data automatically when you visit our website, such as your IP address, browser type, device information, pages visited, and approximate location derived from your IP address. This data is collected through standard server infrastructure and, where applicable, analytics tools operated by our trusted service providers.",
+      "s3Title": "3. How We Use Your Information",
+      "s3Body": "We use the information we collect to: provide and operate the Platform and booking services; respond to your enquiries and support requests; process and manage bookings and reservations (including, where applicable, coordinating with payment service providers); send transactional communications such as booking confirmations, verification codes, and service notifications; review and process host applications; improve and personalise the Platform based on usage patterns; comply with legal obligations; and detect and prevent fraud or misuse.\n\nWe do not use your personal data for automated decision-making or profiling in a way that produces legal or similarly significant effects without your explicit consent.",
+      "s4Title": "4. Legal Bases for Processing",
+      "s4Body": "We process your personal data on the following legal bases:\n\n— Performance of a contract: to provide the services you request, including account management, booking processing, and responding to enquiries.\n\n— Legitimate interests: to operate and improve our Platform, prevent fraud, and communicate with users in ways that do not override your rights and freedoms.\n\n— Legal obligation: to comply with applicable laws and regulations.\n\n— Consent: where required, for example for certain marketing communications if introduced in the future.",
+      "s5Title": "5. Cookies and Analytics",
+      "s5Body": "Our website may use cookies and similar tracking technologies to support essential site functionality, remember your preferences, and — subject to your consent — to understand how visitors use the Platform.\n\nEssential cookies are necessary for the Platform to function correctly and do not require your consent. Non-essential cookies (such as those used for analytics or personalisation) will only be set with your prior consent, where required by law. You can manage or withdraw your cookie preferences at any time through your browser settings or any consent tool provided on the Platform.",
+      "s6Title": "6. How We Share Your Information",
+      "s6Body": "We do not sell your personal data. We may share your information in the following circumstances:\n\n— With trusted service providers who process data on our behalf under appropriate data processing agreements. These include hosting and infrastructure providers, our email delivery provider, and, where applicable, payment processing providers. These providers are contractually obligated to protect your data and use it only for the purposes we specify.\n\n— With property hosts, to the extent necessary to facilitate your booking or inquiry — for example, sharing your name, contact details, and booking dates with the relevant host.\n\n— With law enforcement or regulatory authorities where required by applicable law, or to protect the rights and safety of our users and the public.\n\nWe require all third parties with whom we share data to comply with applicable data protection laws.",
+      "s7Title": "7. International Data Transfers",
+      "s7Body": "Homesta Stay serves guests and hosts internationally, and some of our service providers may be located in, or process data in, countries outside of Türkiye or the European Economic Area. Where data is transferred internationally, we ensure that appropriate safeguards are in place in accordance with applicable data protection laws — such as standard contractual clauses or other recognised transfer mechanisms.",
+      "s8Title": "8. Data Retention",
+      "s8Body": "We retain your personal data for as long as necessary to fulfil the purposes for which it was collected, including to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements.\n\nAccount data is retained for the lifetime of your account and for a reasonable period thereafter. Booking records may be retained for longer periods where required for tax, legal, or dispute resolution purposes. Contact form submissions are retained for as long as needed to respond to your enquiry and for a reasonable follow-up period.",
+      "s9Title": "9. Data Security",
+      "s9Body": "We implement appropriate technical and organisational measures to protect your personal data against accidental or unlawful destruction, loss, alteration, unauthorised disclosure, or access. These measures include encrypted data transmission, strict access controls, and regular security reviews.\n\nWhile we take data security seriously, no system is entirely immune to risk. In the event of a data breach that is likely to result in a risk to your rights and freedoms, we will notify the relevant supervisory authority and, where required, you directly, in accordance with applicable law.",
+      "s10Title": "10. Your Rights",
+      "s10Body": "Depending on your location and applicable law, you may have the following rights regarding your personal data: the right to access a copy of your data; the right to rectification of inaccurate data; the right to erasure (\"right to be forgotten\"); the right to restrict processing; the right to data portability; the right to object to processing based on legitimate interests; and the right to withdraw consent at any time where processing is based on consent.\n\nTo exercise any of these rights, please contact us through the contact form on our website. We will respond within the timeframe required by applicable law (typically within 30 days). We may need to verify your identity before processing your request.\n\nIf you are located in Türkiye, you may also submit a request to the Personal Data Protection Authority (KVKK). If you are in the European Economic Area, you have the right to lodge a complaint with your local data protection supervisory authority.",
+      "s11Title": "11. Children's Privacy",
+      "s11Body": "Our Platform is not directed to individuals under the age of 18. We do not knowingly collect personal data from children under 18. If you believe a child has provided us with personal data without appropriate consent, please contact us through the contact form and we will take steps to delete it promptly.",
+      "s12Title": "12. Changes to This Policy",
+      "s12Body": "We may update this Privacy Policy from time to time to reflect changes in our practices, services, or legal requirements. We will update the \"last updated\" date on this page. For material changes, we will take reasonable steps to inform registered users. We encourage you to review this Policy periodically.",
+      "s13Title": "13. Contact Us",
+      "s13Body": "For any privacy-related questions, requests, or concerns, please contact us through the contact form on our website. We take privacy enquiries seriously and will respond as promptly as possible.",
+      "crossLinkLabel": "Terms of Service",
+      "crossLinkPrefix": "Also read our"
+    }
+  },
+  "unit": {
+    "notFound": "Stay not found",
+    "notFoundSub": "The listing you're looking for doesn't exist or has been removed.",
+    "backToStays": "Back to all stays",
+    "perNight": "/ night",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guestsLabel": "Guests",
+    "addDates": "Add dates",
+    "addGuests": "Add guests",
+    "guestCount": "{count, plural, one {# guest} other {# guests}}",
+    "guestsDecrement": "Fewer guests",
+    "guestsIncrement": "More guests",
+    "reserve": "Reserve",
+    "booking": {
+      "modalTitle": "Select dates & guests",
+      "continue": "Continue",
+      "selectDatesHint": "Please select a check-in date to continue.",
+      "confirmTitle": "Almost there",
+      "confirmBody": "Online payment is coming soon. Our team will reach out to confirm your booking.",
+      "done": "Got it",
+      "nights": "{count, plural, one {# night} other {# nights}}"
+    },
+    "about": "About this place",
+    "reviews": "reviews",
+    "unitTypes": {
+      "apartment": "Apartment",
+      "room": "Room",
+      "suite": "Suite",
+      "studio": "Studio",
+      "villa": "Villa",
+      "cabin": "Cabin",
+      "farm": "Farm",
+      "bed": "Private room",
+      "other": "Place"
+    },
+    "specsTitle": "Property details",
+    "specs": {
+      "bedroomsZero": "Studio",
+      "bedroom": "bedroom",
+      "bedrooms": "bedrooms",
+      "bed": "bed",
+      "beds": "beds",
+      "bathroom": "bathroom",
+      "bathrooms": "bathrooms",
+      "guests": "guests",
+      "sqm": "m²",
+      "nightMin": "night min",
+      "nightsMin": "nights min",
+      "floor": "Floor",
+      "balcony": "Balcony",
+      "balconies": "Balconies",
+      "kitchen": "Kitchen",
+      "kitchens": "Kitchens",
+      "size": "Area",
+      "distanceMall": "Distance to mall",
+      "distanceTransport": "Nearby transport",
+      "type": "Type",
+      "minStay": "Min. stay"
+    },
+    "amenitiesTitle": "What this place offers",
+    "amenityGroups": {
+      "connectivity": "Connectivity & Entertainment",
+      "climate": "Climate",
+      "kitchenLaundry": "Kitchen & Laundry",
+      "bathroomComfort": "Bathroom & Comfort",
+      "buildingAccess": "Building & Access"
+    },
+    "amenities": {
+      "tv": "TV",
+      "wifi": "Wi-Fi",
+      "air_conditioning": "Air conditioning",
+      "heating": "Heating",
+      "kitchen": "Kitchen",
+      "dishwasher": "Dishwasher",
+      "washing_machine": "Washer",
+      "hot_water": "Hot water",
+      "hair_dryer": "Hair dryer",
+      "iron": "Iron",
+      "extra_bed": "Extra bed",
+      "parking": "Free parking",
+      "elevator": "Elevator",
+      "pool": "Pool",
+      "gym": "Gym",
+      "self_check_in": "Self check-in"
+    },
+    "rulesTitle": "House rules",
+    "rules": {
+      "allow_parties": "Parties & events",
+      "allow_pets": "Pets",
+      "allow_smoking": "Smoking",
+      "allow_unregistered_guests": "Unregistered guests",
+      "family_friendly": "Family friendly",
+      "id_required": "ID required",
+      "quiet_hours": "Quiet hours",
+      "additional_rules": "Additional rules",
+      "allowed": "Allowed",
+      "not_allowed": "Not allowed",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "cancellationTitle": "Cancellation policy",
+    "locationTitle": "Location",
+    "address": "Address",
+    "viewOnMaps": "View on Google Maps"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "subtitle": "Welcome back to Homesta Stay",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "loading": "Signing in…",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account",
+      "error": {
+        "requiredField": "Please fill in all required fields.",
+        "emailInvalid": "Please enter a valid email address.",
+        "invalidCredentials": "Incorrect email or password.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "signUp": {
+      "title": "Create account",
+      "subtitle": "Join Homesta Stay",
+      "firstNameLabel": "First name",
+      "lastNameLabel": "Last name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "submit": "Create account",
+      "loading": "Creating account…",
+      "phoneLabel": "Phone number",
+      "phoneSearchPlaceholder": "Search countries…",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "error": {
+        "requiredField": "Please fill in all required fields.",
+        "emailInvalid": "Please enter a valid email address.",
+        "passwordTooShort": "Password must be at least 8 characters.",
+        "passwordMismatch": "Passwords do not match.",
+        "phoneInvalid": "Please enter a valid phone number.",
+        "emailAlreadyRegistered": "This email is already registered.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "verifyEmail": {
+      "title": "Confirm your email",
+      "subtitle": "We sent a 6-digit code to {email}",
+      "codeLabel": "Verification code",
+      "submit": "Verify email",
+      "loading": "Verifying…",
+      "resend": "Resend code",
+      "resendIn": "Resend in {seconds}s",
+      "noEmail": "Email address missing. Please sign up again.",
+      "backToSignUp": "Back to sign up",
+      "error": {
+        "incompleteCode": "Please enter all 6 digits.",
+        "invalidCode": "Invalid or expired code. Please try again.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "userMenu": {
+      "signOut": "Sign out",
+      "myBookings": "My bookings",
+      "account": "Account"
+    },
+    "authGate": {
+      "title": "Sign in to continue",
+      "subtitle": "Create a free account or sign in to save places and make bookings.",
+      "signIn": "Sign in",
+      "createAccount": "Create account"
+    }
+  },
+  "myBookings": {
+    "title": "My bookings",
+    "emptyTitle": "No bookings yet",
+    "emptySubtitle": "When you make a booking, it will appear here.",
+    "browseStays": "Browse stays"
+  },
+  "whyHomesta": {
+    "title": "Why Homesta",
+    "booking": {
+      "title": "Instant Booking",
+      "text": "Book in minutes, confirmed fast."
+    },
+    "verified": {
+      "title": "Verified Stays",
+      "text": "Every place is checked by our team."
+    },
+    "support": {
+      "title": "Local Support",
+      "text": "Support in Arabic, Turkish & English."
+    },
+    "pricing": {
+      "title": "Clear Pricing",
+      "text": "Transparent prices, no hidden fees."
+    }
+  },
+  "howItWorks": {
+    "title": "How it works",
+    "step1": {
+      "title": "Search",
+      "text": "Find your stay by city, dates, and guests."
+    },
+    "step2": {
+      "title": "Book",
+      "text": "Reserve instantly with secure checkout."
+    },
+    "step3": {
+      "title": "Enjoy",
+      "text": "Get your keys and enjoy your stay."
+    }
+  },
+  "footer": {
+    "tagline": "Your next stay starts here.",
+    "copyright": "© 2026 Homesta Stay",
+    "quickLinks": "Quick links",
+    "company": "Company",
+    "contactUs": "Contact us",
+    "about": "About",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "emailLabel": "Email us",
+    "socialInstagram": "Homesta Stay on Instagram",
+    "socialFacebook": "Homesta Stay on Facebook",
+    "socialWhatsapp": "Chat with us on WhatsApp"
+  }
+}
