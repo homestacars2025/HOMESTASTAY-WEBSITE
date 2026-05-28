@@ -14,10 +14,7 @@ import { ALL_UNITS } from '@/lib/mock/units';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
 
-// Pre-generate all unit detail routes at build time
-export async function generateStaticParams() {
-  return ALL_UNITS.map((u) => ({ id: u.id }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
