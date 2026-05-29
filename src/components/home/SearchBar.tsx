@@ -88,10 +88,10 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
     const next     = openPanel === panel ? null : panel;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-    // Mobile city/date: rendered inline — no portal needed.
-    // Desktop (all panels) + mobile guests: compute anchor position synchronously
-    // at the top level so both setState calls commit in the same React render.
-    if (!isMobile || next === 'guests') {
+    // Mobile: all panels rendered inline — no portal needed.
+    // Desktop: compute anchor position synchronously at the top level so both
+    // setState calls commit in the same React render.
+    if (!isMobile) {
       if (next === 'guests') {
         const el    = whoRef.current ?? containerRef.current;
         const isWho = !!whoRef.current;
@@ -366,6 +366,22 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
               <span className="w-4 h-4 shrink-0" aria-hidden="true" />
             )}
           </button>
+
+          {/* Guests stepper — inline on mobile, anchored directly below the Who field */}
+          {openPanel === 'guests' && (
+            <div className="border-t border-rule px-5 py-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute leading-none mb-4">
+                {t('whoLabel')}
+              </p>
+              <GuestsStepper
+                value={guests}
+                onChange={setGuests}
+                decrementLabel={t('guestsDecrement')}
+                incrementLabel={t('guestsIncrement')}
+                inputLabel={t('whoLabel')}
+              />
+            </div>
+          )}
 
           {/* CTA */}
           <div className="px-4 pt-1 pb-4">
