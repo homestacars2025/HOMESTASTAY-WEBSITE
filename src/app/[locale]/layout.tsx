@@ -36,10 +36,6 @@ export const metadata: Metadata = {
   ),
   title: 'Homesta Stay',
   description: 'Short-term and touristic rentals in Istanbul',
-  icons: {
-    icon:  [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
-  },
   manifest: '/manifest.webmanifest',
 };
 
