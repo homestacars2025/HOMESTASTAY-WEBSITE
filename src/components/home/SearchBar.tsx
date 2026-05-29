@@ -84,29 +84,33 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
   // City and date panels span the full search bar width.
   // Guests panel is anchored to just the Who button.
 
-  const toggle = useCallback(
-    (panel: OpenPanel) => {
-      setOpenPanel((p) => {
-        const next = p === panel ? null : panel;
-        if (next === 'guests') {
-          // whoRef is only on the desktop button; fall back to containerRef on mobile
-          const el     = whoRef.current ?? containerRef.current;
-          const isWho  = !!whoRef.current;
-          if (el) {
-            const r     = el.getBoundingClientRect();
-            const width = isWho ? Math.max(r.width, 200) : r.width;
-            const left  = isWho ? Math.max(8, r.right - width) : r.left;
-            setPortalPos({ top: r.bottom + 8, left, width });
-          }
-        } else if (next && containerRef.current) {
-          const r = containerRef.current.getBoundingClientRect();
-          setPortalPos({ top: r.bottom + 8, left: r.left, width: r.width });
+  const toggle = useCallback((panel: OpenPanel) => {
+    const next     = openPanel === panel ? null : panel;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+    // Mobile city/date: rendered inline — no portal needed.
+    // Desktop (all panels) + mobile guests: compute anchor position synchronously
+    // at the top level so both setState calls commit in the same React render.
+    if (!isMobile || next === 'guests') {
+      if (next === 'guests') {
+        const el    = whoRef.current ?? containerRef.current;
+        const isWho = !!whoRef.current;
+        if (el) {
+          const r     = el.getBoundingClientRect();
+          const width = isWho ? Math.max(r.width, 200) : r.width;
+          const left  = isWho ? Math.max(8, r.right - width) : r.left;
+          setPortalPos({ top: r.bottom + 8, left, width });
         }
-        return next;
-      });
-    },
-    []
-  );
+      } else if (next && containerRef.current) {
+        const r = containerRef.current.getBoundingClientRect();
+        setPortalPos({ top: r.bottom + 8, left: r.left, width: r.width });
+      }
+    } else {
+      setPortalPos(null);
+    }
+
+    setOpenPanel(next);
+  }, [openPanel]);
 
   // ── Close on outside click, Escape, or scroll ─────────────────────────────
 
@@ -288,6 +292,26 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
             />
           </button>
 
+          {/* City list — inline on mobile, anchored directly below the Where field */}
+          {openPanel === 'city' && (
+            <div className="border-b border-rule max-h-[60vh] overflow-y-auto">
+              {cities.map((city) => (
+                <button
+                  key={city.id}
+                  type="button"
+                  role="option"
+                  aria-selected={city.id === cityId}
+                  onClick={() => { setCityId(city.id); setOpenPanel(null); }}
+                  className={`w-full flex items-center px-5 py-3.5 text-sm text-start transition-colors duration-[240ms] hover:bg-paper-warm ${
+                    city.id === cityId ? 'bg-paper-warm text-ink font-medium' : 'text-ink-soft'
+                  }`}
+                >
+                  {city.localizedName}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* When */}
           <button
             type="button"
@@ -309,6 +333,17 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
               <span className="w-4 h-4 shrink-0" aria-hidden="true" />
             )}
           </button>
+
+          {/* Date picker — inline on mobile, anchored directly below the When field */}
+          {openPanel === 'date' && (
+            <div className="border-b border-rule p-4 overflow-y-auto max-h-[70vh]">
+              <DateRangePicker
+                selected={dateRange}
+                onSelect={setDateRange}
+                locale={locale}
+              />
+            </div>
+          )}
 
           {/* Who */}
           <button

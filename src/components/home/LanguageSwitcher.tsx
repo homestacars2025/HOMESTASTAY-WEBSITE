@@ -46,7 +46,7 @@ export function LanguageSwitcher() {
       {open && (
         <div
           role="listbox"
-          className="absolute top-full end-0 mt-1.5 z-50 min-w-[148px] rounded-[14px] border border-rule bg-white shadow-[0_8px_32px_rgba(0,0,0,0.10)] py-1.5 overflow-hidden"
+          className="absolute bottom-full end-0 mb-1.5 md:top-full md:bottom-auto md:mt-1.5 md:mb-0 z-50 min-w-[148px] rounded-[14px] border border-rule bg-white shadow-[0_8px_32px_rgba(0,0,0,0.10)] py-1.5 overflow-hidden"
         >
           {LOCALES.map(({ code, native }) => (
             <Link
