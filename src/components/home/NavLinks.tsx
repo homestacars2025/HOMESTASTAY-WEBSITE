@@ -50,7 +50,7 @@ export function NavLinks({ orientation = 'horizontal', onLinkClick }: NavLinksPr
         </Link>
       ))}
 
-      {/* Become a host — slightly emphasized */}
+      {/* List property CTA — slightly emphasized */}
       <Link
         href="/host"
         onClick={onLinkClick}

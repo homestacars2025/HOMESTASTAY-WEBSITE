@@ -6,7 +6,7 @@
     "stays": "Stays",
     "blog": "Blog",
     "contact": "Contact",
-    "becomeHost": "Become a host",
+    "becomeHost": "List your property",
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
   },
@@ -105,7 +105,7 @@
       "browseStays": "Browse all stays"
     },
     "host": {
-      "title": "Become a host",
+      "title": "List your property",
       "comingSoon": "Partner with us to list your property. Host onboarding is coming soon.",
       "headline": "List your property with Homesta Stay",
       "subline": "Earn more with curated guests, fast bookings, and real support.",

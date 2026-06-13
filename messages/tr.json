@@ -6,7 +6,7 @@
     "stays": "Konaklamalar",
     "blog": "Blog",
     "contact": "İletişim",
-    "becomeHost": "Ev sahibi ol",
+    "becomeHost": "Mülkünüzü listeleyin",
     "openMenu": "Menüyü aç",
     "closeMenu": "Menüyü kapat"
   },
@@ -105,7 +105,7 @@
       "browseStays": "Tüm konaklamalara göz at"
     },
     "host": {
-      "title": "Ev sahibi ol",
+      "title": "Mülkünüzü listeleyin",
       "comingSoon": "Mülkünüzü listelemek için bizimle iş birliği yapın. Ev sahibi kaydı yakında açılıyor.",
       "headline": "Mülkünüzü Homesta Stay ile listeleyin",
       "subline": "Seçkin misafirler, hızlı rezervasyonlar ve gerçek destek ile daha fazla kazanın.",
