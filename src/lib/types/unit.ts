@@ -165,6 +165,12 @@ export interface UnitListing {
   // ── Derived at query time (reviews aggregate — null until reviews are built)
   rating: number | null;
   review_count: number | null;
+
+  // ── Pre-launch flag ───────────────────────────────────────────────────────
+  // True for demo/mock listings shown before launch. When real owner listings
+  // arrive this is false (DB default), so sample badges/banners disappear and
+  // social proof renders normally. Flip per-listing to graduate a sample.
+  is_sample: boolean;
 }
 
 // ── UI filter categories ─────────────────────────────────────────────────────

@@ -1,4 +1,12 @@
 {
+  "sample": {
+    "badge": "SAMPLE LISTING",
+    "new": "New",
+    "detailNotice": "This is a sample listing — the platform is pre-launch. Your property would look like this.",
+    "indexBanner": "Pre-launch preview — sample listings shown. To add your property:",
+    "cta": "List your property",
+    "dismiss": "Dismiss"
+  },
   "nav": {
     "signIn": "Sign in",
     "createAccount": "Create account",

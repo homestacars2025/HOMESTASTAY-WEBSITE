@@ -126,7 +126,11 @@ function gallery(unitId: string, coverUrl: string, offset = 0): UnitMediaItem[] 
   ];
 }
 
-export const ALL_UNITS: UnitListing[] = [
+// Raw mock rows (everything except the pre-launch flag). Every entry below is
+// demo data, so ALL_UNITS stamps is_sample: true on all of them in one pass —
+// no per-object edits. When real listings replace this with a Supabase query,
+// is_sample comes from the DB column (default false) and the stamping is dropped.
+const RAW_UNITS: Omit<UnitListing, 'is_sample'>[] = [
   // ── Apartments / Studios ─────────────────────────────────────────────────
   {
     id:                 'u-1001',
@@ -1012,6 +1016,9 @@ export const ALL_UNITS: UnitListing[] = [
     review_count:        22,
   },
 ];
+
+// All current listings are pre-launch demo data — mark every one as a sample.
+export const ALL_UNITS: UnitListing[] = RAW_UNITS.map((u) => ({ ...u, is_sample: true }));
 
 // Slices used by the home page horizontal scroll sections
 export const FEATURED_UNIT_IDS = ['u-1001', 'u-1005', 'u-1007', 'u-1003', 'u-1006', 'u-1009'];
