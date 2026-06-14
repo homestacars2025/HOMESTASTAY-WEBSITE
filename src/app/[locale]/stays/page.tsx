@@ -15,8 +15,15 @@ export default function StaysPage() {
   const t = useTranslations('pages.stays');
 
   // Server Component: pass all available units to the client gallery.
-  // TODO: replace ALL_UNITS with a Supabase query (units + unit_info + unit_media + unit_amenities)
-  //   filtered to status = 'available', ordered by rating desc.
+  // TODO: replace ALL_UNITS with a Supabase query.
+  // When implementing the real listing query, it MUST include:
+  //   .is('archived_at', null)     — exclude admin-archived units (units.archived_at added
+  //                                  2026-06; HP-ADMIN soft-archive). Without this filter,
+  //                                  units archived in HP-ADMIN will leak onto the public site.
+  //   .eq('status', 'available')   — only publicly bookable units (matches the mock filter below;
+  //                                  'available' is from unit_status_enum in src/lib/types/unit.ts).
+  // Shape needed: units + unit_info + unit_media + unit_amenities (see mock/units.ts for the
+  //   expected fields). Order by rating desc.
   const units = ALL_UNITS.filter((u) => u.status === 'available');
   const hasSamples = units.some((u) => u.is_sample);
 
