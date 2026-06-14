@@ -22,6 +22,13 @@ export default function StaysPage() {
   //                                  units archived in HP-ADMIN will leak onto the public site.
   //   .eq('status', 'available')   — only publicly bookable units (matches the mock filter below;
   //                                  'available' is from unit_status_enum in src/lib/types/unit.ts).
+  // The public listing is units-only (no standalone properties page yet), but units belong to a
+  // parent property. The query must ALSO exclude units whose parent property is archived — filter
+  // by the joined properties.archived_at IS NULL (added 2026-06; HP-ADMIN soft-archive) so that
+  // archiving a property in HP-ADMIN hides all of its units on the public site too. When a
+  // properties listing is eventually added, that query must likewise apply:
+  //   .is('archived_at', null)     — exclude admin-archived properties
+  //   .eq('status', 'available')   — only publicly listable properties (confirm exact value)
   // Shape needed: units + unit_info + unit_media + unit_amenities (see mock/units.ts for the
   //   expected fields). Order by rating desc.
   const units = ALL_UNITS.filter((u) => u.status === 'available');
