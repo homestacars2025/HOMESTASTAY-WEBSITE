@@ -66,7 +66,7 @@ type Step = 'pick' | 'confirm';
 interface BookingModalProps {
   unitId:            string;
   unitTitle:         string;
-  price:             number;
+  price:             number | null;
   minNights:         number;
   dateRange:         DateRange;
   guests:            number;
@@ -271,9 +271,11 @@ export function BookingModal({
                         <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-mute mb-1">
                           {t('booking.nights', { count: nightsCount })}
                         </p>
-                        <p className="text-stay font-semibold">
-                          ${price * nightsCount}
-                        </p>
+                        {price !== null && (
+                          <p className="text-stay font-semibold">
+                            ${price * nightsCount}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

@@ -64,7 +64,12 @@
     "stays": {
       "title": "Konaklamalar",
       "comingSoon": "Tam listeleme görünümünü hazırlıyoruz. Yakında burada.",
-      "noResults": "Bu filtreye uyan konaklama yok."
+      "noResults": "Bu filtreye uyan konaklama yok.",
+      "emptyState": {
+        "title": "Henüz ilan yok",
+        "body": "Daha yeni başlıyoruz. Yeni konaklamalar ekleniyor — yakında tekrar göz atın ya da kendi mülkünüzü bizimle listeleyin.",
+        "cta": "Mülkünüzü listeleyin"
+      }
     },
     "blog": {
       "title": "Blog",

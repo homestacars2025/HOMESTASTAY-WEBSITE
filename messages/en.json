@@ -64,7 +64,12 @@
     "stays": {
       "title": "Stays",
       "comingSoon": "We're putting together the full listing view. Check back soon.",
-      "noResults": "No stays match this filter."
+      "noResults": "No stays match this filter.",
+      "emptyState": {
+        "title": "No listings available yet",
+        "body": "We're just getting started. New stays are being added — check back soon, or list your own property with us.",
+        "cta": "List your property"
+      }
     },
     "blog": {
       "title": "Blog",

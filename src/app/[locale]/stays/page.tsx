@@ -1,9 +1,13 @@
 import { getTranslations } from 'next-intl/server';
-import { useTranslations } from 'next-intl';
+import { ArrowRight } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { StaysGallery } from '@/components/stays/StaysGallery';
 import { SampleBar } from '@/components/shared/SampleBar';
-import { ALL_UNITS } from '@/lib/mock/units';
+import { Link } from '@/i18n/navigation';
+import { getPublicUnits } from '@/lib/queries/stays';
+
+// Fresh data per request — real availability, no stale-cache leak of booked/archived units.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -11,27 +15,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: t('title') };
 }
 
-export default function StaysPage() {
-  const t = useTranslations('pages.stays');
+export default async function StaysPage() {
+  const t = await getTranslations('pages.stays');
 
-  // Server Component: pass all available units to the client gallery.
-  // TODO: replace ALL_UNITS with a Supabase query.
-  // When implementing the real listing query, it MUST include:
-  //   .is('archived_at', null)     — exclude admin-archived units (units.archived_at added
-  //                                  2026-06; HP-ADMIN soft-archive). Without this filter,
-  //                                  units archived in HP-ADMIN will leak onto the public site.
-  //   .eq('status', 'available')   — only publicly bookable units (matches the mock filter below;
-  //                                  'available' is from unit_status_enum in src/lib/types/unit.ts).
-  // The public listing is units-only (no standalone properties page yet), but units belong to a
-  // parent property. The query must ALSO exclude units whose parent property is archived — filter
-  // by the joined properties.archived_at IS NULL (added 2026-06; HP-ADMIN soft-archive) so that
-  // archiving a property in HP-ADMIN hides all of its units on the public site too. When a
-  // properties listing is eventually added, that query must likewise apply:
-  //   .is('archived_at', null)     — exclude admin-archived properties
-  //   .eq('status', 'available')   — only publicly listable properties (confirm exact value)
-  // Shape needed: units + unit_info + unit_media + unit_amenities (see mock/units.ts for the
-  //   expected fields). Order by rating desc.
-  const units = ALL_UNITS.filter((u) => u.status === 'available');
+  // Live public listings from Supabase (server-side). The strict visibility
+  // filter lives in getPublicUnits; more units appear automatically as hosts
+  // fill in ad_title. Real DB units carry is_sample = false, so sample
+  // badges/banners stay hidden — the flag is retained for any future preview mode.
+  const units = await getPublicUnits();
   const hasSamples = units.some((u) => u.is_sample);
 
   return (
@@ -49,7 +40,25 @@ export default function StaysPage() {
           </div>
         )}
 
-        <StaysGallery units={units} />
+        {units.length === 0 ? (
+          <div className="px-4 py-20 text-center max-w-md mx-auto">
+            <h2 className="text-lg font-medium text-ink mb-2 tracking-[-0.015em]">
+              {t('emptyState.title')}
+            </h2>
+            <p className="text-ink-soft leading-relaxed mb-6">
+              {t('emptyState.body')}
+            </p>
+            <Link
+              href="/host"
+              className="inline-flex items-center gap-1.5 bg-ink text-white rounded-[999px] px-6 py-2.5 text-sm font-medium transition-opacity duration-[240ms] hover:opacity-80"
+            >
+              {t('emptyState.cta')}
+              <ArrowRight className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />
+            </Link>
+          </div>
+        ) : (
+          <StaysGallery units={units} />
+        )}
       </main>
     </div>
   );

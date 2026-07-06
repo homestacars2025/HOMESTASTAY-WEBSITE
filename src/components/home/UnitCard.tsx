@@ -70,11 +70,13 @@ export function UnitCard({ unit, className }: UnitCardProps) {
             {district}{district && unit.city ? ' · ' : ''}{unit.city}
           </p>
 
-          {/* Price */}
-          <p className="text-sm">
-            <span className="font-semibold text-stay">${unit.base_nightly_price}</span>
-            <span className="text-mute text-xs"> {t('perNight')}</span>
-          </p>
+          {/* Price — hidden entirely when the host hasn't set a nightly price */}
+          {unit.base_nightly_price !== null && (
+            <p className="text-sm">
+              <span className="font-semibold text-stay">${unit.base_nightly_price}</span>
+              <span className="text-mute text-xs"> {t('perNight')}</span>
+            </p>
+          )}
         </div>
       </article>
     </Link>

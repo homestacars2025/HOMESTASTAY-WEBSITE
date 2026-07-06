@@ -20,7 +20,7 @@ function formatDate(d: Date, locale: string): string {
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface BookingCardProps {
-  price:       number;
+  price:       number | null;
   minNights:   number;
   rating:      number | null;
   reviewCount: number | null;
@@ -84,11 +84,13 @@ export function BookingCard({ price, minNights, rating, reviewCount, unitId, uni
   const desktopCard = (
     <aside className="hidden lg:block sticky top-6 border border-rule rounded-[14px] p-6 bg-white shadow-sm">
 
-      {/* Price */}
-      <p className="mb-5">
-        <span className="text-2xl font-semibold text-stay">${price}</span>
-        <span className="text-mute text-sm ms-1.5">{t('perNight')}</span>
-      </p>
+      {/* Price — hidden when the host hasn't set a nightly price */}
+      {price !== null && (
+        <p className="mb-5">
+          <span className="text-2xl font-semibold text-stay">${price}</span>
+          <span className="text-mute text-sm ms-1.5">{t('perNight')}</span>
+        </p>
+      )}
 
       {/* Summary display — clicking opens the modal */}
       <button
@@ -164,10 +166,12 @@ export function BookingCard({ price, minNights, rating, reviewCount, unitId, uni
     >
       <div className="flex items-center justify-between gap-4 px-4 py-3 max-w-screen-xl mx-auto">
         <div>
-          <p>
-            <span className="text-[1.1rem] font-semibold text-stay">${price}</span>
-            <span className="text-mute text-xs ms-1">{t('perNight')}</span>
-          </p>
+          {price !== null && (
+            <p>
+              <span className="text-[1.1rem] font-semibold text-stay">${price}</span>
+              <span className="text-mute text-xs ms-1">{t('perNight')}</span>
+            </p>
+          )}
           {rating !== null && (
             <p className="text-xs text-mute flex items-center gap-1 mt-0.5">
               <BrandMark className="w-[9px] h-[9px]" />

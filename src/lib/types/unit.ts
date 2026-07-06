@@ -134,7 +134,7 @@ export interface UnitListing {
   unit_style: UnitStyleEnum | null;
   business_model: BusinessModelEnum | null;
   min_nights: number;
-  base_nightly_price: number;   // always USD (DB currency default = 'USD')
+  base_nightly_price: number | null;   // always USD (DB currency default = 'USD'); null when the host hasn't set a nightly price
   currency: 'USD';
 
   // ── unit_info table (one-to-one with units) ──────────────────────────────

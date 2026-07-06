@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
@@ -12,7 +13,7 @@ import { BrandMark } from '@/components/brand/BrandMark';
 import { SampleBadge } from '@/components/shared/SampleBadge';
 import { SampleBar } from '@/components/shared/SampleBar';
 import { Link } from '@/i18n/navigation';
-import { ALL_UNITS } from '@/lib/mock/units';
+import { getPublicUnitById } from '@/lib/queries/stays';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
 
@@ -24,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
-  const unit = ALL_UNITS.find((u) => u.id === id);
+  const unit = await getPublicUnitById(id);
   if (!unit) return { title: 'Not found — Homesta Stay' };
   const t = await getTranslations({ locale, namespace: 'unit' });
   return {
@@ -42,31 +43,10 @@ export default async function UnitDetailPage({
   const t = await getTranslations({ locale, namespace: 'unit' });
   const tSample = await getTranslations({ locale, namespace: 'sample' });
 
-  const unit = ALL_UNITS.find((u) => u.id === id);
-
-  // ── Not found ─────────────────────────────────────────────────────────────
-  if (!unit) {
-    return (
-      <div className="min-h-screen bg-paper">
-        <Header />
-        <main className="max-w-screen-xl mx-auto px-4 pt-24 pb-24 text-center">
-          <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute mb-4">404</p>
-          <h1 className="text-[clamp(1.5rem,4vw,2.25rem)] font-medium tracking-[-0.035em] text-ink mb-3">
-            {t('notFound')}
-          </h1>
-          <p className="text-ink-soft mb-8 max-w-xs mx-auto leading-relaxed">
-            {t('notFoundSub')}
-          </p>
-          <Link
-            href="/stays"
-            className="inline-flex items-center gap-1.5 bg-ink text-white rounded-[999px] px-6 py-2.5 text-sm font-medium transition-opacity duration-[240ms] hover:opacity-80"
-          >
-            {t('backToStays')}
-          </Link>
-        </main>
-      </div>
-    );
-  }
+  // Applies the same strict public-visibility filter as the index; a link to a
+  // non-public or non-existent unit resolves to a real 404 (correct for SEO).
+  const unit = await getPublicUnitById(id);
+  if (!unit) notFound();
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const title = unit.ad_title ?? unit.unit_name ?? '—';
