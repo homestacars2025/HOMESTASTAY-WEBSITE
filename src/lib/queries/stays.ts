@@ -260,9 +260,6 @@ function mapRow(row: RawRow, policy: UnitCancellationPolicy | null, locale: stri
     rating: null,
     review_count: null,
 
-    // Real DB listings are never pre-launch samples — badges/banners stay hidden.
-    is_sample: false,
-
     content_language: content.content_language,
     is_machine_translated: content.is_machine_translated,
   };
@@ -400,4 +397,27 @@ export async function getPublicUnitById(
 
   const policies = await fetchPolicies(supabase, [row.cancellation_policy_id], locale);
   return mapRow(row, policies.get(row.cancellation_policy_id) ?? null, locale);
+}
+
+/**
+ * A random selection of publicly visible units for homepage rails, resolved for
+ * `locale`. Reuses the same strict visibility filter as the index (so nothing
+ * pending/archived leaks) and the same locale-aware mapping. Shuffled with
+ * Fisher-Yates at request time; call twice for two independent rails, or pass a
+ * larger limit and slice disjoint halves.
+ */
+export async function getRandomFeaturedUnits(
+  locale: string = SOURCE_LOCALE,
+  limit: number = 6,
+): Promise<UnitListing[]> {
+  const units = await getPublicUnits(locale);
+
+  // Fisher-Yates shuffle (a fresh copy — never mutate the source array).
+  const shuffled = [...units];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, limit);
 }

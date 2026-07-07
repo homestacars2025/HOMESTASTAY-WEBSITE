@@ -1,12 +1,4 @@
 {
-  "sample": {
-    "badge": "ÖRNEK İLAN",
-    "new": "Yeni",
-    "detailNotice": "Bu bir örnek ilandır — platform lansman öncesindedir. Mülkünüz de böyle görünecek.",
-    "indexBanner": "Lansman öncesi önizleme — örnek ilanlar gösterilmektedir. Mülkünüzü eklemek için:",
-    "cta": "Mülkünüzü listeleyin",
-    "dismiss": "Kapat"
-  },
   "nav": {
     "signIn": "Giriş yap",
     "createAccount": "Hesap oluştur",
@@ -44,6 +36,7 @@
   },
   "sections": {
     "featured": "Öne çıkan konaklamalar",
+    "moreStays": "Daha fazla konaklama",
     "topRated": "En yüksek puanlı",
     "cities": "Şehirleri keşfet"
   },

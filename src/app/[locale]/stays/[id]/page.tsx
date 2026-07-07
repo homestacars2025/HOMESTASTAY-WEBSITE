@@ -10,8 +10,6 @@ import { UnitRulesSection } from '@/components/unit/UnitRulesSection';
 import { UnitCancellationSection } from '@/components/unit/UnitCancellationSection';
 import { UnitLocationSection } from '@/components/unit/UnitLocationSection';
 import { BrandMark } from '@/components/brand/BrandMark';
-import { SampleBadge } from '@/components/shared/SampleBadge';
-import { SampleBar } from '@/components/shared/SampleBar';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnitById } from '@/lib/queries/stays';
 import { FadeUp } from '@/components/motion/FadeUp';
@@ -41,7 +39,6 @@ export default async function UnitDetailPage({
 }) {
   const { locale, id } = await params;
   const t = await getTranslations({ locale, namespace: 'unit' });
-  const tSample = await getTranslations({ locale, namespace: 'sample' });
 
   // Applies the same strict public-visibility filter as the index; a link to a
   // non-public or non-existent unit resolves to a real 404 (correct for SEO).
@@ -89,11 +86,6 @@ export default async function UnitDetailPage({
           </Link>
         </nav>
 
-        {/* Pre-launch sample notice */}
-        {unit.is_sample && (
-          <SampleBar messageKey="detailNotice" dismissible className="mb-5" />
-        )}
-
         {/* Gallery */}
         <UnitGallery media={unit.media} title={title} unitId={unit.id} />
 
@@ -106,7 +98,6 @@ export default async function UnitDetailPage({
             {/* Title + location + rating */}
             <FadeUp>
             <header className="mb-6">
-              {unit.is_sample && <SampleBadge className="mb-3" />}
               <h1 className="text-[clamp(1.5rem,4vw,2.25rem)] font-medium tracking-[-0.035em] text-ink mb-2 leading-tight">
                 {title}
               </h1>
@@ -116,22 +107,16 @@ export default async function UnitDetailPage({
                     {locationParts.join(' · ')}
                   </p>
                 )}
-                {unit.is_sample ? (
-                  <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute">
-                    {tSample('new')}
-                  </span>
-                ) : (
-                  unit.rating !== null && (
-                    <div className="flex items-center gap-1 text-ink-soft text-sm">
-                      <BrandMark className="w-[12px] h-[12px]" />
-                      <span className="font-semibold tabular-nums">{unit.rating.toFixed(2)}</span>
-                      {unit.review_count !== null && (
-                        <span className="text-mute">
-                          · {unit.review_count} {t('reviews')}
-                        </span>
-                      )}
-                    </div>
-                  )
+                {unit.rating !== null && (
+                  <div className="flex items-center gap-1 text-ink-soft text-sm">
+                    <BrandMark className="w-[12px] h-[12px]" />
+                    <span className="font-semibold tabular-nums">{unit.rating.toFixed(2)}</span>
+                    {unit.review_count !== null && (
+                      <span className="text-mute">
+                        · {unit.review_count} {t('reviews')}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </header>
@@ -313,8 +298,8 @@ export default async function UnitDetailPage({
           <BookingCard
             price={unit.base_nightly_price}
             minNights={unit.min_nights}
-            rating={unit.is_sample ? null : unit.rating}
-            reviewCount={unit.is_sample ? null : unit.review_count}
+            rating={unit.rating}
+            reviewCount={unit.review_count}
             unitId={unit.id}
             unitTitle={title}
           />

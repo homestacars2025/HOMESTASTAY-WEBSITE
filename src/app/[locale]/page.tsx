@@ -1,4 +1,4 @@
-import { useTranslations } from 'next-intl';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { Header } from '@/components/home/Header';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
 import { CategoryChips } from '@/components/home/CategoryChips';
@@ -9,11 +9,24 @@ import { WhyHomesta } from '@/components/home/WhyHomesta';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { FadeUp } from '@/components/motion/FadeUp';
 import { MotionCard } from '@/components/motion/MotionCard';
-import { FEATURED_UNITS, TOP_RATED_UNITS } from '@/lib/placeholder-data';
+import { getRandomFeaturedUnits } from '@/lib/queries/stays';
 
-export default function HomePage() {
-  const tHero     = useTranslations('hero');
-  const tSections = useTranslations('sections');
+// Random real listings are picked per request — keep it dynamic so the rails
+// refresh for each visitor instead of freezing at build time.
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const [tHero, tSections, locale] = await Promise.all([
+    getTranslations('hero'),
+    getTranslations('sections'),
+    getLocale(),
+  ]);
+
+  // One fetch → two disjoint rails. getRandomFeaturedUnits returns up to 12
+  // shuffled real units; the first 6 feed "Featured", the next feed "More stays".
+  const pool = await getRandomFeaturedUnits(locale, 12);
+  const featured = pool.slice(0, 6);
+  const moreStays = pool.slice(6, 12);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -78,48 +91,54 @@ export default function HomePage() {
         <WhyHomesta />
 
         {/* ── Featured stays ───────────────────────────────────── */}
-        <FadeUp>
-          <section className="pb-12">
-            <h2 className="px-4 mb-5 text-[19px] font-medium tracking-[-0.025em] text-ink">
-              {tSections('featured')}
-            </h2>
-            {/* Horizontal scroll — cards peek off edge to signal more */}
-            <div
-              className="flex gap-4 overflow-x-auto px-4 pb-3 scrollbar-none"
-              style={{ scrollSnapType: 'x mandatory' }}
-            >
-              {FEATURED_UNITS.map((unit) => (
-                <MotionCard key={unit.id} className="flex-none w-[260px] md:w-[280px]">
-                  <UnitCard unit={unit} />
-                </MotionCard>
-              ))}
-              <div className="w-1 shrink-0" aria-hidden="true" />
-            </div>
-          </section>
-        </FadeUp>
+        {featured.length > 0 && (
+          <FadeUp>
+            <section className="pb-12">
+              <h2 className="px-4 mb-5 text-[19px] font-medium tracking-[-0.025em] text-ink">
+                {tSections('featured')}
+              </h2>
+              {/* Horizontal scroll — cards peek off edge to signal more */}
+              <div
+                className="flex gap-4 overflow-x-auto px-4 pb-3 scrollbar-none"
+                style={{ scrollSnapType: 'x mandatory' }}
+              >
+                {featured.map((unit) => (
+                  <MotionCard key={unit.id} className="flex-none w-[260px] md:w-[280px]">
+                    <UnitCard unit={unit} />
+                  </MotionCard>
+                ))}
+                <div className="w-1 shrink-0" aria-hidden="true" />
+              </div>
+            </section>
+          </FadeUp>
+        )}
 
         {/* ── How it works ─────────────────────────────────────── */}
         <HowItWorks />
 
-        {/* ── Top rated ────────────────────────────────────────── */}
-        <FadeUp>
-          <section className="pb-24">
-            <h2 className="px-4 mb-5 text-[19px] font-medium tracking-[-0.025em] text-ink">
-              {tSections('topRated')}
-            </h2>
-            <div
-              className="flex gap-4 overflow-x-auto px-4 pb-3 scrollbar-none"
-              style={{ scrollSnapType: 'x mandatory' }}
-            >
-              {TOP_RATED_UNITS.map((unit) => (
-                <MotionCard key={unit.id} className="flex-none w-[260px] md:w-[280px]">
-                  <UnitCard unit={unit} />
-                </MotionCard>
-              ))}
-              <div className="w-1 shrink-0" aria-hidden="true" />
-            </div>
-          </section>
-        </FadeUp>
+        {/* ── More stays ───────────────────────────────────────── */}
+        {/* Honest label: no reviews yet, so this rail is "more real listings",
+            not "top rated". Restore a genuine top-rated rail when reviews exist. */}
+        {moreStays.length > 0 && (
+          <FadeUp>
+            <section className="pb-24">
+              <h2 className="px-4 mb-5 text-[19px] font-medium tracking-[-0.025em] text-ink">
+                {tSections('moreStays')}
+              </h2>
+              <div
+                className="flex gap-4 overflow-x-auto px-4 pb-3 scrollbar-none"
+                style={{ scrollSnapType: 'x mandatory' }}
+              >
+                {moreStays.map((unit) => (
+                  <MotionCard key={unit.id} className="flex-none w-[260px] md:w-[280px]">
+                    <UnitCard unit={unit} />
+                  </MotionCard>
+                ))}
+                <div className="w-1 shrink-0" aria-hidden="true" />
+              </div>
+            </section>
+          </FadeUp>
+        )}
       </main>
     </div>
   );

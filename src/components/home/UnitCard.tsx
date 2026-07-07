@@ -3,7 +3,6 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { SaveButton } from '@/components/home/SaveButton';
-import { SampleBadge } from '@/components/shared/SampleBadge';
 import { Link } from '@/i18n/navigation';
 import type { UnitListing } from '@/lib/types/unit';
 
@@ -16,7 +15,6 @@ interface UnitCardProps {
 
 export function UnitCard({ unit, className }: UnitCardProps) {
   const t = useTranslations('card');
-  const tSample = useTranslations('sample');
 
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
   const title = unit.ad_title ?? unit.unit_name ?? '—';
@@ -38,9 +36,6 @@ export function UnitCard({ unit, className }: UnitCardProps) {
           ) : (
             <div className="absolute inset-0 bg-paper-warm" />
           )}
-          {unit.is_sample && (
-            <SampleBadge className="absolute top-3 start-3 z-10" />
-          )}
           <SaveButton unitId={unit.id} />
         </div>
 
@@ -51,17 +46,11 @@ export function UnitCard({ unit, className }: UnitCardProps) {
             <h3 className="text-sm font-semibold text-ink leading-snug line-clamp-1 flex-1">
               {title}
             </h3>
-            {unit.is_sample ? (
-              <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.08em] text-mute pt-0.5">
-                {tSample('new')}
-              </span>
-            ) : (
-              unit.rating !== null && (
-                <div className="flex items-center gap-0.5 shrink-0 text-ink-soft text-xs pt-0.5">
-                  <BrandMark className="w-[11px] h-[11px]" />
-                  <span className="tabular-nums">{unit.rating.toFixed(2)}</span>
-                </div>
-              )
+            {unit.rating !== null && (
+              <div className="flex items-center gap-0.5 shrink-0 text-ink-soft text-xs pt-0.5">
+                <BrandMark className="w-[11px] h-[11px]" />
+                <span className="tabular-nums">{unit.rating.toFixed(2)}</span>
+              </div>
             )}
           </div>
 

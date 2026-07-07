@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Unit types — mirrors the Supabase DB schema for guest-facing listing data.
-// Field names match DB column names exactly so a Supabase query can replace
-// the mock data with zero renaming.
+// Field names match DB column names exactly so a Supabase query maps in with
+// zero renaming (see src/lib/queries/stays.ts).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Exact values from unit_type_enum in the live DB. */
@@ -165,12 +165,6 @@ export interface UnitListing {
   // ── Derived at query time (reviews aggregate — null until reviews are built)
   rating: number | null;
   review_count: number | null;
-
-  // ── Pre-launch flag ───────────────────────────────────────────────────────
-  // True for demo/mock listings shown before launch. When real owner listings
-  // arrive this is false (DB default), so sample badges/banners disappear and
-  // social proof renders normally. Flip per-listing to graduate a sample.
-  is_sample: boolean;
 
   // ── Locale-aware content (resolved from unit_translations) ─────────────────
   // Language the ad_description text is actually in ('en'|'ar'|'tr'|'ru'), or

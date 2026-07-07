@@ -2,7 +2,6 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { ArrowRight } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { StaysGallery } from '@/components/stays/StaysGallery';
-import { SampleBar } from '@/components/shared/SampleBar';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnits } from '@/lib/queries/stays';
 
@@ -20,11 +19,9 @@ export default async function StaysPage() {
 
   // Live public listings from Supabase (server-side). The strict visibility
   // filter lives in getPublicUnits; more units appear automatically as hosts
-  // fill in ad_title. Real DB units carry is_sample = false, so sample
-  // badges/banners stay hidden — the flag is retained for any future preview mode.
-  // Card titles are resolved for the visitor's locale (unit_translations).
+  // fill in ad_title. Card titles are resolved for the visitor's locale
+  // (unit_translations).
   const units = await getPublicUnits(locale);
-  const hasSamples = units.some((u) => u.is_sample);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -34,12 +31,6 @@ export default async function StaysPage() {
         <h1 className="px-4 mb-6 text-[clamp(1.75rem,5vw,2.5rem)] font-medium tracking-[-0.035em] leading-tight text-ink">
           {t('title')}
         </h1>
-
-        {hasSamples && (
-          <div className="px-4 mb-6">
-            <SampleBar messageKey="indexBanner" />
-          </div>
-        )}
 
         {units.length === 0 ? (
           <div className="px-4 py-20 text-center max-w-md mx-auto">
