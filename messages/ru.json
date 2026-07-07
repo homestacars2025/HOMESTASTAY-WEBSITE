@@ -272,6 +272,7 @@
       "nights": "{count, plural, one {# ночь} few {# ночи} many {# ночей} other {# ночи}}"
     },
     "about": "Об этом месте",
+    "aiTranslatedNotice": "Это описание переведено автоматически и может содержать незначительные ошибки.",
     "reviews": "отзывов",
     "unitTypes": {
       "apartment": "Квартира",

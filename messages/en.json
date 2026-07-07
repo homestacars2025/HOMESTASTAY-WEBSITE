@@ -272,6 +272,7 @@
       "nights": "{count, plural, one {# night} other {# nights}}"
     },
     "about": "About this place",
+    "aiTranslatedNotice": "This description was automatically translated and may contain minor errors.",
     "reviews": "reviews",
     "unitTypes": {
       "apartment": "Apartment",

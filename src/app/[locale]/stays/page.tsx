@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { ArrowRight } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { StaysGallery } from '@/components/stays/StaysGallery';
@@ -16,13 +16,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 export default async function StaysPage() {
-  const t = await getTranslations('pages.stays');
+  const [t, locale] = await Promise.all([getTranslations('pages.stays'), getLocale()]);
 
   // Live public listings from Supabase (server-side). The strict visibility
   // filter lives in getPublicUnits; more units appear automatically as hosts
   // fill in ad_title. Real DB units carry is_sample = false, so sample
   // badges/banners stay hidden — the flag is retained for any future preview mode.
-  const units = await getPublicUnits();
+  // Card titles are resolved for the visitor's locale (unit_translations).
+  const units = await getPublicUnits(locale);
   const hasSamples = units.some((u) => u.is_sample);
 
   return (

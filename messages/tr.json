@@ -272,6 +272,7 @@
       "nights": "{count, plural, other {# gece}}"
     },
     "about": "Bu yer hakkında",
+    "aiTranslatedNotice": "Bu açıklama otomatik olarak çevrildi ve küçük hatalar içerebilir.",
     "reviews": "değerlendirme",
     "unitTypes": {
       "apartment": "Daire",

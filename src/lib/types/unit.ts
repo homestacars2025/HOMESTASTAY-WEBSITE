@@ -171,6 +171,16 @@ export interface UnitListing {
   // arrive this is false (DB default), so sample badges/banners disappear and
   // social proof renders normally. Flip per-listing to graduate a sample.
   is_sample: boolean;
+
+  // ── Locale-aware content (resolved from unit_translations) ─────────────────
+  // Language the ad_description text is actually in ('en'|'ar'|'tr'|'ru'), or
+  // null when it came from the legacy unit_info fallback. Drives text direction
+  // (Arabic → rtl) independently of the visitor's UI locale.
+  content_language: string | null;
+  // True when a non-Turkish machine translation is being shown to the visitor,
+  // so the UI can display the "auto-translated" disclaimer. False for Turkish
+  // (the source) and for legacy/fallback content.
+  is_machine_translated: boolean;
 }
 
 // ── UI filter categories ─────────────────────────────────────────────────────

@@ -40,7 +40,14 @@ const LISTING_SELECT = [
   'unit_rules(allow_parties,allow_pets,allow_smoking,quiet_hours_enabled,quiet_hours_from,quiet_hours_to,allow_unregistered_guests,family_friendly,id_required,additional_rules)',
   'unit_media(id,unit_id,media_type,file_path,public_url,is_cover,sort_order)',
   'properties!inner(name,property_type,cover_photo_url,geo_cities:city_id(name),geo_districts:district_id(name))',
+  // Locale-aware marketing copy. All non-Turkish rows are AI translations of the
+  // Turkish source. Resolved per visitor locale in mapRow (see resolveTranslation).
+  'unit_translations(language_code,ad_title,ad_description)',
 ].join(',');
+
+// Turkish is the source language every listing is authored in; all fallbacks
+// end here before dropping to the legacy unit_info free-text.
+const SOURCE_LOCALE = 'tr';
 
 // Raw shape returned by Supabase for the select above.
 // reason: PostgREST embeds are loosely typed; a narrow local shape is clearer than fighting generics.
@@ -96,13 +103,75 @@ function resolveMedia(row: RawRow): UnitMediaItem[] {
   return [];
 }
 
+type TranslationRow = {
+  language_code: string;
+  ad_title: string | null;
+  ad_description: string | null;
+};
+
+type ResolvedContent = {
+  ad_title: string | null;
+  ad_description: string | null;
+  content_language: string | null;
+  is_machine_translated: boolean;
+};
+
+/**
+ * Resolve marketing copy for the visitor's locale with a 3-step fallback chain:
+ *   1. unit_translations row matching the visitor locale
+ *   2. Turkish (source) row
+ *   3. legacy unit_info free-text
+ * Title and description fall back independently (field-level). content_language
+ * tracks the language the description text is actually in (for text direction);
+ * is_machine_translated is true only when a non-Turkish translation is served.
+ */
+function resolveTranslation(
+  translations: TranslationRow[] | null | undefined,
+  locale: string,
+  legacyTitle: string | null,
+  legacyDescription: string | null,
+): ResolvedContent {
+  const rows = Array.isArray(translations) ? translations : [];
+  const match = rows.find((t) => t.language_code === locale) ?? null;
+  const source = rows.find((t) => t.language_code === SOURCE_LOCALE) ?? null;
+
+  const ad_title = match?.ad_title || source?.ad_title || legacyTitle || null;
+
+  let ad_description: string | null;
+  let content_language: string | null;
+  if (match?.ad_description) {
+    ad_description = match.ad_description;
+    content_language = match.language_code;
+  } else if (source?.ad_description) {
+    ad_description = source.ad_description;
+    content_language = SOURCE_LOCALE;
+  } else {
+    // Legacy unit_info text is authored in Turkish (the source language).
+    ad_description = legacyDescription ?? null;
+    content_language = legacyDescription ? SOURCE_LOCALE : null;
+  }
+
+  const is_machine_translated =
+    locale !== SOURCE_LOCALE && !!match && (!!match.ad_title || !!match.ad_description);
+
+  return { ad_title, ad_description, content_language, is_machine_translated };
+}
+
 /** Map one raw DB row into the guest-facing UnitListing shape the UI consumes. */
-function mapRow(row: RawRow, policy: UnitCancellationPolicy | null): UnitListing {
+function mapRow(row: RawRow, policy: UnitCancellationPolicy | null, locale: string): UnitListing {
   const info = one<RawRow>(row.unit_info);
   const specsRow = one<RawRow>(row.unit_specifications);
   const amenitiesRow = one<RawRow>(row.unit_amenities);
   const rulesRow = one<RawRow>(row.unit_rules);
   const props = row.properties ?? null;
+
+  // Locale-aware title/description (unit_translations → Turkish → legacy unit_info).
+  const content = resolveTranslation(
+    row.unit_translations,
+    locale,
+    info?.ad_title ?? null,
+    info?.ad_description ?? null,
+  );
 
   // Location: prefer the canonical geo lookup (via property FKs); fall back to
   // the free-text values a host typed on unit_info.
@@ -172,8 +241,8 @@ function mapRow(row: RawRow, policy: UnitCancellationPolicy | null): UnitListing
       typeof row.base_nightly_price === 'number' ? row.base_nightly_price : null,
     currency: 'USD',
 
-    ad_title: info?.ad_title ?? null,
-    ad_description: info?.ad_description ?? null,
+    ad_title: content.ad_title,
+    ad_description: content.ad_description,
     country: null, // not modelled on unit_info in the live Stay schema
     city: geoCity ?? info?.city ?? null,
     region: geoDistrict ?? info?.region ?? null,
@@ -193,17 +262,22 @@ function mapRow(row: RawRow, policy: UnitCancellationPolicy | null): UnitListing
 
     // Real DB listings are never pre-launch samples — badges/banners stay hidden.
     is_sample: false,
+
+    content_language: content.content_language,
+    is_machine_translated: content.is_machine_translated,
   };
 }
 
 /**
- * Fetch cancellation policies for a set of ids in one query and index them by id.
- * units.cancellation_policy_id has no FK constraint, so PostgREST can't embed it —
- * we resolve it with a small companion query instead.
+ * Fetch cancellation policies for a set of ids in one query and index them by id,
+ * resolving name/description for the visitor locale (locale → Turkish → legacy
+ * base row). units.cancellation_policy_id has no FK constraint, so PostgREST
+ * can't embed it — we resolve it with a small companion query instead.
  */
 async function fetchPolicies(
   supabase: Awaited<ReturnType<typeof createClient>>,
   ids: string[],
+  locale: string,
 ): Promise<Map<string, UnitCancellationPolicy>> {
   const map = new Map<string, UnitCancellationPolicy>();
   const unique = [...new Set(ids.filter(Boolean))];
@@ -211,7 +285,7 @@ async function fetchPolicies(
 
   const { data, error } = await supabase
     .from('unit_cancellation_policy')
-    .select('id, name, description')
+    .select('id, name, description, cancellation_policy_translations(language_code, name, description)')
     .in('id', unique);
 
   if (error) {
@@ -224,11 +298,16 @@ async function fetchPolicies(
     return map;
   }
 
-  for (const p of data ?? []) {
+  for (const p of (data ?? []) as RawRow[]) {
+    const trans: RawRow[] = Array.isArray(p.cancellation_policy_translations)
+      ? p.cancellation_policy_translations
+      : [];
+    const match = trans.find((t) => t.language_code === locale) ?? null;
+    const source = trans.find((t) => t.language_code === SOURCE_LOCALE) ?? null;
     map.set(p.id as string, {
       id: p.id as string,
-      name: (p.name as string) ?? '',
-      description: (p.description as string) ?? '',
+      name: match?.name || source?.name || p.name || '',
+      description: match?.description || source?.description || p.description || '',
     });
   }
   return map;
@@ -241,10 +320,11 @@ function hasAdTitle(row: RawRow): boolean {
 }
 
 /**
- * All publicly visible units for the /stays index, mapped to UnitListing.
+ * All publicly visible units for the /stays index, mapped to UnitListing with
+ * title/description resolved for `locale` (defaults to Turkish, the source).
  * Returns [] on error (logged) — the page then renders its empty state.
  */
-export async function getPublicUnits(): Promise<UnitListing[]> {
+export async function getPublicUnits(locale: string = SOURCE_LOCALE): Promise<UnitListing[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -271,9 +351,10 @@ export async function getPublicUnits(): Promise<UnitListing[]> {
   const policies = await fetchPolicies(
     supabase,
     rows.map((r) => r.cancellation_policy_id),
+    locale,
   );
 
-  return rows.map((r) => mapRow(r, policies.get(r.cancellation_policy_id) ?? null));
+  return rows.map((r) => mapRow(r, policies.get(r.cancellation_policy_id) ?? null, locale));
 }
 
 /**
@@ -283,7 +364,10 @@ export async function getPublicUnits(): Promise<UnitListing[]> {
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function getPublicUnitById(id: string): Promise<UnitListing | null> {
+export async function getPublicUnitById(
+  id: string,
+  locale: string = SOURCE_LOCALE,
+): Promise<UnitListing | null> {
   // Unit ids are UUIDs; a malformed slug is simply "not found" — skip the query
   // (avoids a Postgres 22P02 error on every bogus URL).
   if (!UUID_RE.test(id)) return null;
@@ -314,6 +398,6 @@ export async function getPublicUnitById(id: string): Promise<UnitListing | null>
   const row = data as RawRow | null;
   if (!row || !hasAdTitle(row)) return null;
 
-  const policies = await fetchPolicies(supabase, [row.cancellation_policy_id]);
-  return mapRow(row, policies.get(row.cancellation_policy_id) ?? null);
+  const policies = await fetchPolicies(supabase, [row.cancellation_policy_id], locale);
+  return mapRow(row, policies.get(row.cancellation_policy_id) ?? null, locale);
 }

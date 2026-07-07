@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Languages } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
 import { BookingCard } from '@/components/unit/BookingCard';
@@ -25,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
-  const unit = await getPublicUnitById(id);
+  const unit = await getPublicUnitById(id, locale);
   if (!unit) return { title: 'Not found — Homesta Stay' };
   const t = await getTranslations({ locale, namespace: 'unit' });
   return {
@@ -45,7 +45,8 @@ export default async function UnitDetailPage({
 
   // Applies the same strict public-visibility filter as the index; a link to a
   // non-public or non-existent unit resolves to a real 404 (correct for SEO).
-  const unit = await getPublicUnitById(id);
+  // Title/description are resolved for the visitor's locale (unit_translations).
+  const unit = await getPublicUnitById(id, locale);
   if (!unit) notFound();
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -185,9 +186,22 @@ export default async function UnitDetailPage({
                   <h2 className="text-base font-medium text-ink mb-4 tracking-[-0.015em]">
                     {t('about')}
                   </h2>
-                  <p className="text-ink-soft leading-relaxed">
+                  {/* dir follows the language of the text itself (Arabic → rtl),
+                      independent of the UI locale — matters when the description
+                      falls back to Turkish under an Arabic UI. */}
+                  <p
+                    dir={unit.content_language === 'ar' ? 'rtl' : 'ltr'}
+                    className="text-ink-soft leading-relaxed whitespace-pre-line"
+                  >
                     {unit.ad_description}
                   </p>
+                  {/* Machine-translation disclaimer — only for non-Turkish AI copy */}
+                  {unit.is_machine_translated && (
+                    <p className="mt-3 flex items-center gap-1.5 text-xs italic text-mute">
+                      <Languages className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      {t('aiTranslatedNotice')}
+                    </p>
+                  )}
                 </section>
                 </FadeUp>
                 <hr className="border-rule mb-6" />
