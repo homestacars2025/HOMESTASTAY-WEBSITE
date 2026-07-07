@@ -26,6 +26,11 @@ export default function supabaseImageLoader({ src, width, quality }: LoaderProps
   const url = new URL(rewritten);
   url.searchParams.set('width', String(width));
   url.searchParams.set('quality', String(quality ?? 75));
+  // Without this, Supabase crops a full-height strip to the target width
+  // (verified: a 1600x1200 source came back 640x1200, not 640x480). 'contain'
+  // scales proportionally so the whole image survives; the CSS object-fit on
+  // the card/gallery layouts handles the final display crop at the right zoom.
+  url.searchParams.set('resize', 'contain');
   // No format param — Supabase auto-negotiates WebP for supporting browsers.
   return url.toString();
 }
