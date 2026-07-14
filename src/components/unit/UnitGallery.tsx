@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import Image from 'next/image';
 import { SaveButton } from '@/components/home/SaveButton';
+import { SmartImage } from '@/components/media/SmartImage';
 import type { UnitMediaItem } from '@/lib/types/unit';
 
 interface UnitGalleryProps {
@@ -50,7 +50,7 @@ export function UnitGallery({ media, title, unitId }: UnitGalleryProps) {
               className="flex-none w-full relative aspect-[4/3] bg-paper-warm"
               style={{ scrollSnapAlign: 'start' }}
             >
-              <Image
+              <SmartImage
                 src={item.public_url}
                 alt={`${title} — ${i + 1}`}
                 fill
@@ -92,7 +92,7 @@ export function UnitGallery({ media, title, unitId }: UnitGalleryProps) {
         {/* Large cover — spans full height */}
         {cover && (
           <div className="relative h-full overflow-hidden bg-paper-warm">
-            <Image
+            <SmartImage
               src={cover.public_url}
               alt={title}
               fill
@@ -111,7 +111,7 @@ export function UnitGallery({ media, title, unitId }: UnitGalleryProps) {
         <div className="grid grid-cols-2 grid-rows-2 gap-1.5 h-full">
           {thumbs.map((item, i) => (
             <div key={item.id} className="relative h-full overflow-hidden bg-paper-warm">
-              <Image
+              <SmartImage
                 src={item.public_url}
                 alt={`${title} — ${i + 2}`}
                 fill

@@ -1,5 +1,5 @@
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
+import { SmartImage } from '@/components/media/SmartImage';
 import { cn } from '@/lib/utils';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { SaveButton } from '@/components/home/SaveButton';
@@ -26,7 +26,7 @@ export function UnitCard({ unit, className }: UnitCardProps) {
         {/* Image */}
         <div className="relative rounded-[14px] overflow-hidden aspect-[4/3] mb-3">
           {cover ? (
-            <Image
+            <SmartImage
               src={cover.public_url}
               alt={title}
               fill
