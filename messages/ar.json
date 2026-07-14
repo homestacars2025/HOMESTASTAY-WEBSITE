@@ -108,7 +108,16 @@
       "faq5Q": "ما هو هوميستا ستاي؟",
       "faq5A": "هوميستا ستاي منصة إيجار قصيرة الأمد تربط الضيوف بعقارات مميزة في إسطنبول، تركيا.",
       "listProperty": "هل تريد إدراج عقارك؟",
-      "browseStays": "تصفح جميع الإقامات"
+      "browseStays": "تصفح جميع الإقامات",
+      "companyTitle": "معلومات الشركة",
+      "companyNameLabel": "اسم الشركة",
+      "taxOfficeLabel": "دائرة الضرائب",
+      "taxNoLabel": "الرقم الضريبي",
+      "mersisLabel": "رقم MERSİS",
+      "companyAddressLabel": "العنوان",
+      "kepLabel": "البريد المسجّل (KEP)",
+      "phoneLabel": "الهاتف",
+      "companyEmailLabel": "البريد الإلكتروني"
     },
     "host": {
       "title": "أدرج عقارك",
@@ -472,6 +481,7 @@
     "emailLabel": "راسلنا",
     "socialInstagram": "Homesta Stay على إنستغرام",
     "socialFacebook": "Homesta Stay على فيسبوك",
-    "socialWhatsapp": "تواصل معنا عبر واتساب"
+    "socialWhatsapp": "تواصل معنا عبر واتساب",
+    "legalInfo": "معلومات الشركة"
   }
 }

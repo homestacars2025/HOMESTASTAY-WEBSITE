@@ -108,7 +108,16 @@
       "faq5Q": "What is Homesta Stay?",
       "faq5A": "Homesta Stay is a short-term rental platform connecting guests with quality properties in Istanbul, Turkey.",
       "listProperty": "Want to list your property?",
-      "browseStays": "Browse all stays"
+      "browseStays": "Browse all stays",
+      "companyTitle": "Company Information",
+      "companyNameLabel": "Company Name",
+      "taxOfficeLabel": "Tax Office",
+      "taxNoLabel": "Tax No",
+      "mersisLabel": "MERSIS No",
+      "companyAddressLabel": "Address",
+      "kepLabel": "KEP (registered email)",
+      "phoneLabel": "Phone",
+      "companyEmailLabel": "Email"
     },
     "host": {
       "title": "List your property",
@@ -472,6 +481,7 @@
     "emailLabel": "Email us",
     "socialInstagram": "Homesta Stay on Instagram",
     "socialFacebook": "Homesta Stay on Facebook",
-    "socialWhatsapp": "Chat with us on WhatsApp"
+    "socialWhatsapp": "Chat with us on WhatsApp",
+    "legalInfo": "Company Information"
   }
 }

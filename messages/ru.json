@@ -108,7 +108,16 @@
       "faq5Q": "Что такое Homesta Stay?",
       "faq5A": "Homesta Stay — платформа краткосрочной аренды, связывающая гостей с качественными объектами в Стамбуле, Турция.",
       "listProperty": "Хотите разместить свой объект?",
-      "browseStays": "Просмотреть все варианты"
+      "browseStays": "Просмотреть все варианты",
+      "companyTitle": "Информация о компании",
+      "companyNameLabel": "Название компании",
+      "taxOfficeLabel": "Налоговая инспекция",
+      "taxNoLabel": "Налоговый номер",
+      "mersisLabel": "Номер MERSİS",
+      "companyAddressLabel": "Адрес",
+      "kepLabel": "KEP (зарег. почта)",
+      "phoneLabel": "Телефон",
+      "companyEmailLabel": "Эл. почта"
     },
     "host": {
       "title": "Разместить объект",
@@ -472,6 +481,7 @@
     "emailLabel": "Написать нам",
     "socialInstagram": "Homesta Stay в Instagram",
     "socialFacebook": "Homesta Stay во Facebook",
-    "socialWhatsapp": "Написать нам в WhatsApp"
+    "socialWhatsapp": "Написать нам в WhatsApp",
+    "legalInfo": "Информация о компании"
   }
 }

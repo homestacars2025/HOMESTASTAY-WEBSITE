@@ -102,6 +102,18 @@ export function SiteFooter() {
           </div>
 
         </div>
+
+        {/* Company / legal registration info */}
+        <div className="mt-12 pt-8 border-t border-hairline-dark">
+          <ColHead>{t('legalInfo')}</ColHead>
+          <address className="not-italic mt-3 text-[12px] leading-relaxed max-w-3xl space-y-0.5">
+            <p className="text-white/70">
+              HOMESTA GRUP DANIŞMANLIK HİZMETLERİ LİMİTED ŞİRKETİ
+            </p>
+            <p>Vergi Dairesi: BAŞAKŞEHİR</p>
+            <p>KAYABAŞI MAH. GAZİ YAŞARGİL CAD. T2 BLOK NO: 2 Y BAŞAKŞEHİR / İSTANBUL</p>
+          </address>
+        </div>
       </div>
     </footer>
   );

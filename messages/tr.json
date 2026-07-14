@@ -108,7 +108,16 @@
       "faq5Q": "Homesta Stay nedir?",
       "faq5A": "Homesta Stay, İstanbul'daki kaliteli mülkleri misafirlerle buluşturan kısa süreli kiralama platformudur.",
       "listProperty": "Mülkünüzü listelemek ister misiniz?",
-      "browseStays": "Tüm konaklamalara göz at"
+      "browseStays": "Tüm konaklamalara göz at",
+      "companyTitle": "Şirket Bilgileri",
+      "companyNameLabel": "Şirket Adı",
+      "taxOfficeLabel": "Vergi Dairesi",
+      "taxNoLabel": "Vergi No",
+      "mersisLabel": "MERSİS No",
+      "companyAddressLabel": "Adres",
+      "kepLabel": "KEP",
+      "phoneLabel": "Tel",
+      "companyEmailLabel": "E-posta"
     },
     "host": {
       "title": "Mülkünüzü listeleyin",
@@ -472,6 +481,7 @@
     "emailLabel": "E-posta gönderin",
     "socialInstagram": "Instagram'da Homesta Stay",
     "socialFacebook": "Facebook'ta Homesta Stay",
-    "socialWhatsapp": "WhatsApp'tan bize ulaşın"
+    "socialWhatsapp": "WhatsApp'tan bize ulaşın",
+    "legalInfo": "Şirket Bilgileri"
   }
 }

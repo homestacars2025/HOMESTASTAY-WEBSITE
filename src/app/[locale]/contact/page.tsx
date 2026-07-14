@@ -59,6 +59,20 @@ export default async function ContactPage({
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'pages.contact' });
 
+  // Company (legal) information — Turkish registration facts, same across locales.
+  // reason: legal identifiers are not translatable content, only the labels are.
+  const company: { label: string; value: string; href?: string }[] = [
+    { label: t('companyNameLabel'), value: 'HOMESTA GRUP DANIŞMANLIK HİZMETLERİ LİMİTED ŞİRKETİ' },
+    { label: t('taxOfficeLabel'), value: 'BAŞAKŞEHİR' },
+    { label: t('taxNoLabel'), value: '4631515171' },
+    {
+      label: t('companyAddressLabel'),
+      value: 'KAYABAŞI MAH. GAZİ YAŞARGİL CAD. T2 BLOK NO: 2 Y BAŞAKŞEHİR / İSTANBUL',
+    },
+    { label: t('phoneLabel'), value: '+90 542 843 40 91', href: 'tel:+905428434091' },
+    { label: t('companyEmailLabel'), value: 'info@homestastay.com', href: 'mailto:info@homestastay.com' },
+  ];
+
   // FAQ data for both render and JSON-LD
   const faqs = [
     { q: t('faq1Q'), a: t('faq1A') },
@@ -154,6 +168,45 @@ export default async function ContactPage({
                 <div key={i} className="border-b border-rule py-5">
                   <dt className="text-sm font-medium text-ink mb-1.5">{q}</dt>
                   <dd className="text-sm text-ink-soft leading-relaxed">{a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </FadeUp>
+
+        {/* ── Company information (legal) ────────────────────────────────────── */}
+        <FadeUp>
+          <section
+            className="max-w-3xl mx-auto px-4 pb-16"
+            aria-labelledby="company-heading"
+          >
+            <h2
+              id="company-heading"
+              className="text-[1.1rem] font-medium text-ink tracking-[-0.02em] mb-2"
+            >
+              {t('companyTitle')}
+            </h2>
+            <dl className="mt-2">
+              {company.map(({ label, value, href }) => (
+                <div
+                  key={label}
+                  className="flex flex-col gap-0.5 border-b border-rule py-4 sm:flex-row sm:gap-4"
+                >
+                  <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute sm:w-40 sm:shrink-0 sm:pt-0.5">
+                    {label}
+                  </dt>
+                  <dd className="text-sm text-ink-soft leading-relaxed">
+                    {href ? (
+                      <a
+                        href={href}
+                        className="hover:text-ink transition-colors duration-[240ms]"
+                      >
+                        {value}
+                      </a>
+                    ) : (
+                      value
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>
