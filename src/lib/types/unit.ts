@@ -146,6 +146,8 @@ export interface UnitListing {
   municipality: string | null;
   full_address: string | null;
   google_maps_url: string | null;
+  latitude: number | null;       // unit_info.latitude — WGS84 decimal degrees
+  longitude: number | null;      // unit_info.longitude — WGS84 decimal degrees
 
   // ── unit_specifications table (one-to-one) ───────────────────────────────
   specifications: UnitSpecifications;

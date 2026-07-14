@@ -34,7 +34,7 @@ import type {
 // so the mapper reads element [0]. properties resolves to an object (units.property_id FK).
 const LISTING_SELECT = [
   'id,unit_type,unit_name,status,unit_style,business_model,min_nights,base_nightly_price,currency,cancellation_policy_id',
-  'unit_info!inner(ad_title,ad_description,city,region,municipality,full_address,google_maps_url)',
+  'unit_info!inner(ad_title,ad_description,city,region,municipality,full_address,google_maps_url,latitude,longitude)',
   'unit_specifications(bedrooms,beds,bathrooms,max_guests,size_sqm,floor,balconies,kitchens,distance_to_mall,distance_to_transport)',
   'unit_amenities(tv,wifi,air_conditioning,heating,kitchen,dishwasher,washing_machine,hot_water,hair_dryer,iron,extra_bed,parking,elevator,pool,gym,self_check_in)',
   'unit_rules(allow_parties,allow_pets,allow_smoking,quiet_hours_enabled,quiet_hours_from,quiet_hours_to,allow_unregistered_guests,family_friendly,id_required,additional_rules)',
@@ -249,6 +249,8 @@ function mapRow(row: RawRow, policy: UnitCancellationPolicy | null, locale: stri
     municipality: info?.municipality ?? null,
     full_address: info?.full_address ?? null,
     google_maps_url: info?.google_maps_url ?? null,
+    latitude: typeof info?.latitude === 'number' ? info.latitude : null,
+    longitude: typeof info?.longitude === 'number' ? info.longitude : null,
 
     specifications,
     amenities,

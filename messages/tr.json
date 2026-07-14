@@ -355,7 +355,11 @@
     "cancellationTitle": "İptal politikası",
     "locationTitle": "Konum",
     "address": "Adres",
-    "viewOnMaps": "Google Haritalar'da görüntüle"
+    "viewOnMaps": "Google Haritalar'da görüntüle",
+    "whereYoullBe": "Konaklayacağınız yer",
+    "exactLocationNote": "Tam konum, rezervasyon onayından sonra paylaşılır.",
+    "mapStreet": "Sokak",
+    "mapSatellite": "Uydu"
   },
   "auth": {
     "signIn": {

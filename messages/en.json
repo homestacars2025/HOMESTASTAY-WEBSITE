@@ -355,7 +355,11 @@
     "cancellationTitle": "Cancellation policy",
     "locationTitle": "Location",
     "address": "Address",
-    "viewOnMaps": "View on Google Maps"
+    "viewOnMaps": "View on Google Maps",
+    "whereYoullBe": "Where you'll be",
+    "exactLocationNote": "Exact location provided after booking confirmation.",
+    "mapStreet": "Street",
+    "mapSatellite": "Satellite"
   },
   "auth": {
     "signIn": {

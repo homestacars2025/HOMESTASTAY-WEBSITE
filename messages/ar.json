@@ -355,7 +355,11 @@
     "cancellationTitle": "سياسة الإلغاء",
     "locationTitle": "الموقع",
     "address": "العنوان",
-    "viewOnMaps": "عرض على خرائط Google"
+    "viewOnMaps": "عرض على خرائط Google",
+    "whereYoullBe": "أين ستقيم",
+    "exactLocationNote": "يتم توفير الموقع الدقيق بعد تأكيد الحجز.",
+    "mapStreet": "الخريطة",
+    "mapSatellite": "القمر الصناعي"
   },
   "auth": {
     "signIn": {

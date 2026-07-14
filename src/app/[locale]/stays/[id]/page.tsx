@@ -9,6 +9,7 @@ import { UnitAmenitiesSection } from '@/components/unit/UnitAmenitiesSection';
 import { UnitRulesSection } from '@/components/unit/UnitRulesSection';
 import { UnitCancellationSection } from '@/components/unit/UnitCancellationSection';
 import { UnitLocationSection } from '@/components/unit/UnitLocationSection';
+import { UnitMapSection } from '@/components/unit/UnitMapSection';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnitById } from '@/lib/queries/stays';
@@ -291,6 +292,26 @@ export default async function UnitDetailPage({
                 viewOnMaps:    t('viewOnMaps'),
               }}
             />
+            </FadeUp>
+
+            {/* ── 7. WHERE YOU'LL BE (interactive map) ─────────────────────── */}
+            {/* Renders only when the unit has coordinates; hidden otherwise. */}
+            <FadeUp>
+            <div className="mt-6">
+              <UnitMapSection
+                latitude={unit.latitude}
+                longitude={unit.longitude}
+                city={unit.city}
+                country={unit.country}
+                title={title}
+                labels={{
+                  whereYoullBe:      t('whereYoullBe'),
+                  exactLocationNote: t('exactLocationNote'),
+                  street:            t('mapStreet'),
+                  satellite:         t('mapSatellite'),
+                }}
+              />
+            </div>
             </FadeUp>
           </div>
 
