@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Map, { Marker } from 'react-map-gl/mapbox';
+import { BrandMark } from '@/components/brand/BrandMark';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface UnitMapProps {
@@ -44,14 +45,15 @@ export default function UnitMap({ latitude, longitude, title, token, labels }: U
       touchPitch={false}
     >
       <Marker latitude={latitude} longitude={longitude} anchor="center">
-        {/* Dark circle with a house glyph — not Mapbox's default teardrop pin.
-            #0E0E10 is --ink, the brand's dark surface color. */}
+        {/* White disc carrying the Homesta arch mark — not Mapbox's default
+            teardrop pin. BrandMark is inline SVG inheriting currentColor, so
+            the mark stays crisp at any zoom and costs no extra request. */}
         <div
           role="img"
           aria-label={title}
-          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-ink text-[17px] leading-none shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white p-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
         >
-          🏠
+          <BrandMark className="h-full w-full text-stay" />
         </div>
       </Marker>
 
