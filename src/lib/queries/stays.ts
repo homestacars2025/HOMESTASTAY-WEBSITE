@@ -1,5 +1,6 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
+import { approximateCoords } from '@/lib/geo/approximate';
 import type {
   UnitListing,
   UnitMediaItem,
@@ -33,8 +34,11 @@ import type {
 // PostgREST as single-element arrays (no unique constraint on their unit_id FK),
 // so the mapper reads element [0]. properties resolves to an object (units.property_id FK).
 const LISTING_SELECT = [
-  'id,unit_type,unit_name,status,unit_style,business_model,min_nights,base_nightly_price,currency,cancellation_policy_id',
-  'unit_info!inner(ad_title,ad_description,city,region,municipality,full_address,google_maps_url,latitude,longitude)',
+  'id,slug,unit_type,unit_name,status,unit_style,business_model,min_nights,base_nightly_price,currency,cancellation_policy_id',
+  // full_address and google_maps_url are deliberately not selected: both pin the
+  // exact property, and anything selected here reaches the browser in the RSC
+  // payload. Public surfaces get the blurred point from approximateCoords only.
+  'unit_info!inner(ad_title,ad_description,city,region,municipality,latitude,longitude)',
   'unit_specifications(bedrooms,beds,bathrooms,max_guests,size_sqm,floor,balconies,kitchens,distance_to_mall,distance_to_transport)',
   'unit_amenities(tv,wifi,air_conditioning,heating,kitchen,dishwasher,washing_machine,hot_water,hair_dryer,iron,extra_bed,parking,elevator,pool,gym,self_check_in)',
   'unit_rules(allow_parties,allow_pets,allow_smoking,quiet_hours_enabled,quiet_hours_from,quiet_hours_to,allow_unregistered_guests,family_friendly,id_required,additional_rules)',
@@ -233,6 +237,7 @@ function mapRow(row: RawRow, policy: UnitCancellationPolicy | null, locale: stri
     id: row.id,
     unit_type: (row.unit_type ?? 'other') as UnitTypeEnum,
     unit_name: row.unit_name ?? null,
+    slug: row.slug ?? null,
     status: row.status,
     unit_style: (row.unit_style ?? null) as UnitStyleEnum | null,
     business_model: (row.business_model ?? null) as BusinessModelEnum | null,
@@ -247,10 +252,13 @@ function mapRow(row: RawRow, policy: UnitCancellationPolicy | null, locale: stri
     city: geoCity ?? info?.city ?? null,
     region: geoDistrict ?? info?.region ?? null,
     municipality: info?.municipality ?? null,
-    full_address: info?.full_address ?? null,
-    google_maps_url: info?.google_maps_url ?? null,
-    latitude: typeof info?.latitude === 'number' ? info.latitude : null,
-    longitude: typeof info?.longitude === 'number' ? info.longitude : null,
+    // Blurred here, at the single point where DB rows become public listings, so
+    // no caller can accidentally publish the real address.
+    ...approximateCoords(
+      row.id,
+      typeof info?.latitude === 'number' ? info.latitude : null,
+      typeof info?.longitude === 'number' ? info.longitude : null,
+    ),
 
     specifications,
     amenities,
@@ -357,26 +365,28 @@ export async function getPublicUnits(locale: string = SOURCE_LOCALE): Promise<Un
 }
 
 /**
- * A single publicly visible unit for /stays/[id]. Applies the same strict
+ * A single publicly visible unit for /stays/[slug]. Applies the same strict
  * visibility filter, so direct links to non-public units resolve to null (404).
  * Returns null when not found or on error (logged).
+ *
+ * Accepts a slug OR a bare unit id: every offer link the sales team has already
+ * sent over WhatsApp points at /stays/{uuid}, and those messages can't be
+ * recalled. Slugs are never UUID-shaped, so which column to match is unambiguous.
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function getPublicUnitById(
-  id: string,
+export async function getPublicUnitBySlug(
+  slugOrId: string,
   locale: string = SOURCE_LOCALE,
 ): Promise<UnitListing | null> {
-  // Unit ids are UUIDs; a malformed slug is simply "not found" — skip the query
-  // (avoids a Postgres 22P02 error on every bogus URL).
-  if (!UUID_RE.test(id)) return null;
+  const column = UUID_RE.test(slugOrId) ? 'id' : 'slug';
 
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('units')
     .select(LISTING_SELECT)
-    .eq('id', id)
+    .eq(column, slugOrId)
     .eq('status', 'available')
     .is('archived_at', null)
     .not('unit_info.ad_title', 'is', null)
@@ -384,8 +394,8 @@ export async function getPublicUnitById(
     .maybeSingle();
 
   if (error) {
-    console.error('[getPublicUnitById]', {
-      id,
+    console.error('[getPublicUnitBySlug]', {
+      slugOrId,
       message: error.message,
       code: error.code,
       details: error.details,

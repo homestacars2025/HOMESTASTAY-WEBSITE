@@ -7,6 +7,10 @@ import type {
   GeoJSONSourceSpecification,
   LineLayerSpecification,
 } from 'mapbox-gl';
+// The circle is drawn around the *offset* point, so its radius is tied to the
+// offset applied in approximateCoords — wide enough to still contain the real
+// address, or it would point guests at an area the stay isn't in.
+import { APPROX_RADIUS_M } from '@/lib/geo/approximate';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // mapbox-gl bundles its own GeoJSON types but doesn't re-export FeatureCollection,
@@ -30,16 +34,13 @@ const STYLES = {
 
 type StyleKey = keyof typeof STYLES;
 
-/** Radius of the approximate-location circle, in metres. */
-const RADIUS_M = 300;
-
 /**
  * A circle of `radiusM` around a point, as a GeoJSON polygon.
  *
  * Drawn as a polygon rather than a `circle` layer because a circle layer sizes
- * itself in screen pixels: it would only match 300m at one zoom level and drift
- * at every other. A polygon is defined in real coordinates, so it covers the
- * same ground however far the guest zooms.
+ * itself in screen pixels: it would only match the radius at one zoom level and
+ * drift at every other. A polygon is defined in real coordinates, so it covers
+ * the same ground however far the guest zooms.
  */
 function circleAround(longitude: number, latitude: number, radiusM: number): GeoJSONData {
   const STEPS = 64;
@@ -96,7 +97,7 @@ export default function UnitMap({ latitude, longitude, token, labels }: UnitMapP
   const next: StyleKey = style === 'street' ? 'satellite' : 'street';
 
   const area = useMemo(
-    () => circleAround(longitude, latitude, RADIUS_M),
+    () => circleAround(longitude, latitude, APPROX_RADIUS_M),
     [longitude, latitude],
   );
 

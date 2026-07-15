@@ -21,7 +21,7 @@ export function UnitCard({ unit, className }: UnitCardProps) {
   const district = unit.region ?? unit.municipality ?? '';
 
   return (
-    <Link href={`/stays/${unit.id}` as '/stays/[id]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
+    <Link href={`/stays/${unit.slug ?? unit.id}` as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
       <article>
         {/* Image */}
         <div className="relative rounded-[14px] overflow-hidden aspect-[4/3] mb-3">

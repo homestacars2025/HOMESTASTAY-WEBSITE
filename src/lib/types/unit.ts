@@ -128,6 +128,8 @@ export interface UnitCancellationPolicy {
 export interface UnitListing {
   // ── units table ─────────────────────────────────────────────────────────
   id: string;
+  /** URL segment for this listing (/stays/{slug}). Null until the unit has one. */
+  slug: string | null;
   unit_type: UnitTypeEnum;
   unit_name: string | null;
   status: UnitStatusEnum;
@@ -144,10 +146,13 @@ export interface UnitListing {
   city: string | null;
   region: string | null;         // neighbourhood / district (plain text)
   municipality: string | null;
-  full_address: string | null;
-  google_maps_url: string | null;
-  latitude: number | null;       // unit_info.latitude — WGS84 decimal degrees
-  longitude: number | null;      // unit_info.longitude — WGS84 decimal degrees
+  // Blurred by approximateCoords, NOT unit_info's real values: 300-500m off the
+  // true address, deterministic per unit. This type describes a public listing,
+  // so the exact point must never be assigned here. full_address and
+  // google_maps_url are absent for the same reason — both identify the property
+  // exactly, and are withheld until a booking is confirmed.
+  latitude: number | null;       // WGS84 decimal degrees, offset
+  longitude: number | null;      // WGS84 decimal degrees, offset
 
   // ── unit_specifications table (one-to-one) ───────────────────────────────
   specifications: UnitSpecifications;

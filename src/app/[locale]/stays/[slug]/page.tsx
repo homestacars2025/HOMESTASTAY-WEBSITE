@@ -12,7 +12,7 @@ import { UnitLocationSection } from '@/components/unit/UnitLocationSection';
 import { UnitMapSection } from '@/components/unit/UnitMapSection';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { Link } from '@/i18n/navigation';
-import { getPublicUnitById } from '@/lib/queries/stays';
+import { getPublicUnitBySlug } from '@/lib/queries/stays';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
 
@@ -21,10 +21,10 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; id: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, id } = await params;
-  const unit = await getPublicUnitById(id, locale);
+  const { locale, slug } = await params;
+  const unit = await getPublicUnitBySlug(slug, locale);
   if (!unit) return { title: 'Not found — Homesta Stay' };
   const t = await getTranslations({ locale, namespace: 'unit' });
   return {
@@ -36,15 +36,15 @@ export async function generateMetadata({
 export default async function UnitDetailPage({
   params,
 }: {
-  params: Promise<{ locale: string; id: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, id } = await params;
+  const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: 'unit' });
 
   // Applies the same strict public-visibility filter as the index; a link to a
   // non-public or non-existent unit resolves to a real 404 (correct for SEO).
   // Title/description are resolved for the visitor's locale (unit_translations).
-  const unit = await getPublicUnitById(id, locale);
+  const unit = await getPublicUnitBySlug(slug, locale);
   if (!unit) notFound();
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -284,13 +284,7 @@ export default async function UnitDetailPage({
               municipality={unit.municipality}
               city={unit.city}
               country={unit.country}
-              full_address={unit.full_address}
-              google_maps_url={unit.google_maps_url}
-              labels={{
-                locationTitle: t('locationTitle'),
-                address:       t('address'),
-                viewOnMaps:    t('viewOnMaps'),
-              }}
+              labels={{ locationTitle: t('locationTitle') }}
             />
             </FadeUp>
 
