@@ -3,12 +3,14 @@
 import dynamic from 'next/dynamic';
 import { MapPin } from 'lucide-react';
 
-// Leaflet must never render on the server (it reads `window`), so the map is
+// mapbox-gl must never render on the server (it reads `window`), so the map is
 // loaded client-side only. A "use client" boundary is required for ssr:false.
 const UnitMap = dynamic(() => import('./UnitMap'), {
   ssr: false,
   loading: () => <div className="h-full w-full bg-paper-warm animate-pulse" />,
 });
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 interface UnitMapSectionProps {
   latitude: number | null;
@@ -34,6 +36,8 @@ export function UnitMapSection({
 }: UnitMapSectionProps) {
   // No coordinates → no section at all (do not render an empty map).
   if (latitude == null || longitude == null) return null;
+  // No token → Mapbox would paint a broken grey box, so hide the section too.
+  if (!MAPBOX_TOKEN) return null;
 
   const place = [city, country].filter(Boolean).join(', ');
 
@@ -54,11 +58,12 @@ export function UnitMapSection({
       )}
 
       {/* Fixed aspect box reserves space before the map loads (no layout shift). */}
-      <div className="relative h-[320px] md:h-[400px] w-full rounded-[14px] overflow-hidden border border-rule">
+      <div className="relative h-[280px] md:h-[400px] w-full rounded-[14px] overflow-hidden border border-rule">
         <UnitMap
           latitude={latitude}
           longitude={longitude}
           title={title}
+          token={MAPBOX_TOKEN}
           labels={{ street: labels.street, satellite: labels.satellite }}
         />
       </div>
