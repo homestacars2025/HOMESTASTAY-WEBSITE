@@ -326,21 +326,98 @@ function hasAdTitle(row: RawRow): boolean {
   return typeof title === 'string' && title.trim() !== '';
 }
 
+/** Search filters for the /stays index. Every field is optional. */
+export interface StaysFilters {
+  /** geo_cities.name, case-insensitive (e.g. "istanbul"). */
+  city?: string;
+  /** Minimum sleeping capacity — matches units with max_guests >= this. */
+  guests?: number;
+  /** ISO YYYY-MM-DD. Both dates are required for the availability filter to apply. */
+  checkIn?: string;
+  checkOut?: string;
+}
+
+/**
+ * unit_ids with a calendar block overlapping [checkIn, checkOut).
+ *
+ * Half-open overlap: `start < checkOut AND end > checkIn`. A block ending on the
+ * requested check-in date does not collide, because calendar.end_date is the
+ * checkout day rather than the last occupied night — the same convention the
+ * bookings table uses (check_in 06-19, check_out 06-21 => nights = 2).
+ *
+ * Runs server-side and returns ids only: calendar rows carry `reason` and
+ * `notes` (e.g. "Technician scheduled for full HVAC replacement"), which are
+ * internal and must never reach a guest.
+ */
+async function blockedUnitIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  checkIn: string,
+  checkOut: string,
+): Promise<string[] | null> {
+  const { data, error } = await supabase
+    .from('calendar')
+    .select('unit_id')
+    .lt('start_date', checkOut)
+    .gt('end_date', checkIn);
+
+  if (error) {
+    // Fail closed: returning [] here would silently advertise blocked units as
+    // free, which risks a double booking. The caller aborts instead.
+    console.error('[blockedUnitIds]', { message: error.message, code: error.code });
+    return null;
+  }
+
+  return [...new Set((data ?? []).map((r) => r.unit_id as string))];
+}
+
 /**
  * All publicly visible units for the /stays index, mapped to UnitListing with
  * title/description resolved for `locale` (defaults to Turkish, the source).
- * Returns [] on error (logged) — the page then renders its empty state.
+ * Optionally narrowed by `filters`. Returns [] on error (logged) — the page then
+ * renders its empty state.
  */
-export async function getPublicUnits(locale: string = SOURCE_LOCALE): Promise<UnitListing[]> {
+export async function getPublicUnits(
+  locale: string = SOURCE_LOCALE,
+  filters: StaysFilters = {},
+): Promise<UnitListing[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const { city, guests, checkIn, checkOut } = filters;
+  const wantsAvailability = !!checkIn && !!checkOut;
+
+  let blocked: string[] = [];
+  if (wantsAvailability) {
+    const ids = await blockedUnitIds(supabase, checkIn, checkOut);
+    if (ids === null) return []; // fail closed — see blockedUnitIds
+    blocked = ids;
+  }
+
+  // Filters on an embedded table only drop the parent row when that embed is an
+  // inner join; without !inner PostgREST nulls the embed and returns every unit,
+  // which reads as a filter that silently does nothing. Verified against the live
+  // API: city=istanbul returns 41 rows with !inner, all 141 without.
+  // Applied only when the filter is active, so units missing a specifications row
+  // still appear in an unfiltered listing.
+  let select = LISTING_SELECT;
+  if (guests) select = select.replace('unit_specifications(', 'unit_specifications!inner(');
+  if (city) select = select.replace('geo_cities:city_id(', 'geo_cities:city_id!inner(');
+
+  let query = supabase
     .from('units')
-    .select(LISTING_SELECT)
+    .select(select)
     .eq('status', 'available')
     .is('archived_at', null)
     .not('unit_info.ad_title', 'is', null)
-    .is('properties.archived_at', null)
+    .is('properties.archived_at', null);
+
+  // City comes from properties.geo_cities — the normalised lookup the search
+  // dropdown and the unit card both read. unit_info.city is free text and
+  // disagrees with it (casing, and at least one unit filed under the wrong city).
+  if (city) query = query.ilike('properties.geo_cities.name', city);
+  if (guests) query = query.gte('unit_specifications.max_guests', guests);
+  if (blocked.length > 0) query = query.not('id', 'in', `(${blocked.join(',')})`);
+
+  const { data, error } = await query
     .order('property_id', { ascending: true })
     .order('unit_name', { ascending: true });
 
@@ -350,6 +427,7 @@ export async function getPublicUnits(locale: string = SOURCE_LOCALE): Promise<Un
       code: error.code,
       details: error.details,
       hint: error.hint,
+      filters,
     });
     return [];
   }

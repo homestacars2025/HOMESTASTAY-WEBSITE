@@ -5,6 +5,9 @@ import { createPortal } from 'react-dom';
 import { useLocale, useTranslations } from 'next-intl';
 import { Search, Calendar, Users, ChevronDown, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
+// Locale-aware router: a plain next/navigation push would drop the /ar prefix.
+import { useRouter } from '@/i18n/navigation';
+import { buildStaysQuery, toISODate } from '@/lib/stays/search-params';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import type { DateRange } from './DateRangePicker';
@@ -16,6 +19,16 @@ type SearchCity = {
   name: string;
   localizedName: string;
 };
+
+export interface SearchBarProps {
+  cities: SearchCity[];
+  /** Pre-fills the bar from the active /stays filters, so a search reads back. */
+  initial?: {
+    cityId?: string;
+    guests?: number;
+    dateRange?: DateRange;
+  };
+}
 
 type OpenPanel = 'city' | 'date' | 'guests' | null;
 
@@ -56,13 +69,14 @@ function ClearButton({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function SearchBar({ cities }: { cities: SearchCity[] }) {
+export function SearchBar({ cities, initial }: SearchBarProps) {
   const t      = useTranslations('search');
   const locale = useLocale();
+  const router = useRouter();
 
-  const [cityId,    setCityId]    = useState('');
-  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined });
-  const [guests,    setGuests]    = useState(1);
+  const [cityId,    setCityId]    = useState(initial?.cityId ?? '');
+  const [dateRange, setDateRange] = useState<DateRange>(initial?.dateRange ?? { from: undefined });
+  const [guests,    setGuests]    = useState(initial?.guests ?? 1);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   // Portal anchor: fixed coords computed from the relevant trigger element
   const [portalPos, setPortalPos] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -77,6 +91,21 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
 
   const selectedCity = cities.find((c) => c.id === cityId);
   const dateLabel    = formatRange(dateRange, locale);
+
+  // Run the search: state -> /stays?city=…&guests=…&checkIn=…&checkOut=…
+  // The city travels as its name rather than its uuid — /stays?city=istanbul is
+  // legible, shareable and indexable, where a uuid is none of those.
+  // Dates only go if both ends are set; one date can't describe a stay.
+  const runSearch = useCallback(() => {
+    const query = buildStaysQuery({
+      city: selectedCity?.name,
+      guests,
+      checkIn: dateRange.from ? toISODate(dateRange.from) : undefined,
+      checkOut: dateRange.to ? toISODate(dateRange.to) : undefined,
+    });
+    setOpenPanel(null);
+    router.push(`/stays${query}`);
+  }, [router, selectedCity, guests, dateRange]);
   // Show guest count in the Who field only after user changes from the default
   const guestLabel   = guests > 1 ? t('guestCount', { count: guests }) : null;
 
@@ -387,6 +416,7 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
           <div className="px-4 pt-1 pb-4">
             <button
               type="button"
+              onClick={runSearch}
               className="w-full flex items-center justify-center gap-2 bg-stay text-white rounded-[999px] py-3 text-sm font-medium transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80"
             >
               <Search className="w-4 h-4" />
@@ -440,6 +470,7 @@ export function SearchBar({ cities }: { cities: SearchCity[] }) {
           <div className="p-2 shrink-0">
             <button
               type="button"
+              onClick={runSearch}
               className="flex items-center gap-2 bg-stay text-white rounded-[999px] px-5 py-3 text-sm font-medium whitespace-nowrap transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80"
             >
               <Search className="w-4 h-4" />

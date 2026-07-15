@@ -62,6 +62,11 @@
         "title": "Henüz ilan yok",
         "body": "Daha yeni başlıyoruz. Yeni konaklamalar ekleniyor — yakında tekrar göz atın ya da kendi mülkünüzü bizimle listeleyin.",
         "cta": "Mülkünüzü listeleyin"
+      },
+      "searchEmpty": {
+        "title": "Aramanıza uygun konaklama yok",
+        "body": "Farklı tarihler, daha az misafir veya başka bir şehir deneyin — bu aramanın gösterdiğinden daha fazlası olabilir.",
+        "cta": "Filtreleri temizle"
       }
     },
     "blog": {
