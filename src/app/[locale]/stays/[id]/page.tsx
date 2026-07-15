@@ -303,12 +303,10 @@ export default async function UnitDetailPage({
                 longitude={unit.longitude}
                 city={unit.city}
                 country={unit.country}
-                title={title}
                 labels={{
-                  whereYoullBe:      t('whereYoullBe'),
-                  exactLocationNote: t('exactLocationNote'),
-                  street:            t('mapStreet'),
-                  satellite:         t('mapSatellite'),
+                  whereYoullBe: t('whereYoullBe'),
+                  street:       t('mapStreet'),
+                  satellite:    t('mapSatellite'),
                 }}
               />
             </div>

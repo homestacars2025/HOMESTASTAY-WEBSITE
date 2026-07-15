@@ -17,10 +17,8 @@ interface UnitMapSectionProps {
   longitude: number | null;
   city: string | null;
   country: string | null;
-  title: string;
   labels: {
     whereYoullBe: string;
-    exactLocationNote: string;
     street: string;
     satellite: string;
   };
@@ -31,7 +29,6 @@ export function UnitMapSection({
   longitude,
   city,
   country,
-  title,
   labels,
 }: UnitMapSectionProps) {
   // No coordinates → no section at all (do not render an empty map).
@@ -62,13 +59,10 @@ export function UnitMapSection({
         <UnitMap
           latitude={latitude}
           longitude={longitude}
-          title={title}
           token={MAPBOX_TOKEN}
           labels={{ street: labels.street, satellite: labels.satellite }}
         />
       </div>
-
-      <p className="mt-3 text-xs text-mute italic">{labels.exactLocationNote}</p>
     </section>
   );
 }
