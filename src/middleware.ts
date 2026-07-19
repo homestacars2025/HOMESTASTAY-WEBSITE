@@ -35,11 +35,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // `onay` and `ret` are the owner decision links sent over WhatsApp. They are
-    // Turkish-only by design and must stay at the bare path — routing.localePrefix
-    // is 'always', so without this exclusion next-intl would 307 /onay/{token} to
-    // /en/onay/{token}, breaking every link in an already-approved Meta template.
-    // They also never carry a Supabase session, so the auth refresh below is moot.
-    '/((?!_next|_vercel|onay|ret|.*\\..*).*)',
+    '/((?!_next|_vercel|.*\\..*).*)',
   ],
 };
