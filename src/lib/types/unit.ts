@@ -30,6 +30,20 @@ export type BusinessModelEnum =
 /** Exact values from unit_status_enum. */
 export type UnitStatusEnum = 'available' | 'unavailable' | 'blocked' | 'other';
 
+/**
+ * Live-resolved pricing for a listing. Never stored, never cached — computed
+ * per request from units.cost_price / units.commission_percent via the
+ * quote_units RPC. See CLAUDE.md "Pricing is derived, never cached".
+ *
+ * total_usd and nights are null unless the request carried dates; they are the
+ * resolver's SUM over the stay, never a nightly figure multiplied out.
+ */
+export interface UnitPricing {
+  nightly_usd: number | null;
+  total_usd:   number | null;
+  nights:      number | null;
+}
+
 /** Mirrors a row in the unit_media table. Always use public_url for display. */
 export interface UnitMediaItem {
   id: string;
@@ -136,8 +150,14 @@ export interface UnitListing {
   unit_style: UnitStyleEnum | null;
   business_model: BusinessModelEnum | null;
   min_nights: number;
-  base_nightly_price: number | null;   // always USD (DB currency default = 'USD'); null when the host hasn't set a nightly price
   currency: 'USD';
+
+  // ── Resolved at read time (quote_units RPC) ──────────────────────────────
+  // units.base_nightly_price is DEPRECATED and deliberately absent here: it is
+  // a cache of cost_price x (1 + commission_percent), and commission is a live
+  // setting the owner changes at will — so any stored price is stale the moment
+  // it moves. Prices are always derived, never read from storage.
+  pricing: UnitPricing;
 
   // ── unit_info table (one-to-one with units) ──────────────────────────────
   ad_title: string | null;       // marketing title shown to guests

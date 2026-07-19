@@ -20,6 +20,9 @@ export function UnitCard({ unit, className }: UnitCardProps) {
   const title = unit.ad_title ?? unit.unit_name ?? '—';
   const district = unit.region ?? unit.municipality ?? '';
 
+  // Live-resolved. total/nights are present only when the search carried dates.
+  const { nightly_usd: nightlyUsd, total_usd: totalUsd, nights } = unit.pricing;
+
   return (
     <Link href={`/stays/${unit.slug ?? unit.id}` as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
       <article>
@@ -59,12 +62,21 @@ export function UnitCard({ unit, className }: UnitCardProps) {
             {district}{district && unit.city ? ' · ' : ''}{unit.city}
           </p>
 
-          {/* Price — hidden entirely when the host hasn't set a nightly price */}
-          {unit.base_nightly_price !== null && (
-            <p className="text-sm">
-              <span className="font-semibold text-stay">${unit.base_nightly_price}</span>
-              <span className="text-mute text-xs"> {t('perNight')}</span>
-            </p>
+          {/* Price — resolved live, hidden entirely when the unit has no price.
+              When the search carried dates the total is the resolver's SUM over
+              the stay, so the grid and the detail page can never disagree. */}
+          {nightlyUsd !== null && (
+            <>
+              <p className="text-sm">
+                <span className="font-semibold text-stay">${nightlyUsd}</span>
+                <span className="text-mute text-xs"> {t('perNight')}</span>
+              </p>
+              {totalUsd !== null && nights !== null && (
+                <p className="text-xs text-mute mt-0.5">
+                  ${totalUsd} {t('total')} · {t('nights', { count: nights })}
+                </p>
+              )}
+            </>
           )}
         </div>
       </article>

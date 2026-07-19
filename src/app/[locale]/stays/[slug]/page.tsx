@@ -309,7 +309,7 @@ export default async function UnitDetailPage({
 
           {/* ── Booking card (desktop side / mobile bottom bar) ──────────── */}
           <BookingCard
-            price={unit.base_nightly_price}
+            pricing={unit.pricing}
             minNights={unit.min_nights}
             rating={unit.rating}
             reviewCount={unit.review_count}

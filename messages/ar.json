@@ -50,6 +50,8 @@
   },
   "card": {
     "perNight": "/ ليلة",
+    "total": "الإجمالي",
+    "nights": "{count, plural, zero {# ليلة} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
     "save": "حفظ",
     "unsave": "إزالة من المحفوظات"
   },

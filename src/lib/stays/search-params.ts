@@ -13,7 +13,7 @@ export const MAX_GUESTS = 20;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A real calendar date, not merely ISO-shaped — rejects 2026-02-31. */
-function isRealDate(value: string): boolean {
+export function isRealDate(value: string): boolean {
   if (!ISO_DATE_RE.test(value)) return false;
   const d = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;

@@ -50,6 +50,8 @@
   },
   "card": {
     "perNight": "/ night",
+    "total": "total",
+    "nights": "{count, plural, one {# night} other {# nights}}",
     "save": "Save",
     "unsave": "Remove from saved"
   },

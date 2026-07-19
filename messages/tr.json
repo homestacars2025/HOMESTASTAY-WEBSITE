@@ -50,6 +50,8 @@
   },
   "card": {
     "perNight": "/ gece",
+    "total": "toplam",
+    "nights": "{count, plural, one {# gece} other {# gece}}",
     "save": "Kaydet",
     "unsave": "Kaydedilenlerden kaldır"
   },

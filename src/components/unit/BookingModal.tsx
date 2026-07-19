@@ -11,6 +11,7 @@ import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useAuthGate } from '@/contexts/AuthGateContext';
+import type { UnitPricing } from '@/lib/types/unit';
 import type { DateRange } from '@/components/home/DateRangePicker';
 
 const DateRangePicker = dynamic(
@@ -66,7 +67,9 @@ type Step = 'pick' | 'confirm';
 interface BookingModalProps {
   unitId:            string;
   unitTitle:         string;
-  price:             number | null;
+  /** Live quote for the current date range. total_usd is the resolver's SUM
+   *  across the nights — null until a complete range has been quoted. */
+  pricing:           UnitPricing;
   minNights:         number;
   dateRange:         DateRange;
   guests:            number;
@@ -81,7 +84,7 @@ interface BookingModalProps {
 export function BookingModal({
   unitId,
   unitTitle,
-  price,
+  pricing,
   minNights,
   dateRange,
   guests,
@@ -271,9 +274,12 @@ export function BookingModal({
                         <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-mute mb-1">
                           {t('booking.nights', { count: nightsCount })}
                         </p>
-                        {price !== null && (
+                        {/* The stay total is the resolver's SUM over the
+                            nights. Never nightly x nights: that would ignore
+                            seasonal daily prices and length-of-stay discounts. */}
+                        {pricing.total_usd !== null && (
                           <p className="text-stay font-semibold">
-                            ${price * nightsCount}
+                            ${pricing.total_usd}
                           </p>
                         )}
                       </div>

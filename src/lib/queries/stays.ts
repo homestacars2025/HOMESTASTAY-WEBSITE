@@ -4,6 +4,7 @@ import { approximateCoords } from '@/lib/geo/approximate';
 import type {
   UnitListing,
   UnitMediaItem,
+  UnitPricing,
   UnitSpecifications,
   UnitAmenities,
   UnitRules,
@@ -34,7 +35,10 @@ import type {
 // PostgREST as single-element arrays (no unique constraint on their unit_id FK),
 // so the mapper reads element [0]. properties resolves to an object (units.property_id FK).
 const LISTING_SELECT = [
-  'id,slug,unit_type,unit_name,status,unit_style,business_model,min_nights,base_nightly_price,currency,cancellation_policy_id',
+  // base_nightly_price is deliberately NOT selected — it is a deprecated cache
+  // of cost x (1 + commission) and goes stale whenever the owner changes a
+  // commission. Prices come from the quote_units RPC instead (see fetchQuotes).
+  'id,slug,unit_type,unit_name,status,unit_style,business_model,min_nights,currency,cancellation_policy_id',
   // full_address and google_maps_url are deliberately not selected: both pin the
   // exact property, and anything selected here reaches the browser in the RSC
   // payload. Public surfaces get the blurred point from approximateCoords only.
@@ -70,6 +74,67 @@ const EMPTY_AMENITIES: UnitAmenities = {
   hair_dryer: false, iron: false, extra_bed: false, parking: false,
   elevator: false, pool: false, gym: false, self_check_in: false,
 };
+
+const EMPTY_PRICING: UnitPricing = { nightly_usd: null, total_usd: null, nights: null };
+
+/** PostgREST can hand `numeric` back as a string; coerce once, here. */
+function num(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Live prices for a set of units in ONE round trip (the quote_units RPC).
+ *
+ * With dates, total_usd is the resolver's SUM across the stay — never a nightly
+ * rate multiplied by nights, which would ignore seasonal unit_daily_prices rows
+ * and every length-of-stay discount. Without dates, nightly_usd is the
+ * representative rate: cost_price x (1 + commission_percent), computed live.
+ *
+ * The RPC is SECURITY DEFINER because anon has no column grant on cost_price;
+ * it returns customer-facing figures only, so no owner cost reaches the client.
+ *
+ * On error this returns an empty map, so the UI hides prices rather than
+ * showing a wrong one. Priceless-and-loud beats mispriced-and-quiet.
+ */
+async function fetchQuotes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  unitIds: string[],
+  checkIn?: string,
+  checkOut?: string,
+): Promise<Map<string, UnitPricing>> {
+  const map = new Map<string, UnitPricing>();
+  const unique = [...new Set(unitIds.filter(Boolean))];
+  if (unique.length === 0) return map;
+
+  const { data, error } = await supabase.rpc('quote_units', {
+    p_unit_ids:  unique,
+    p_check_in:  checkIn ?? null,
+    p_check_out: checkOut ?? null,
+  });
+
+  if (error) {
+    console.error('[fetchQuotes]', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      units: unique.length,
+      dated: !!(checkIn && checkOut),
+    });
+    return map;
+  }
+
+  for (const row of (data ?? []) as RawRow[]) {
+    map.set(row.unit_id as string, {
+      nightly_usd: num(row.nightly_usd),
+      total_usd:   num(row.total_usd),
+      nights:      num(row.nights),
+    });
+  }
+  return map;
+}
 
 /** Read the single row of a one-to-one embed (PostgREST returns [row] or []). */
 function one<T>(embed: T[] | T | null | undefined): T | null {
@@ -162,7 +227,12 @@ function resolveTranslation(
 }
 
 /** Map one raw DB row into the guest-facing UnitListing shape the UI consumes. */
-function mapRow(row: RawRow, policy: UnitCancellationPolicy | null, locale: string): UnitListing {
+function mapRow(
+  row: RawRow,
+  policy: UnitCancellationPolicy | null,
+  locale: string,
+  pricing: UnitPricing,
+): UnitListing {
   const info = one<RawRow>(row.unit_info);
   const specsRow = one<RawRow>(row.unit_specifications);
   const amenitiesRow = one<RawRow>(row.unit_amenities);
@@ -242,9 +312,8 @@ function mapRow(row: RawRow, policy: UnitCancellationPolicy | null, locale: stri
     unit_style: (row.unit_style ?? null) as UnitStyleEnum | null,
     business_model: (row.business_model ?? null) as BusinessModelEnum | null,
     min_nights: typeof row.min_nights === 'number' ? row.min_nights : 1,
-    base_nightly_price:
-      typeof row.base_nightly_price === 'number' ? row.base_nightly_price : null,
     currency: 'USD',
+    pricing,
 
     ad_title: content.ad_title,
     ad_description: content.ad_description,
@@ -433,13 +502,22 @@ export async function getPublicUnits(
   }
 
   const rows = ((data ?? []) as RawRow[]).filter(hasAdTitle);
-  const policies = await fetchPolicies(
-    supabase,
-    rows.map((r) => r.cancellation_policy_id),
-    locale,
-  );
 
-  return rows.map((r) => mapRow(r, policies.get(r.cancellation_policy_id) ?? null, locale));
+  // Independent of each other — run concurrently so the added price lookup
+  // costs the slower of the two, not the sum.
+  const [policies, quotes] = await Promise.all([
+    fetchPolicies(supabase, rows.map((r) => r.cancellation_policy_id), locale),
+    fetchQuotes(supabase, rows.map((r) => r.id as string), checkIn, checkOut),
+  ]);
+
+  return rows.map((r) =>
+    mapRow(
+      r,
+      policies.get(r.cancellation_policy_id) ?? null,
+      locale,
+      quotes.get(r.id as string) ?? EMPTY_PRICING,
+    ),
+  );
 }
 
 /**
@@ -485,8 +563,19 @@ export async function getPublicUnitBySlug(
   const row = data as RawRow | null;
   if (!row || !hasAdTitle(row)) return null;
 
-  const policies = await fetchPolicies(supabase, [row.cancellation_policy_id], locale);
-  return mapRow(row, policies.get(row.cancellation_policy_id) ?? null, locale);
+  // No dates here: the detail page re-quotes live once the guest picks them
+  // (see quoteStay). This call yields the representative nightly rate only.
+  const [policies, quotes] = await Promise.all([
+    fetchPolicies(supabase, [row.cancellation_policy_id], locale),
+    fetchQuotes(supabase, [row.id as string]),
+  ]);
+
+  return mapRow(
+    row,
+    policies.get(row.cancellation_policy_id) ?? null,
+    locale,
+    quotes.get(row.id as string) ?? EMPTY_PRICING,
+  );
 }
 
 /**

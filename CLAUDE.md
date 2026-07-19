@@ -345,6 +345,29 @@ not only on the client.
 
 ## 9. Pricing Rules
 
+### Pricing is derived, never cached
+
+`units.cost_price` and `units.commission_percent` are live settings the business owner
+changes at will. Every price shown to a guest is computed from them **at read time** via
+`resolve_nightly_prices()` — cost (or the day's `unit_daily_prices` override) →
+length-of-stay discount → current commission → customer price. No intermediate price is
+ever stored or displayed from storage.
+
+The single exception is `booking_nightly_prices`, written at booking time: that is a
+contractual snapshot of what a specific guest agreed to pay, not a cache, and it is
+immutable once paid.
+
+Guest-facing code must call `quote_units()` (batched, for listing surfaces) or
+`quote_nightly_prices()` (single unit, per-night). **Never call `resolve_nightly_prices()`
+from a guest-facing path** — it returns the owner's cost price and is granted to
+`service_role` only.
+
+> `units.base_nightly_price` is **deprecated**. It was a cache of
+> `cost_price × (1 + commission_percent)` and went stale the moment a commission changed.
+> Nothing in this codebase reads it. It is removed once HP-ADMIN confirms it is unused.
+
+### Currency
+
 - **All prices are stored in USD** in the database. This is non-negotiable.
 - **Never store a currency-converted value.** Conversion is display-time only.
 - **Default display currency:** USD.

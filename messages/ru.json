@@ -50,6 +50,8 @@
   },
   "card": {
     "perNight": "/ ночь",
+    "total": "всего",
+    "nights": "{count, plural, one {# ночь} few {# ночи} many {# ночей} other {# ночи}}",
     "save": "Сохранить",
     "unsave": "Удалить из сохранённых"
   },

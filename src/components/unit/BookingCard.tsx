@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Calendar } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { BookingModal, loadAndClearBookingIntent } from '@/components/unit/BookingModal';
+import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
+import { toISODate } from '@/lib/stays/search-params';
+import type { UnitPricing } from '@/lib/types/unit';
 import type { DateRange } from '@/components/home/DateRangePicker';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -20,7 +23,9 @@ function formatDate(d: Date, locale: string): string {
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface BookingCardProps {
-  price:       number | null;
+  /** Server-resolved representative rate for this page load. Re-quoted live
+   *  once the guest picks dates — never a stored or cached price. */
+  pricing:     UnitPricing;
   minNights:   number;
   rating:      number | null;
   reviewCount: number | null;
@@ -30,7 +35,7 @@ interface BookingCardProps {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function BookingCard({ price, minNights, rating, reviewCount, unitId, unitTitle }: BookingCardProps) {
+export function BookingCard({ pricing, minNights, rating, reviewCount, unitId, unitTitle }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
   const user   = useAuthUser();
@@ -42,19 +47,54 @@ export function BookingCard({ price, minNights, rating, reviewCount, unitId, uni
   const [modalOpen,   setModalOpen]   = useState(false);
   const [initialStep, setInitialStep] = useState<'pick' | 'confirm'>('pick');
 
+  // Live quote for the chosen dates. Starts as the representative rate the
+  // server resolved for this page load, and is replaced whenever a complete
+  // range exists. Prices are always derived — nothing here is ever cached.
+  const [quote, setQuote]      = useState<UnitPricing>(pricing);
+  const [isQuoting, startQuote] = useTransition();
+
+  /**
+   * Re-quote for a date range. Called from event handlers rather than an
+   * effect: this is a user action producing new data, not a subscription.
+   * A failed quote falls back to the representative rate with no total —
+   * showing no price is safer than showing a stale or guessed one.
+   */
+  function refreshQuote(r: DateRange) {
+    if (!r.from || !r.to) {
+      setQuote(pricing);
+      return;
+    }
+    const from = toISODate(r.from);
+    const to   = toISODate(r.to);
+    startQuote(async () => {
+      const q = await quoteStay(unitId, from, to);
+      setQuote(q ?? { ...pricing, total_usd: null, nights: null });
+    });
+  }
+
+  function handleDateRangeChange(r: DateRange) {
+    setDateRange(r);
+    refreshQuote(r);
+  }
+
   // After sign-in: restore intent + open modal at confirm step
   useEffect(() => {
     if (!user) return;
     const intent = loadAndClearBookingIntent(unitId);
     if (!intent) return;
 
-    setDateRange({
+    const restored: DateRange = {
       from: intent.dateFrom ? new Date(intent.dateFrom) : undefined,
       to:   intent.dateTo   ? new Date(intent.dateTo)   : undefined,
-    });
+    };
+    setDateRange(restored);
+    refreshQuote(restored);
     setGuests(intent.guests);
     setInitialStep('confirm');
     setModalOpen(true);
+    // refreshQuote is stable for this component's lifetime; re-running this
+    // effect on it would re-open the modal after every quote.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, unitId]);
 
   // Reset initialStep each time modal closes so re-opening starts at 'pick'
@@ -77,17 +117,18 @@ export function BookingCard({ price, minNights, rating, reviewCount, unitId, uni
   const showMinNote   = minNights > 1;
   const isBelowMin    = nightsCount !== null && nightsCount < minNights;
 
-  const hasDates = !!dateRange.from;
+  const hasDates   = !!dateRange.from;
+  const nightlyUsd = quote.nightly_usd;
 
   // ── Desktop sticky card ──────────────────────────────────────────────────
 
   const desktopCard = (
     <aside className="hidden lg:block sticky top-6 border border-rule rounded-[14px] p-6 bg-white shadow-sm">
 
-      {/* Price — hidden when the host hasn't set a nightly price */}
-      {price !== null && (
-        <p className="mb-5">
-          <span className="text-2xl font-semibold text-stay">${price}</span>
+      {/* Price — live-resolved; dims while a new quote is in flight */}
+      {nightlyUsd !== null && (
+        <p className={`mb-5 transition-opacity duration-[240ms] ${isQuoting ? 'opacity-50' : ''}`}>
+          <span className="text-2xl font-semibold text-stay">${nightlyUsd}</span>
           <span className="text-mute text-sm ms-1.5">{t('perNight')}</span>
         </p>
       )}
@@ -166,9 +207,9 @@ export function BookingCard({ price, minNights, rating, reviewCount, unitId, uni
     >
       <div className="flex items-center justify-between gap-4 px-4 py-3 max-w-screen-xl mx-auto">
         <div>
-          {price !== null && (
-            <p>
-              <span className="text-[1.1rem] font-semibold text-stay">${price}</span>
+          {nightlyUsd !== null && (
+            <p className={`transition-opacity duration-[240ms] ${isQuoting ? 'opacity-50' : ''}`}>
+              <span className="text-[1.1rem] font-semibold text-stay">${nightlyUsd}</span>
               <span className="text-mute text-xs ms-1">{t('perNight')}</span>
             </p>
           )}
@@ -199,11 +240,11 @@ export function BookingCard({ price, minNights, rating, reviewCount, unitId, uni
         <BookingModal
           unitId={unitId}
           unitTitle={unitTitle}
-          price={price}
+          pricing={quote}
           minNights={minNights}
           dateRange={dateRange}
           guests={guests}
-          onDateRangeChange={setDateRange}
+          onDateRangeChange={handleDateRangeChange}
           onGuestsChange={setGuests}
           initialStep={initialStep}
           onClose={handleClose}
