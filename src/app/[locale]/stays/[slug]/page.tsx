@@ -315,6 +315,7 @@ export default async function UnitDetailPage({
             reviewCount={unit.review_count}
             unitId={unit.id}
             unitTitle={title}
+            slug={slug}
           />
         </div>
       </main>

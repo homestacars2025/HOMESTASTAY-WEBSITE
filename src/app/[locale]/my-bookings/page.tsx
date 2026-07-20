@@ -1,8 +1,7 @@
-import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Header } from '@/components/home/Header';
 import { Link } from '@/i18n/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireConfirmedUser } from '@/lib/auth/require-user';
 
 export async function generateMetadata({
   params,
@@ -21,12 +20,8 @@ export default async function MyBookingsPage({
 }) {
   const { locale } = await params;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/sign-in?returnUrl=%2Fmy-bookings`);
-  }
+  // Signed in AND email-confirmed, enforced server-side. Redirects otherwise.
+  await requireConfirmedUser(locale, '/my-bookings');
 
   const t = await getTranslations({ locale, namespace: 'myBookings' });
 

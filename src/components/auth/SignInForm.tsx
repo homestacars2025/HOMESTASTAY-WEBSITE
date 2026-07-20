@@ -4,9 +4,23 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
+import type { AuthError } from '@supabase/supabase-js';
 
 interface SignInFormProps {
   returnUrl?: string;
+}
+
+/**
+ * Supabase reports an unverified address as `code: 'email_not_confirmed'` on
+ * current versions and as a bare message on older ones. Both are checked so a
+ * client upgrade cannot silently turn this back into a generic credentials
+ * error — which would strand the user with no way forward.
+ */
+function isEmailNotConfirmed(error: AuthError): boolean {
+  return (
+    error.code === 'email_not_confirmed' ||
+    /email\s+not\s+confirmed/i.test(error.message)
+  );
 }
 
 export function SignInForm({ returnUrl }: SignInFormProps) {
@@ -36,6 +50,17 @@ export function SignInForm({ returnUrl }: SignInFormProps) {
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
+      // Credentials were correct — the address simply isn't verified yet.
+      // "Wrong email or password" would be untrue AND offer no way out, so
+      // send them to the page that can resend the code. Loading stays true:
+      // the navigation is in flight and a second submit helps nobody.
+      if (isEmailNotConfirmed(authError)) {
+        router.push(
+          `/verify-email?email=${encodeURIComponent(email)}` +
+            (returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''),
+        );
+        return;
+      }
       setError(t('error.invalidCredentials'));
       setLoading(false);
     } else {

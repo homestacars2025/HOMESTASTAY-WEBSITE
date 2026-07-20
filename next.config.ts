@@ -7,6 +7,12 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
   // Resolve the workspace-root warning from the parent-dir package-lock.json
   outputFileTracingRoot: path.join(__dirname),
+  // The confirmation email renders the legal PDFs with embedded Geist. Vercel's
+  // tracer cannot see fonts loaded by a runtime path.join, so name them
+  // explicitly or they are absent in the deployed function and the render fails.
+  outputFileTracingIncludes: {
+    '/api/payment/callback': ['./src/lib/pdf/fonts/*.ttf'],
+  },
   images: {
     // Route optimization through Supabase Storage's render/image endpoint
     // (see src/lib/image-loader.ts). Vercel's own /_next/image optimizer is

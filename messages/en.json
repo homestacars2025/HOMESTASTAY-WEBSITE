@@ -278,7 +278,8 @@
       "confirmTitle": "Almost there",
       "confirmBody": "Online payment is coming soon. Our team will reach out to confirm your booking.",
       "done": "Got it",
-      "nights": "{count, plural, one {# night} other {# nights}}"
+      "nights": "{count, plural, one {# night} other {# nights}}",
+      "proceed": "Continue to booking"
     },
     "about": "About this place",
     "aiTranslatedNotice": "This description was automatically translated and may contain minor errors.",
@@ -491,5 +492,107 @@
     "socialFacebook": "Homesta Stay on Facebook",
     "socialWhatsapp": "Chat with us on WhatsApp",
     "legalInfo": "Company Information"
+  },
+  "booking": {
+    "backToListing": "Back to the listing",
+    "heading": "Your details",
+    "submit": "Continue to payment",
+    "submitting": "Holding your dates…",
+    "noChargeYet": "You won’t be charged yet. We’ll hold these dates while you review the payment step.",
+    "summary": {
+      "title": "Your stay",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "nights": "Nights",
+      "total": "Total",
+      "tryNote": "Charged in Turkish lira at a rate fixed the moment you pay. The exact amount is shown before you reach your bank.",
+      "noQuote": "We couldn’t price these dates just now. Please go back and choose them again."
+    },
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "phoneHint": "Include your country code, starting with +",
+      "nationality": "Nationality",
+      "optional": "(optional)",
+      "guests": "Guests",
+      "guestsDecrement": "Fewer guests",
+      "guestsIncrement": "More guests",
+      "maxGuests": "This place sleeps up to {count}."
+    },
+    "documents": {
+      "label": "I have read and accept the <pre>Pre-Information Form</pre> and the <contract>Distance Sales Contract</contract>."
+    },
+    "errors": {
+      "email": "Please enter a valid email address.",
+      "phone": "Enter your number with a country code, like +905309373810.",
+      "invalid": "Please check the details above and try again.",
+      "ownHold": "You already hold this place on different dates, under reference {reference}. Finish or release that booking first.",
+      "unavailable": "These dates have just been taken. Choose another range and we’ll check again.",
+      "notBookable": "This place isn’t accepting bookings right now.",
+      "rateUnavailable": "We couldn’t confirm today’s exchange rate, so we stopped rather than charge you the wrong amount. Please try again shortly.",
+      "generic": "Something went wrong on our side. Nothing has been charged — please try again.",
+      "minNights": "This place has a minimum stay of {count, plural, one {# night} other {# nights}}. Please pick a longer range."
+    },
+    "result": {
+      "referenceLabel": "Booking reference",
+      "awaitingApproval": "Awaiting owner approval",
+      "awaitingApprovalBody": "We’ve sent your request to the property owner. They have 12 hours to respond, and we’ll email you as soon as they do.",
+      "chargedLabel": "Amount charged",
+      "usdEquivalent": "Equivalent to {amount}",
+      "refundTitle": "If the owner declines",
+      "refundBody": "You receive a full refund to the same card, in the same Turkish lira amount. It can take 3–10 business days to appear on your statement, depending on your bank.",
+      "heldTitle": "Your dates are held",
+      "heldBody": "We’re holding these dates for you. The payment step isn’t live yet — nothing has been charged.",
+      "browseMore": "Browse more stays",
+      "lockedRate": "Rate locked at {rate} TRY per USD."
+    },
+    "legal": {
+      "versionLabel": "Document version",
+      "fallbackNotice": "This document isn’t available in your language yet, so it is shown in {shown}. The Turkish text is the legally binding version.",
+      "annex": {
+        "reference": "Booking reference",
+        "checkIn": "Check-in",
+        "checkOut": "Check-out",
+        "guests": "Guests",
+        "total": "Total"
+      }
+    },
+    "payment": {
+      "holderName": "Name on card",
+      "cardNumber": "Card number",
+      "month": "Month",
+      "year": "Year",
+      "cvv": "CVV",
+      "billingTitle": "Billing address",
+      "addressLine": "Address",
+      "city": "City",
+      "state": "State / province",
+      "postCode": "Postcode",
+      "submit": "Pay {amount}",
+      "secureNote": "Secured by 3D Secure. We never store your card details."
+    },
+    "failed": {
+      "title": "Payment couldn’t be completed",
+      "chargedTitle": "You’ve been charged — and we owe you a refund",
+      "refundAssurance": "Your money is being returned to the same card in the same amount. It can take 3–10 business days to appear, depending on your bank. You do not need to do anything, but you’re welcome to contact us with your booking reference.",
+      "browseStays": "Browse stays",
+      "contactUs": "Contact us",
+      "reasons": {
+        "session": "We couldn’t find your booking session. It may have expired. Please choose your dates again.",
+        "server": "Something went wrong on our side and no payment was taken. Please try again.",
+        "card": "Those card details didn’t look right. Please check them and try again.",
+        "bank": "We couldn’t reach the bank. No payment was taken — please try again in a moment.",
+        "declined": "Your bank declined the payment. No money has been taken. Try another card, or contact your bank.",
+        "unknown": "We couldn’t complete this payment. If you think you were charged, contact us and we’ll check immediately.",
+        "pending": "Your payment may have gone through, but we couldn’t confirm it. We are checking now and will email you shortly — please don’t pay again.",
+        "duplicate_payment": "This booking had already been paid for, so this second payment is being refunded in full.",
+        "booking_canceled": "The hold on these dates expired while you were paying, so the booking could not be completed and your payment is being refunded in full.",
+        "already_paid": "This booking has already been paid for.",
+        "not_holdable": "This booking is no longer being held, so it can’t be paid for.",
+        "not_found": "We couldn’t find that booking."
+      }
+    }
   }
 }

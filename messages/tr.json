@@ -278,7 +278,8 @@
       "confirmTitle": "Neredeyse tamam",
       "confirmBody": "Online ödeme yakında geliyor. Ekibimiz rezervasyonunuzu onaylamak için sizinle iletişime geçecek.",
       "done": "Anladım",
-      "nights": "{count, plural, other {# gece}}"
+      "nights": "{count, plural, other {# gece}}",
+      "proceed": "Rezervasyona devam et"
     },
     "about": "Bu yer hakkında",
     "aiTranslatedNotice": "Bu açıklama otomatik olarak çevrildi ve küçük hatalar içerebilir.",
@@ -491,5 +492,107 @@
     "socialFacebook": "Facebook'ta Homesta Stay",
     "socialWhatsapp": "WhatsApp'tan bize ulaşın",
     "legalInfo": "Şirket Bilgileri"
+  },
+  "booking": {
+    "backToListing": "İlana geri dön",
+    "heading": "Bilgileriniz",
+    "submit": "Ödemeye devam et",
+    "submitting": "Tarihleriniz tutuluyor…",
+    "noChargeYet": "Henüz ücret alınmayacak. Ödeme adımını incelerken bu tarihleri sizin için tutuyoruz.",
+    "summary": {
+      "title": "Konaklamanız",
+      "checkIn": "Giriş",
+      "checkOut": "Çıkış",
+      "nights": "Gece",
+      "total": "Toplam",
+      "tryNote": "Ödeme anında sabitlenen kur ile Türk lirası olarak tahsil edilir. Kesin tutar bankanıza yönlendirilmeden önce gösterilir.",
+      "noQuote": "Bu tarihler için şu anda fiyat hesaplanamadı. Lütfen geri dönüp tekrar seçin."
+    },
+    "fields": {
+      "firstName": "Ad",
+      "lastName": "Soyad",
+      "email": "E-posta",
+      "phone": "Telefon",
+      "phoneHint": "Ülke kodunu + ile birlikte girin",
+      "nationality": "Uyruk",
+      "optional": "(isteğe bağlı)",
+      "guests": "Misafir",
+      "guestsDecrement": "Daha az misafir",
+      "guestsIncrement": "Daha fazla misafir",
+      "maxGuests": "Bu yer en fazla {count} misafir ağırlar."
+    },
+    "documents": {
+      "label": "<pre>Ön Bilgilendirme Formu</pre>’nu ve <contract>Mesafeli Satış Sözleşmesi</contract>’ni okudum, kabul ediyorum."
+    },
+    "errors": {
+      "email": "Lütfen geçerli bir e-posta adresi girin.",
+      "phone": "Numaranızı ülke kodu ile girin, örneğin +905309373810.",
+      "invalid": "Lütfen yukarıdaki bilgileri kontrol edip tekrar deneyin.",
+      "ownHold": "Bu yeri farklı tarihlerde zaten tutuyorsunuz ({reference}). Önce o rezervasyonu tamamlayın veya bırakın.",
+      "unavailable": "Bu tarihler az önce doldu. Başka bir aralık seçin, tekrar kontrol edelim.",
+      "notBookable": "Bu yer şu anda rezervasyon kabul etmiyor.",
+      "rateUnavailable": "Bugünkü kuru doğrulayamadık; yanlış tutarı tahsil etmektense işlemi durdurduk. Lütfen kısa süre sonra tekrar deneyin.",
+      "generic": "Tarafımızda bir sorun oluştu. Hiçbir ücret alınmadı — lütfen tekrar deneyin.",
+      "minNights": "Bu yerde en az {count, plural, one {# gece} other {# gece}} konaklama şartı var. Lütfen daha uzun bir aralık seçin."
+    },
+    "result": {
+      "referenceLabel": "Rezervasyon numarası",
+      "awaitingApproval": "Mülk sahibi onayı bekleniyor",
+      "awaitingApprovalBody": "Talebinizi mülk sahibine ilettik. Yanıtlamak için 12 saatleri var; yanıt gelir gelmez size e-posta göndereceğiz.",
+      "chargedLabel": "Tahsil edilen tutar",
+      "usdEquivalent": "{amount} karşılığı",
+      "refundTitle": "Mülk sahibi reddederse",
+      "refundBody": "Tahsil edilen Türk lirası tutarının tamamı aynı karta iade edilir. Bankanıza bağlı olarak hesabınıza yansıması 3–10 iş günü sürebilir.",
+      "heldTitle": "Tarihleriniz tutuldu",
+      "heldBody": "Bu tarihleri sizin için tutuyoruz. Ödeme adımı henüz aktif değil — hiçbir ücret alınmadı.",
+      "browseMore": "Diğer konaklamalara göz at",
+      "lockedRate": "Kur {rate} TRY/USD olarak sabitlendi."
+    },
+    "legal": {
+      "versionLabel": "Belge sürümü",
+      "fallbackNotice": "Bu belge henüz sizin dilinizde mevcut değil, {shown} dilinde gösteriliyor. Hukuken bağlayıcı metin Türkçe olanıdır.",
+      "annex": {
+        "reference": "Rezervasyon numarası",
+        "checkIn": "Giriş",
+        "checkOut": "Çıkış",
+        "guests": "Misafir",
+        "total": "Toplam"
+      }
+    },
+    "payment": {
+      "holderName": "Kart üzerindeki isim",
+      "cardNumber": "Kart numarası",
+      "month": "Ay",
+      "year": "Yıl",
+      "cvv": "CVV",
+      "billingTitle": "Fatura adresi",
+      "addressLine": "Adres",
+      "city": "İl",
+      "state": "İlçe / bölge",
+      "postCode": "Posta kodu",
+      "submit": "{amount} öde",
+      "secureNote": "3D Secure ile korunur. Kart bilgileriniz saklanmaz."
+    },
+    "failed": {
+      "title": "Ödeme tamamlanamadı",
+      "chargedTitle": "Tahsilat yapıldı — iade ediyoruz",
+      "refundAssurance": "Tutarın tamamı aynı karta iade edilmektedir. Bankanıza bağlı olarak hesabınıza yansıması 3–10 iş günü sürebilir. Yapmanız gereken bir şey yok; dilerseniz rezervasyon numaranızla bize ulaşabilirsiniz.",
+      "browseStays": "Konaklamalara göz at",
+      "contactUs": "Bize ulaşın",
+      "reasons": {
+        "session": "Rezervasyon oturumunuz bulunamadı; süresi dolmuş olabilir. Lütfen tarihleri yeniden seçin.",
+        "server": "Tarafımızda bir sorun oluştu ve tahsilat yapılmadı. Lütfen tekrar deneyin.",
+        "card": "Kart bilgileri doğru görünmüyor. Lütfen kontrol edip tekrar deneyin.",
+        "bank": "Bankaya ulaşılamadı. Tahsilat yapılmadı — lütfen birazdan tekrar deneyin.",
+        "declined": "Bankanız ödemeyi reddetti. Hiçbir tutar çekilmedi. Başka bir kart deneyin veya bankanızla görüşün.",
+        "unknown": "Bu ödeme tamamlanamadı. Tahsilat yapıldığını düşünüyorsanız bize ulaşın, hemen kontrol edelim.",
+        "pending": "Ödemeniz gerçekleşmiş olabilir ancak doğrulayamadık. Kontrol ediyoruz ve kısa süre içinde size e-posta göndereceğiz — lütfen tekrar ödeme yapmayın.",
+        "duplicate_payment": "Bu rezervasyonun ödemesi zaten yapılmıştı; bu ikinci ödeme tamamen iade edilmektedir.",
+        "booking_canceled": "Siz ödeme yaparken bu tarihlerdeki tutma süresi doldu; rezervasyon tamamlanamadı ve ödemeniz tamamen iade edilmektedir.",
+        "already_paid": "Bu rezervasyonun ödemesi zaten yapılmış.",
+        "not_holdable": "Bu rezervasyon artık tutulmuyor, bu nedenle ödeme yapılamaz.",
+        "not_found": "Bu rezervasyon bulunamadı."
+      }
+    }
   }
 }

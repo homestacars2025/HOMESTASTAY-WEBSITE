@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Calendar } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
-import { useAuthUser } from '@/hooks/useAuthUser';
-import { BookingModal, loadAndClearBookingIntent } from '@/components/unit/BookingModal';
+import { BookingModal } from '@/components/unit/BookingModal';
 import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { toISODate } from '@/lib/stays/search-params';
 import type { UnitPricing } from '@/lib/types/unit';
@@ -31,14 +30,15 @@ interface BookingCardProps {
   reviewCount: number | null;
   unitId:      string;
   unitTitle:   string;
+  /** URL segment for the checkout route (/book/{slug}). */
+  slug:        string;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function BookingCard({ pricing, minNights, rating, reviewCount, unitId, unitTitle }: BookingCardProps) {
+export function BookingCard({ pricing, minNights, rating, reviewCount, unitId, unitTitle, slug }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
-  const user   = useAuthUser();
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -76,26 +76,6 @@ export function BookingCard({ pricing, minNights, rating, reviewCount, unitId, u
     setDateRange(r);
     refreshQuote(r);
   }
-
-  // After sign-in: restore intent + open modal at confirm step
-  useEffect(() => {
-    if (!user) return;
-    const intent = loadAndClearBookingIntent(unitId);
-    if (!intent) return;
-
-    const restored: DateRange = {
-      from: intent.dateFrom ? new Date(intent.dateFrom) : undefined,
-      to:   intent.dateTo   ? new Date(intent.dateTo)   : undefined,
-    };
-    setDateRange(restored);
-    refreshQuote(restored);
-    setGuests(intent.guests);
-    setInitialStep('confirm');
-    setModalOpen(true);
-    // refreshQuote is stable for this component's lifetime; re-running this
-    // effect on it would re-open the modal after every quote.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, unitId]);
 
   // Reset initialStep each time modal closes so re-opening starts at 'pick'
   function handleClose() {
@@ -238,8 +218,8 @@ export function BookingCard({ pricing, minNights, rating, reviewCount, unitId, u
 
       {modalOpen && (
         <BookingModal
-          unitId={unitId}
           unitTitle={unitTitle}
+          slug={slug}
           pricing={quote}
           minNights={minNights}
           dateRange={dateRange}

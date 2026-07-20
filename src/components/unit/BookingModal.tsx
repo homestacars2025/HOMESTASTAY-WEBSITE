@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations, useLocale } from 'next-intl';
+import { useRouter } from '@/i18n/navigation';
+import { toISODate } from '@/lib/stays/search-params';
 import { X, CheckCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { modalBackdrop, modalCard } from '@/lib/motion';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import { BrandMark } from '@/components/brand/BrandMark';
-import { useAuthUser } from '@/hooks/useAuthUser';
-import { useAuthGate } from '@/contexts/AuthGateContext';
 import type { UnitPricing } from '@/lib/types/unit';
 import type { DateRange } from '@/components/home/DateRangePicker';
 
@@ -18,36 +18,6 @@ const DateRangePicker = dynamic(
   () => import('@/components/home/DateRangePicker').then((m) => ({ default: m.DateRangePicker })),
   { ssr: false }
 );
-
-// ── Booking intent ─────────────────────────────────────────────────────────────
-
-export const INTENT_KEY = 'hs_booking_intent';
-
-export interface BookingIntent {
-  unitId:   string;
-  dateFrom: string | null;
-  dateTo:   string | null;
-  guests:   number;
-}
-
-export function saveBookingIntent(intent: BookingIntent): void {
-  try {
-    sessionStorage.setItem(INTENT_KEY, JSON.stringify(intent));
-  } catch { /* non-fatal */ }
-}
-
-export function loadAndClearBookingIntent(unitId: string): BookingIntent | null {
-  try {
-    const raw = sessionStorage.getItem(INTENT_KEY);
-    if (!raw) return null;
-    const intent = JSON.parse(raw) as BookingIntent;
-    if (intent.unitId !== unitId) return null;
-    sessionStorage.removeItem(INTENT_KEY);
-    return intent;
-  } catch {
-    return null;
-  }
-}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -65,8 +35,9 @@ type Step = 'pick' | 'confirm';
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface BookingModalProps {
-  unitId:            string;
   unitTitle:         string;
+  /** URL segment for the checkout route (/book/{slug}). */
+  slug:              string;
   /** Live quote for the current date range. total_usd is the resolver's SUM
    *  across the nights — null until a complete range has been quoted. */
   pricing:           UnitPricing;
@@ -82,8 +53,8 @@ interface BookingModalProps {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function BookingModal({
-  unitId,
   unitTitle,
+  slug,
   pricing,
   minNights,
   dateRange,
@@ -95,8 +66,19 @@ export function BookingModal({
 }: BookingModalProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
-  const user   = useAuthUser();
-  const { openAuthGate } = useAuthGate();
+  const router = useRouter();
+
+  // Dates live in the checkout URL so the page is shareable, resumable and
+  // back-button-safe — which matters once the bank redirect enters the flow.
+  const checkoutHref =
+    dateRange.from && dateRange.to
+      ? `/book/${slug}?from=${toISODate(dateRange.from)}` +
+        `&to=${toISODate(dateRange.to)}&guests=${guests}`
+      : null;
+
+  function handleProceed() {
+    if (checkoutHref) router.push(checkoutHref);
+  }
 
   const [step, setStep] = useState<Step>(initialStep);
 
@@ -128,23 +110,13 @@ export function BookingModal({
   const handleContinue = useCallback(() => {
     if (!canContinue) return;
 
-    if (user === undefined) return; // still loading
-
-    if (!user) {
-      // Not logged in: save intent and open auth gate
-      saveBookingIntent({
-        unitId,
-        dateFrom: dateRange.from ? dateRange.from.toISOString() : null,
-        dateTo:   dateRange.to   ? dateRange.to.toISOString()   : null,
-        guests,
-      });
-      onClose();
-      openAuthGate({ type: 'reserve', unitId });
-      return;
-    }
-
+    // Booking deliberately requires NO account (CLAUDE.md §4), so there is no
+    // auth gate here any more. This previously stashed the dates and opened
+    // the sign-in modal; email confirmation must never stand between a guest
+    // and a booking. An account is only needed for account-specific surfaces
+    // such as /my-bookings.
     setStep('confirm');
-  }, [canContinue, user, unitId, dateRange, guests, onClose, openAuthGate]);
+  }, [canContinue]);
 
   // ── Summary strings ──────────────────────────────────────────────────────────
 
@@ -315,12 +287,15 @@ export function BookingModal({
                 </button>
               </>
             ) : (
+              /* Leaves the modal for a real route. Checkout ends in a
+                 top-level bank redirect that a modal could not survive. */
               <button
                 type="button"
-                onClick={onClose}
-                className="w-full bg-ink text-white rounded-[999px] py-3 text-sm font-semibold transition-opacity duration-[240ms] hover:opacity-80 active:opacity-70"
+                onClick={handleProceed}
+                disabled={!checkoutHref}
+                className="w-full bg-stay text-white rounded-[999px] py-3 text-sm font-semibold min-h-[44px] transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {t('booking.done')}
+                {t('booking.proceed')}
               </button>
             )}
           </div>

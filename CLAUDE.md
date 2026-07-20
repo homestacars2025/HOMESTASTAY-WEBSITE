@@ -177,8 +177,10 @@ This is a **full booking platform**, not a catalog with a contact form.
 - View and manage their own bookings ("My bookings")
 
 ### What does NOT live in this codebase:
-- **No WhatsApp or owner-approval logic.** That is a separate internal system. This website
-  does not call it, reference it, or know it exists.
+- **No WhatsApp or owner-approval logic.** That is a separate internal system. The site may
+  **display** owner-decision state read from the `bookings` table (e.g. "awaiting owner
+  approval"); it never invokes the notification system. The WhatsApp prompt is fired by a
+  database trigger on the `paid_at` edge, not by this codebase.
 - **No admin or host dashboard.** Owner-facing surfaces are a separate project.
 - **No CRM, finance, or team tooling.**
 
@@ -415,7 +417,7 @@ these, surface the question rather than guessing.
 | # | Question | Affects |
 |---|----------|---------|
 | 1 | Legal company name for footer and terms? | Footer, `/terms`, `/privacy` |
-| 2 | Payment provider? (examples: Stripe, Iyzico — confirm actual choice) | Booking flow, §4 |
+| ~~2~~ | ~~Payment provider?~~ **Resolved: Kuveyt Türk 3D Secure** (TDV2.0.0). All bank traffic routes through the whitelisted proxy — Vercel egress IPs are not whitelisted. | Booking flow, §4 |
 | 3 | Is there a separate staging Supabase project? | CI/CD, environment setup |
 | 4 | Guest support contact (email for guests)? | Footer, help pages |
 | 5 | Are there reviews / wishlist features in scope? | Guest dashboard scope |

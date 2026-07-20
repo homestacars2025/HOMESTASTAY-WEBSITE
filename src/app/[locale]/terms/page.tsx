@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { LegalPage } from '@/components/legal/LegalPage';
+import { canonical, hreflangAlternates } from '@/lib/config/urls';
 
-const SITE = 'https://homestastay.com';
 
 export async function generateMetadata({
   params,
@@ -11,7 +11,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'pages.terms' });
-  const canonical = `${SITE}/${locale}/terms`;
+  const canonicalUrl = canonical(locale, '/terms');
   const title = t('metaTitle');
   const description = t('metaDescription');
 
@@ -19,19 +19,13 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical,
-      languages: {
-        en: `${SITE}/en/terms`,
-        ar: `${SITE}/ar/terms`,
-        tr: `${SITE}/tr/terms`,
-        ru: `${SITE}/ru/terms`,
-        'x-default': `${SITE}/en/terms`,
-      },
+      canonical: canonicalUrl,
+      languages: hreflangAlternates('/terms', 'en'),
     },
     openGraph: {
       title,
       description,
-      url: canonical,
+      url: canonicalUrl,
       type: 'website',
       siteName: 'Homesta Stay',
     },

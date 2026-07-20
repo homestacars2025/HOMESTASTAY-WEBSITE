@@ -4,8 +4,8 @@ import { Header } from '@/components/home/Header';
 import { ContactForm } from '@/components/contact/ContactForm';
 import { FadeUp } from '@/components/motion/FadeUp';
 import { Link } from '@/i18n/navigation';
+import { CANONICAL_URL, canonical, hreflangAlternates } from '@/lib/config/urls';
 
-const SITE = 'https://homestastay.com';
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ export async function generateMetadata({
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'pages.contact' });
 
-  const canonical = `${SITE}/${locale}/contact`;
+  const canonicalUrl = canonical(locale, '/contact');
   const title       = t('metaTitle');
   const description = t('metaDescription');
 
@@ -25,19 +25,13 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical,
-      languages: {
-        en:        `${SITE}/en/contact`,
-        ar:        `${SITE}/ar/contact`,
-        tr:        `${SITE}/tr/contact`,
-        ru:        `${SITE}/ru/contact`,
-        'x-default': `${SITE}/en/contact`,
-      },
+      canonical: canonicalUrl,
+      languages: hreflangAlternates('/contact', 'en'),
     },
     openGraph: {
       title,
       description,
-      url:  canonical,
+      url:  canonicalUrl,
       type: 'website',
       siteName: 'Homesta Stay',
     },
@@ -88,11 +82,11 @@ export default async function ContactPage({
     '@context': 'https://schema.org',
     '@type': 'ContactPage',
     name: t('metaTitle'),
-    url: `${SITE}/${locale}/contact`,
+    url: canonical(locale, '/contact'),
     mainEntity: {
       '@type': 'Organization',
       name: 'Homesta Stay',
-      url: SITE,
+      url: CANONICAL_URL,
       sameAs: [
         'https://www.instagram.com/homestastay',
         'https://www.facebook.com/share/1D7wLxSNzR/',

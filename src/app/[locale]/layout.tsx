@@ -11,6 +11,7 @@ import { MotionProvider } from '@/components/layout/MotionProvider';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { SiteFooter } from '@/components/home/SiteFooter';
 import '@/styles/globals.css';
+import { CANONICAL_URL } from '@/lib/config/urls';
 
 // Arabic body font — clean, readable; workhorse for all Arabic UI text
 const tajawal = Tajawal({
@@ -31,9 +32,8 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://homestastay.com'
-  ),
+  // Always the production origin, even on preview — see lib/config/urls.
+  metadataBase: new URL(CANONICAL_URL),
   title: 'Homesta Stay',
   description: 'Short-term and touristic rentals in Istanbul',
   manifest: '/manifest.webmanifest',

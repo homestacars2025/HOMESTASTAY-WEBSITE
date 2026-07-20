@@ -114,27 +114,51 @@ export function OtpForm({ email, returnUrl }: OtpFormProps) {
       return;
     }
 
-    // Update profile with phone + name stored during sign-up
+    // Fill in the profile the handle_new_auth_user trigger already created.
+    //
+    // NARROW UPDATE, NEVER AN UPSERT, AND NEVER role OR status. The trigger
+    // sets those correctly and protect_profile_fields guards them — a client
+    // must not be in the business of asserting its own role.
+    //
+    // Only ever fills columns that are empty, so re-verifying, or a later
+    // support edit, cannot be clobbered by whatever is left in this browser's
+    // sessionStorage. Same COALESCE(existing, new) shape the booking RPC uses
+    // on the customers table, and for the same reason.
     try {
+      let pending: { first_name?: string; last_name?: string; phone?: string } = {};
       const raw = sessionStorage.getItem('pending_profile');
-      if (raw) {
-        const pending = JSON.parse(raw) as {
-          first_name?: string;
-          last_name?: string;
-          phone?: string;
-        };
-        await supabase
-          .from('profiles')
-          .update({
-            first_name: pending.first_name ?? null,
-            last_name:  pending.last_name  ?? null,
-            phone:      pending.phone      ?? null,
-          })
-          .eq('id', data.user.id);
-        sessionStorage.removeItem('pending_profile');
+      if (raw) pending = JSON.parse(raw);
+
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name, phone')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      const patch: Record<string, string> = {};
+      const fill = (
+        column: 'email' | 'first_name' | 'last_name' | 'phone',
+        value: string | null | undefined,
+      ) => {
+        const current = existing?.[column];
+        if (value && !(typeof current === 'string' && current.trim() !== '')) {
+          patch[column] = value;
+        }
+      };
+
+      fill('email',      data.user.email ?? email);
+      fill('first_name', pending.first_name);
+      fill('last_name',  pending.last_name);
+      fill('phone',      pending.phone);
+
+      if (Object.keys(patch).length > 0) {
+        patch.updated_at = new Date().toISOString();
+        await supabase.from('profiles').update(patch).eq('id', data.user.id);
       }
+
+      sessionStorage.removeItem('pending_profile');
     } catch {
-      // Non-fatal — profile exists, just won't have phone/name yet
+      // Non-fatal — the session is valid and they are signed in either way.
     }
 
     router.push(returnUrl || '/');
