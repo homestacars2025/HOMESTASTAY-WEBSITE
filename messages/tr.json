@@ -279,7 +279,8 @@
       "confirmBody": "Online ödeme yakında geliyor. Ekibimiz rezervasyonunuzu onaylamak için sizinle iletişime geçecek.",
       "done": "Anladım",
       "nights": "{count, plural, other {# gece}}",
-      "proceed": "Rezervasyona devam et"
+      "proceed": "Rezervasyona devam et",
+      "confirmReady": "Tarihleriniz tutuldu. İnceleyip ödeyerek talebinizi mülk sahibine gönderin."
     },
     "about": "Bu yer hakkında",
     "aiTranslatedNotice": "Bu açıklama otomatik olarak çevrildi ve küçük hatalar içerebilir.",

@@ -279,7 +279,8 @@
       "confirmBody": "Online payment is coming soon. Our team will reach out to confirm your booking.",
       "done": "Got it",
       "nights": "{count, plural, one {# night} other {# nights}}",
-      "proceed": "Continue to booking"
+      "proceed": "Continue to booking",
+      "confirmReady": "Your dates are held. Review and pay to send your request to the owner."
     },
     "about": "About this place",
     "aiTranslatedNotice": "This description was automatically translated and may contain minor errors.",

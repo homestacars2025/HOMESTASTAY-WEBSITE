@@ -32,6 +32,20 @@ function formatDate(d: Date, locale: string): string {
 
 type Step = 'pick' | 'confirm';
 
+/**
+ * Checkout kill switch. Off by default and set EXPLICITLY to false on
+ * production, so an accidentally-set variable is a different, visible failure
+ * from an unset one.
+ *
+ * Off: the confirm step is an inert dead-end — it navigates nowhere and writes
+ * nothing (every DB write lives behind /book/[slug], which this never opens).
+ * The route itself stays reachable by direct URL for testing.
+ *
+ * On: the confirm step proceeds to the live checkout for every guest. Flip the
+ * env var, no redeploy.
+ */
+const CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_ENABLE_CHECKOUT === 'true';
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface BookingModalProps {
@@ -212,7 +226,7 @@ export function BookingModal({
                   </h3>
                   <p className="text-xs text-mute mb-2 truncate">{unitTitle}</p>
                   <p className="text-sm text-mute leading-relaxed max-w-xs">
-                    {t('booking.confirmBody')}
+                    {CHECKOUT_ENABLED ? t('booking.confirmReady') : t('booking.confirmBody')}
                   </p>
                 </div>
 
@@ -286,7 +300,7 @@ export function BookingModal({
                   {t('booking.continue')}
                 </button>
               </>
-            ) : (
+            ) : CHECKOUT_ENABLED ? (
               /* Leaves the modal for a real route. Checkout ends in a
                  top-level bank redirect that a modal could not survive. */
               <button
@@ -296,6 +310,16 @@ export function BookingModal({
                 className="w-full bg-stay text-white rounded-[999px] py-3 text-sm font-semibold min-h-[44px] transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {t('booking.proceed')}
+              </button>
+            ) : (
+              /* Kill switch off: inert dead-end. Closes the modal, navigates
+                 nowhere, writes nothing. Matches the pre-checkout behaviour. */
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full bg-ink text-white rounded-[999px] py-3 text-sm font-semibold min-h-[44px] transition-opacity duration-[240ms] hover:opacity-80 active:opacity-70"
+              >
+                {t('booking.done')}
               </button>
             )}
           </div>
