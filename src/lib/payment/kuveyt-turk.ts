@@ -393,7 +393,35 @@ export interface AuthenticationResult {
   raw:             string;
 }
 
-export function parseAuthenticationResponse(xml: string): AuthenticationResult {
+/**
+ * KT DOUBLE-URL-ENCODES the AuthenticationResponse field. After the transport
+ * layer's own decode (formData / URLSearchParams) the value is STILL
+ * form-encoded — '%3cMerchantOrderId%3e', not '<MerchantOrderId>', with '+'
+ * for spaces — so a regex over it finds no tags and every field reads null.
+ * That is what made a fully-authenticated payment land on reason=unknown.
+ *
+ * Decode further form-url-encoded layers until real XML (a literal '<')
+ * appears. Idempotent: a single-encoded value already containing '<' passes
+ * straight through, so this is safe whichever way a given ACS encodes.
+ *
+ * '+' → space is applied per layer (via %20) because form-encoding uses '+'
+ * for space; a legitimately-'+'-bearing base64 (MD, HashData) is carried as
+ * %2B at each layer, so it survives untouched.
+ */
+function decodeToXml(value: string): string {
+  let v = value;
+  for (let i = 0; i < 3 && !v.includes('<') && /%[0-9a-fA-F]{2}/.test(v); i++) {
+    try {
+      v = decodeURIComponent(v.replace(/\+/g, '%20'));
+    } catch {
+      break; // malformed escape — stop rather than throw into the callback
+    }
+  }
+  return v;
+}
+
+export function parseAuthenticationResponse(value: string): AuthenticationResult {
+  const xml = decodeToXml(value);
   return {
     merchantOrderId: tag(xml, 'MerchantOrderId'),
     md:              tag(xml, 'MD'),

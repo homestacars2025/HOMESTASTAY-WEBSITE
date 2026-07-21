@@ -78,8 +78,10 @@ export async function POST(request: NextRequest) {
   // as top-level form fields. The old code read the top level, found nothing,
   // and a fully-authenticated payment landed on reason=unknown. Read top-level
   // first (some KT models do send them), then fall back to the XML.
-  const authXml = params.get('AuthenticationResponse');
-  const auth = authXml ? parseAuthenticationResponse(authXml) : null;
+  // parseAuthenticationResponse decodes the double-URL-encoded field down to
+  // real XML before extracting — see its comment. Pass the raw field value.
+  const authField = params.get('AuthenticationResponse');
+  const auth = authField ? parseAuthenticationResponse(authField) : null;
 
   const merchantOrderId = params.get('MerchantOrderId') || auth?.merchantOrderId || '';
   const md              = params.get('MD')              || auth?.md              || '';
@@ -92,8 +94,7 @@ export async function POST(request: NextRequest) {
   // ── TEMPORARY DIAGNOSTIC — remove once confirmed on production ─────────────
   console.log('[callback:diag] content-type   :', contentType);
   console.log('[callback:diag] field names     :', fieldNames.join(', '));
-  console.log('[callback:diag] raw body        :', rawBody.slice(0, 4000));
-  console.log('[callback:diag] AuthResponse XML:', authXml ?? '(absent)');
+  console.log('[callback:diag] AuthResponse XML:', auth?.raw ?? '(absent)');
   console.log('[callback:diag] extracted       :', JSON.stringify({
     merchantOrderId, source, mdPresent: Boolean(md), responseCode, responseMessage,
   }));
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
   if (!merchantOrderId) {
     console.error('[payment/callback] no MerchantOrderId (top-level OR AuthenticationResponse)', {
-      contentType, fieldNames, hadAuthXml: Boolean(authXml),
+      contentType, fieldNames, hadAuthField: Boolean(authField),
     });
     return fail('unknown');
   }
