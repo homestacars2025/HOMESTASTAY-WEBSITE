@@ -136,6 +136,30 @@ export async function POST(request: NextRequest) {
 
     const html = await postToBank(payGateUrl(cfg), xml);
 
+    // A 2xx from PayGate is NOT proof of a real 3DS challenge — an error
+    // (HashDataError, bad credential) also comes back 200, as an HTML page.
+    // The distinguishing test is the form's TARGET: a genuine response
+    // auto-posts to the bank's ACS (an external acs/*3d* URL); an error page
+    // does not. Detected and logged only, never blocking — 3DS is confirmed
+    // working and a false positive here must not break it. The response
+    // contains no card number (the PAN went to the bank, not back).
+    const formAction = html.match(/<form[^>]*\baction=["']([^"']+)["']/i)?.[1] ?? null;
+    const looksLikeAcsRedirect =
+      /acs|3d|secure|mpi|threeds/i.test(formAction ?? '') ||
+      /PaReq|creq|threeDS/i.test(html);
+    console.log('[start:diag] payGate 2xx', {
+      merchantOrderId: attempt.merchant_order_id,
+      bytes: html.length,
+      formAction,
+      looksLikeAcsRedirect,
+    });
+    if (!looksLikeAcsRedirect) {
+      console.warn('[start:diag] PayGate response does not look like an ACS redirect — possible error page', {
+        merchantOrderId: attempt.merchant_order_id,
+        head: html.slice(0, 1500),
+      });
+    }
+
     // The attempt has now genuinely been sent to the bank.
     await supabase
       .from('booking_payments')

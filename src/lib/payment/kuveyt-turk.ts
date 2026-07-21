@@ -373,6 +373,41 @@ function tag(xml: string, name: string): string | null {
   return match ? match[1].trim() : null;
 }
 
+/**
+ * The 3D Secure result the ACS posts back to OkUrl/FailUrl.
+ *
+ * KT's 3D Model does NOT post MerchantOrderId / MD / ResponseCode as
+ * top-level form fields. They arrive inside a single URL-encoded form field
+ * `AuthenticationResponse`, whose (once-)decoded value is this XML. Reading
+ * the top-level form for MerchantOrderId finds nothing — the bug that made a
+ * fully-authenticated payment land on reason=unknown.
+ *
+ * ResponseCode here is the 3DS authentication result ('00' = authenticated),
+ * NOT the financial result — that comes later from ProvisionGate.
+ */
+export interface AuthenticationResult {
+  merchantOrderId: string | null;
+  md:              string | null;
+  responseCode:    string | null;
+  responseMessage: string | null;
+  raw:             string;
+}
+
+export function parseAuthenticationResponse(xml: string): AuthenticationResult {
+  return {
+    merchantOrderId: tag(xml, 'MerchantOrderId'),
+    md:              tag(xml, 'MD'),
+    responseCode:    tag(xml, 'ResponseCode'),
+    responseMessage: tag(xml, 'ResponseMessage'),
+    raw:             xml,
+  };
+}
+
+/** '00' is the bank's 3DS-authenticated code. */
+export function isAuthenticated(result: AuthenticationResult): boolean {
+  return result.responseCode === '00';
+}
+
 export interface ProvisionResult {
   responseCode:    string | null;
   responseMessage: string | null;

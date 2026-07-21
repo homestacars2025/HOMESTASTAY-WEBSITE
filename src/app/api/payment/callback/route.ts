@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import {
   kuveytConfig, provisionGateUrl, buildProvisionXml, postToBank,
   parseProvisionResponse, isApproved, hasRefundReferences, toMinorUnits,
+  parseAuthenticationResponse,
 } from '@/lib/payment/kuveyt-turk';
 import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
 
@@ -25,21 +26,12 @@ import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/**
- * request.formData() has ALREADY url-decoded these values once. Decoding again
- * corrupts anything containing a legitimate '%'.
- *
- * What it does not do for this bank's payload is turn '+' back into a space,
- * so Turkish messages arrive as "Kart+doğrulandı." instead of
- * "Kart doğrulandı.". Replace the plus and nothing else.
- */
-function bankText(value: FormDataEntryValue | null): string {
-  return typeof value === 'string' ? value.replace(/\+/g, ' ') : '';
-}
-
-function raw(value: FormDataEntryValue | null): string {
-  return typeof value === 'string' ? value : '';
-}
+// NOTE: an earlier version manually replaced '+' with ' ' here on the belief
+// that formData() left '+' untouched. That belief was wrong — urlencoded
+// parsing (formData AND URLSearchParams) already turns '+' into a space and
+// decodes %XX, verified. Manual +→space is therefore redundant and would
+// CORRUPT any value that legitimately contains '+' after decoding, e.g. a
+// base64 MD. Values now come straight from URLSearchParams, already decoded.
 
 /** PostgREST returns an embedded to-one as either an object or a 1-element array. */
 function one(value: unknown): unknown {
@@ -60,29 +52,57 @@ export async function POST(request: NextRequest) {
       { status: 303 },
     );
 
-  // The bank always posts application/x-www-form-urlencoded, but formData()
-  // THROWS on any other content-type. A 500 back to the bank is the worst
-  // response — it retries, and a retry storm against a callback that may have
-  // already provisioned is exactly the mess to avoid. Fail gracefully instead.
-  let form: FormData;
+  const contentType = request.headers.get('content-type') ?? '';
+
+  // Read the raw body ONCE, then parse it ourselves. URLSearchParams has the
+  // same urlencoded semantics as formData() — %XX decoded, '+' → space,
+  // verified — but reading text() first lets us LOG the exact bytes the ACS
+  // sent, which is the blind spot that hid this bug. No card number is ever in
+  // this body (the PAN went to the ACS, not back to us), so nothing to mask.
+  let rawBody = '';
   try {
-    form = await request.formData();
+    rawBody = await request.text();
   } catch (err) {
     console.error('[payment/callback] unreadable callback body', {
-      contentType: request.headers.get('content-type'),
-      error: err instanceof Error ? err.message : String(err),
+      contentType, error: err instanceof Error ? err.message : String(err),
     });
     return fail('unknown');
   }
 
-  // MD and MerchantOrderId are opaque tokens — never plus-substituted.
-  const merchantOrderId = raw(form.get('MerchantOrderId'));
-  const md              = raw(form.get('MD'));
-  const responseCode    = raw(form.get('ResponseCode'));
-  const responseMessage = bankText(form.get('ResponseMessage'));
+  const params = new URLSearchParams(rawBody);
+  const fieldNames = [...params.keys()];
+
+  // ── The actual fix ─────────────────────────────────────────────────────────
+  // KT's 3D Model returns MerchantOrderId / MD / ResponseCode INSIDE a single
+  // urlencoded field, AuthenticationResponse, whose decoded value is XML — not
+  // as top-level form fields. The old code read the top level, found nothing,
+  // and a fully-authenticated payment landed on reason=unknown. Read top-level
+  // first (some KT models do send them), then fall back to the XML.
+  const authXml = params.get('AuthenticationResponse');
+  const auth = authXml ? parseAuthenticationResponse(authXml) : null;
+
+  const merchantOrderId = params.get('MerchantOrderId') || auth?.merchantOrderId || '';
+  const md              = params.get('MD')              || auth?.md              || '';
+  const responseCode    = params.get('ResponseCode')    || auth?.responseCode    || '';
+  const responseMessage = params.get('ResponseMessage') || auth?.responseMessage || '';
+  const source = params.get('MerchantOrderId') ? 'top-level'
+    : auth?.merchantOrderId ? 'AuthenticationResponse'
+    : 'none';
+
+  // ── TEMPORARY DIAGNOSTIC — remove once confirmed on production ─────────────
+  console.log('[callback:diag] content-type   :', contentType);
+  console.log('[callback:diag] field names     :', fieldNames.join(', '));
+  console.log('[callback:diag] raw body        :', rawBody.slice(0, 4000));
+  console.log('[callback:diag] AuthResponse XML:', authXml ?? '(absent)');
+  console.log('[callback:diag] extracted       :', JSON.stringify({
+    merchantOrderId, source, mdPresent: Boolean(md), responseCode, responseMessage,
+  }));
+  // ───────────────────────────────────────────────────────────────────────────
 
   if (!merchantOrderId) {
-    console.error('[payment/callback] no MerchantOrderId in callback');
+    console.error('[payment/callback] no MerchantOrderId (top-level OR AuthenticationResponse)', {
+      contentType, fieldNames, hadAuthXml: Boolean(authXml),
+    });
     return fail('unknown');
   }
 
