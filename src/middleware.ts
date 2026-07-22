@@ -34,12 +34,17 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // `api` MUST be excluded: next-intl otherwise 307-redirects /api/* to
-  // /en/api/*. The Kuveyt Türk 3DS callback is a cross-site POST to
-  // /api/payment/callback — a redirect drops the POST body and the callback
-  // never runs, so a paid booking would look failed. (The route also lives
-  // outside [locale], so the redirect target 404s regardless.)
+  // Exclusions, each load-bearing:
+  //  - `api`: next-intl otherwise 307-redirects /api/* to /en/api/*, dropping
+  //    the body of the Kuveyt Türk 3DS callback (a cross-site POST) so a paid
+  //    booking looks failed.
+  //  - `icon`, `apple-icon`, `opengraph-image`, `twitter-image`: App Router
+  //    metadata routes, dotless so NOT caught by the .*\..* rule. Without this
+  //    the <link rel="icon" href="/icon"> in every page 307-redirects to
+  //    /en/icon and the favicon never loads — the browser tab stays blank.
+  //  - Dotted metadata files (favicon.ico, manifest.webmanifest, sitemap.xml,
+  //    robots.txt) are already excluded by the .*\..* segment.
   matcher: [
-    '/((?!api|_next|_vercel|.*\\..*).*)',
+    '/((?!api|_next|_vercel|icon|apple-icon|opengraph-image|twitter-image|.*\\..*).*)',
   ],
 };
