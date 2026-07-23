@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { AlertCircle } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
+import { PhoneInput } from '@/components/auth/PhoneInput';
+import { CountrySelect } from '@/components/booking/CountrySelect';
 import { createHoldAction } from '@/app/[locale]/book/[slug]/actions';
 import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/actions';
 
@@ -178,29 +180,33 @@ export function GuestDetailsForm({
       </div>
 
       <div>
-        <label htmlFor="phone" className={labelClass}>{t('fields.phone')}</label>
-        {/* dir="ltr" even in Arabic: a phone number is a left-to-right token and
-            the leading + lands in the wrong place without it. */}
-        <input
-          id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel"
-          dir="ltr" placeholder="+905309373810"
-          value={phone} onChange={(e) => setPhone(e.target.value)}
-          aria-invalid={invalid('phone')} className={inputClass('phone')}
+        {/* Reuses the shared PhoneInput (also on sign-up + host). Emits E.164,
+            which is exactly what the RPC validates. 'booking' variant matches
+            this form's radius and micro-label. */}
+        <PhoneInput
+          variant="booking"
+          defaultCountry="TR"
+          value={phone}
+          onChange={setPhone}
+          label={t('fields.phone')}
+          searchPlaceholder={t('fields.searchCountries')}
+          invalid={invalid('phone')}
+          errorId="phone-error"
         />
         <p className="mt-2 text-xs text-mute">{t('fields.phoneHint')}</p>
-        {invalid('phone') && <FieldNote>{t('errors.phone')}</FieldNote>}
+        {invalid('phone') && <FieldNote id="phone-error">{t('errors.phone')}</FieldNote>}
       </div>
 
-      <div>
-        <label htmlFor="nationality" className={labelClass}>
-          {t('fields.nationality')} <span className="normal-case">{t('fields.optional')}</span>
-        </label>
-        <input
-          id="nationality" name="nationality" type="text" autoComplete="country-name"
-          value={nationality} onChange={(e) => setNationality(e.target.value)}
-          className={inputClass('firstName').replace('border-stay', 'border-rule')}
-        />
-      </div>
+      {/* Nationality — stores the ISO alpha-2 code, localized names from the
+          library. Optional, same as before. */}
+      <CountrySelect
+        value={nationality}
+        onChange={setNationality}
+        label={t('fields.nationality')}
+        optionalText={t('fields.optional')}
+        placeholder={t('fields.nationalityPlaceholder')}
+        searchPlaceholder={t('fields.searchCountries')}
+      />
 
       <div className="border-t border-rule pt-5">
         <p className={labelClass}>{t('fields.guests')}</p>
@@ -263,8 +269,8 @@ export function GuestDetailsForm({
   );
 }
 
-function FieldNote({ children }: { children: React.ReactNode }) {
-  return <p className="mt-2 text-xs text-stay">{children}</p>;
+function FieldNote({ id, children }: { id?: string; children: React.ReactNode }) {
+  return <p id={id} className="mt-2 text-xs text-stay">{children}</p>;
 }
 
 function Notice({ children }: { children: React.ReactNode }) {

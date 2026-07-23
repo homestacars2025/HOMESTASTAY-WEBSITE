@@ -43,7 +43,29 @@ interface PhoneInputProps {
   label: string;
   searchPlaceholder: string;
   errorId?: string;
+  /** 'auth' (default) keeps the sign-up / host look; 'booking' matches the
+   *  14px radius and font-mono micro-label of the booking form's inputs. */
+  variant?: 'auth' | 'booking';
+  /** Red border to match the other fields' invalid state. */
+  invalid?: boolean;
 }
+
+// Both variants' class strings are literal so Tailwind's scanner emits them —
+// a template-built `rounded-[${n}px]` would never be generated.
+const VARIANTS = {
+  auth: {
+    label:     'text-sm font-medium text-ink',
+    radius:    'rounded-[8px]',
+    radiusS:   'rounded-s-[8px]',
+    radiusE:   'rounded-e-[8px]',
+  },
+  booking: {
+    label:     'block font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-2',
+    radius:    'rounded-[14px]',
+    radiusS:   'rounded-s-[14px]',
+    radiusE:   'rounded-e-[14px]',
+  },
+} as const;
 
 export function PhoneInput({
   value: _value,
@@ -52,7 +74,10 @@ export function PhoneInput({
   label,
   searchPlaceholder,
   errorId,
+  variant = 'auth',
+  invalid = false,
 }: PhoneInputProps) {
+  const v = VARIANTS[variant];
   const defaultC = ALL_COUNTRIES.find((c) => c.code === defaultCountry) ?? ALL_COUNTRIES[0];
 
   const [selected,       setSelected]       = useState<Country>(defaultC);
@@ -117,15 +142,15 @@ export function PhoneInput({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor="phone-number" className="text-sm font-medium text-ink">
+      <label htmlFor="phone-number" className={v.label}>
         {label}
       </label>
 
       <div ref={containerRef} className="relative">
         {/* ── Input row ── */}
         <div
-          className={`flex rounded-[8px] border transition-colors duration-[240ms] overflow-visible focus-within:border-ink ${
-            dropdownOpen ? 'border-ink' : 'border-rule'
+          className={`flex ${v.radius} border transition-colors duration-[240ms] overflow-visible focus-within:border-ink ${
+            invalid ? 'border-stay' : dropdownOpen ? 'border-ink' : 'border-rule'
           }`}
         >
           {/* Country-code trigger */}
@@ -135,7 +160,7 @@ export function PhoneInput({
             aria-haspopup="listbox"
             aria-label={`${selected.name} ${selected.dialCode}`}
             onClick={() => setDropdownOpen((v) => !v)}
-            className="flex items-center gap-1.5 ps-3 pe-2.5 py-2.5 bg-paper-warm hover:bg-rule/40 border-e border-rule rounded-s-[8px] shrink-0 transition-colors duration-[240ms]"
+            className={`flex items-center gap-1.5 ps-3 pe-2.5 py-2.5 bg-paper-warm hover:bg-rule/40 border-e border-rule ${v.radiusS} shrink-0 transition-colors duration-[240ms]`}
           >
             <span className="text-[18px] leading-none select-none" aria-hidden="true">
               {selected.flag}
@@ -160,7 +185,7 @@ export function PhoneInput({
             value={localNumber}
             onChange={(e) => handleLocalChange(e.target.value)}
             aria-describedby={errorId}
-            className="flex-1 px-3 py-2.5 text-sm text-ink bg-paper placeholder:text-mute focus:outline-none rounded-e-[8px] min-w-0"
+            className={`flex-1 px-3 py-2.5 text-sm text-ink bg-paper placeholder:text-mute focus:outline-none ${v.radiusE} min-w-0`}
           />
         </div>
 

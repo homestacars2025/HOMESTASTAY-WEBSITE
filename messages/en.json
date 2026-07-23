@@ -520,7 +520,9 @@
       "guests": "Guests",
       "guestsDecrement": "Fewer guests",
       "guestsIncrement": "More guests",
-      "maxGuests": "This place sleeps up to {count}."
+      "maxGuests": "This place sleeps up to {count}.",
+      "searchCountries": "Search countries",
+      "nationalityPlaceholder": "Select your nationality"
     },
     "documents": {
       "label": "I have read and accept the <pre>Pre-Information Form</pre> and the <contract>Distance Sales Contract</contract>."

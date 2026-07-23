@@ -520,7 +520,9 @@
       "guests": "الضيوف",
       "guestsDecrement": "عدد ضيوف أقل",
       "guestsIncrement": "عدد ضيوف أكثر",
-      "maxGuests": "يتسع هذا المكان لـ {count} ضيوف كحد أقصى."
+      "maxGuests": "يتسع هذا المكان لـ {count} ضيوف كحد أقصى.",
+      "searchCountries": "ابحث عن دولة",
+      "nationalityPlaceholder": "اختر جنسيتك"
     },
     "documents": {
       "label": "لقد قرأت <pre>نموذج المعلومات المسبقة</pre> و<contract>عقد البيع عن بُعد</contract> وأوافق عليهما."

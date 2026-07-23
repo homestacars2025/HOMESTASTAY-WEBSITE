@@ -520,7 +520,9 @@
       "guests": "Гости",
       "guestsDecrement": "Меньше гостей",
       "guestsIncrement": "Больше гостей",
-      "maxGuests": "Здесь могут разместиться до {count} гостей."
+      "maxGuests": "Здесь могут разместиться до {count} гостей.",
+      "searchCountries": "Поиск страны",
+      "nationalityPlaceholder": "Выберите гражданство"
     },
     "documents": {
       "label": "Я прочитал(а) и принимаю <pre>Форму предварительного информирования</pre> и <contract>Договор дистанционной продажи</contract>."

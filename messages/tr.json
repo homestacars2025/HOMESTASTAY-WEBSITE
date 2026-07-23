@@ -520,7 +520,9 @@
       "guests": "Misafir",
       "guestsDecrement": "Daha az misafir",
       "guestsIncrement": "Daha fazla misafir",
-      "maxGuests": "Bu yer en fazla {count} misafir ağırlar."
+      "maxGuests": "Bu yer en fazla {count} misafir ağırlar.",
+      "searchCountries": "Ülke ara",
+      "nationalityPlaceholder": "Uyruğunuzu seçin"
     },
     "documents": {
       "label": "<pre>Ön Bilgilendirme Formu</pre>’nu ve <contract>Mesafeli Satış Sözleşmesi</contract>’ni okudum, kabul ediyorum."
