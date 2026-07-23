@@ -89,7 +89,10 @@ export function provisionGateUrl(cfg: KuveytConfig): string {
  * latin1 input encoding is deliberate: the bank hashes bytes, and a Turkish
  * character in CardHolderName must not become multi-byte UTF-8 mid-hash.
  */
-function sha1Base64(input: string): string {
+// Exported so the refund path (kuveyt-refund.ts) reuses the exact same
+// primitive. latin1 == ISO-8859-9 for the ASCII-only hash inputs both paths
+// use, so the bank doc's ISO-8859-9 and this latin1 produce identical bytes.
+export function sha1Base64(input: string): string {
   return createHash('sha1').update(input, 'latin1').digest('base64');
 }
 
