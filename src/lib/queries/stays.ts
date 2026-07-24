@@ -1,5 +1,7 @@
 import 'server-only';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/public';
+import { unstable_cache } from 'next/cache';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { approximateCoords } from '@/lib/geo/approximate';
 import type {
   UnitListing,
@@ -137,7 +139,7 @@ function num(value: unknown): number | null {
  * showing a wrong one. Priceless-and-loud beats mispriced-and-quiet.
  */
 async function fetchQuotes(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseClient,
   unitIds: string[],
   checkIn?: string,
   checkOut?: string,
@@ -389,7 +391,7 @@ function mapRow(
  * can't embed it — we resolve it with a small companion query instead.
  */
 async function fetchPolicies(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseClient,
   ids: string[],
   locale: string,
 ): Promise<Map<string, UnitCancellationPolicy>> {
@@ -457,7 +459,7 @@ export interface StaysFilters {
  * internal and must never reach a guest.
  */
 async function blockedUnitIds(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseClient,
   checkIn: string,
   checkOut: string,
 ): Promise<string[] | null> {
@@ -490,7 +492,7 @@ async function blockedUnitIds(
  * lookup costs the slower of the two, not the sum.
  */
 async function mapCardRows(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseClient,
   data: RawRow[],
   locale: string,
   checkIn?: string,
@@ -513,13 +515,41 @@ async function mapCardRows(
 
 const LISTING_PAGE_SIZE = 24;
 
+/**
+ * Public listing.
+ *
+ * The UNFILTERED first page is cached and tagged 'units' — it is identical for
+ * every visitor and is the transcontinental query we most want to skip. Any
+ * filter (city / guests / DATES) goes straight to the DB: availability MUST be
+ * live, or a guest could be shown a unit that is already booked. So only the
+ * plain /stays index is cached; every search is fresh.
+ */
 export async function getPublicUnits(
   locale: string = SOURCE_LOCALE,
   filters: StaysFilters = {},
   page = 1,
   pageSize = LISTING_PAGE_SIZE,
 ): Promise<{ units: UnitListing[]; total: number }> {
-  const supabase = await createClient();
+  const unfiltered =
+    !filters.city && !filters.guests && !filters.checkIn && !filters.checkOut;
+
+  if (unfiltered && page === 1 && pageSize === LISTING_PAGE_SIZE) {
+    return unstable_cache(
+      () => queryPublicUnits(locale, {}, 1, LISTING_PAGE_SIZE),
+      ['stays-unfiltered', locale],
+      { tags: ['units'], revalidate: 600 },
+    )();
+  }
+  return queryPublicUnits(locale, filters, page, pageSize);
+}
+
+async function queryPublicUnits(
+  locale: string = SOURCE_LOCALE,
+  filters: StaysFilters = {},
+  page = 1,
+  pageSize = LISTING_PAGE_SIZE,
+): Promise<{ units: UnitListing[]; total: number }> {
+  const supabase = createPublicClient();
 
   const { city, guests, checkIn, checkOut } = filters;
   const wantsAvailability = !!checkIn && !!checkOut;
@@ -589,13 +619,29 @@ export async function getPublicUnits(
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Unit detail. Cached and tagged 'units' — /api/revalidate drops it when the
+ * unit's price, photos, availability or content change. The window (300s) is a
+ * fallback for a missed webhook; the tag is the real freshness mechanism.
+ */
 export async function getPublicUnitBySlug(
+  slugOrId: string,
+  locale: string = SOURCE_LOCALE,
+): Promise<UnitListing | null> {
+  return unstable_cache(
+    () => queryPublicUnitBySlug(slugOrId, locale),
+    ['unit-by-slug', slugOrId, locale],
+    { tags: ['units'], revalidate: 300 },
+  )();
+}
+
+async function queryPublicUnitBySlug(
   slugOrId: string,
   locale: string = SOURCE_LOCALE,
 ): Promise<UnitListing | null> {
   const column = UUID_RE.test(slugOrId) ? 'id' : 'slug';
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   const { data, error } = await supabase
     .from('units')
@@ -643,18 +689,15 @@ export async function getPublicUnitBySlug(
  * Fisher-Yates at request time; call twice for two independent rails, or pass a
  * larger limit and slice disjoint halves.
  */
-/** Fetch specific units as trimmed cards, preserving the given id order. */
-async function fetchCardsByIds(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  ids: string[],
-  locale: string,
-): Promise<UnitListing[]> {
-  if (ids.length === 0) return [];
-
+/** All publicly-visible units as trimmed cards — no limit, no dates. The
+ *  homepage's random pool. Cached (see getRandomFeaturedUnits): the whole set
+ *  is small once trimmed, and caching it means the intercontinental fetch
+ *  happens once per window, not per visitor. */
+async function queryAllAvailableCards(locale: string): Promise<UnitListing[]> {
+  const supabase = createPublicClient();
   let query = supabase
     .from('units')
     .select(CARD_SELECT)
-    .in('id', ids)
     .eq('status', 'available')
     .is('archived_at', null)
     .not('unit_info.ad_title', 'is', null)
@@ -662,52 +705,40 @@ async function fetchCardsByIds(
 
   query = cardTrims(query, locale);
 
-  const { data, error } = await query;
+  const { data, error } = await query
+    .order('property_id', { ascending: true })
+    .order('unit_name', { ascending: true });
+
   if (error) {
-    console.error('[fetchCardsByIds]', { message: error.message, code: error.code });
+    console.error('[queryAllAvailableCards]', { message: error.message, code: error.code });
     return [];
   }
+  return mapCardRows(supabase, (data ?? []) as RawRow[], locale);
+}
 
-  const mapped = await mapCardRows(supabase, (data ?? []) as RawRow[], locale);
-  // .in returns DB order; restore the shuffled order the caller chose.
-  const byId = new Map(mapped.map((u) => [u.id, u]));
-  return ids.map((id) => byId.get(id)).filter((u): u is UnitListing => !!u);
+/** The pool, cached and tagged so /api/revalidate can drop it on any unit edit. */
+function getPoolCached(locale: string): Promise<UnitListing[]> {
+  return unstable_cache(
+    () => queryAllAvailableCards(locale),
+    ['stays-pool', locale],
+    { tags: ['units'], revalidate: 600 },
+  )();
 }
 
 /**
- * Random featured units for the homepage rails. Two cheap round trips instead
- * of fetching the whole catalogue:
- *   1. all available unit ids (one column) → shuffle in JS
- *   2. fetch just `limit` of them as trimmed cards
- * This keeps the randomness per-request AND gives a real LIMIT — the old path
- * fetched every unit and threw most away.
+ * Random featured units for the homepage rails. Shuffles a CACHED pool, so the
+ * transcontinental fetch is amortised across a whole revalidation window while
+ * each visitor still gets a fresh random order (the shuffle is per-request,
+ * over cached data — no query cost).
  */
 export async function getRandomFeaturedUnits(
   locale: string = SOURCE_LOCALE,
   limit: number = 12,
 ): Promise<UnitListing[]> {
-  const supabase = await createClient();
-
-  // Same public-visibility guard as getPublicUnits, so the pool matches exactly.
-  const { data: idRows, error } = await supabase
-    .from('units')
-    .select('id, unit_info!inner(ad_title), properties!inner(archived_at)')
-    .eq('status', 'available')
-    .is('archived_at', null)
-    .not('unit_info.ad_title', 'is', null)
-    .is('properties.archived_at', null);
-
-  if (error) {
-    console.error('[getRandomFeaturedUnits]', { message: error.message, code: error.code });
-    return [];
-  }
-
-  const ids = (idRows ?? []).map((r: RawRow) => r.id as string);
-  // Fisher-Yates (mutates the local array only).
-  for (let i = ids.length - 1; i > 0; i--) {
+  const pool = [...(await getPoolCached(locale))];
+  for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [ids[i], ids[j]] = [ids[j], ids[i]];
+    [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-
-  return fetchCardsByIds(supabase, ids.slice(0, limit), locale);
+  return pool.slice(0, limit);
 }
