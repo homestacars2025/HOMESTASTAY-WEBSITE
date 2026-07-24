@@ -53,6 +53,44 @@ const LISTING_SELECT = [
   'unit_translations(language_code,ad_title,ad_description)',
 ].join(',');
 
+// A listing CARD renders only: cover image, title, city/region, price. It never
+// shows amenities, rules, specs, description, or the gallery — those load on the
+// unit detail page (which keeps LISTING_SELECT). This trimmed select is why the
+// homepage/listing payload drops ~90%: no amenities/rules/specs joins, ONE cover
+// photo (via the embedded order+limit below), and the visitor's locale + Turkish
+// source only (via the embedded language filter), not all four locales.
+const CARD_SELECT = [
+  'id,slug,unit_type,unit_name,status,min_nights,currency,cancellation_policy_id',
+  // ad_description + latitude/longitude dropped: the card shows neither.
+  'unit_info!inner(ad_title,city,region,municipality)',
+  // name + property_type dropped.
+  'properties!inner(cover_photo_url,geo_cities:city_id(name),geo_districts:district_id(name))',
+  // Trimmed to one row per unit by the embedded order+limit in cardTrims().
+  'unit_media(public_url,is_cover,sort_order,media_type)',
+  // ad_description dropped; rows narrowed to [locale, tr] by cardTrims().
+  'unit_translations(language_code,ad_title)',
+].join(',');
+
+/**
+ * Apply the card-specific trims to a units query: one cover photo per unit
+ * (is_cover first, then sort_order — so a unit with no flagged cover still gets
+ * its first photo), and only the visitor's locale + the Turkish source rows.
+ * Neither filter uses !inner, so a unit with no cover / no translation is kept
+ * and falls back (property cover_photo_url / Turkish source) in mapRow.
+ */
+// query is typed loosely to sidestep the Supabase builder's deeply-recursive
+// generics (they blow TS's instantiation-depth limit); the caller keeps its own
+// builder type via the T pass-through.
+function cardTrims<T>(query: T, locale: string): T {
+  /* eslint-disable @typescript-eslint/no-explicit-any */ // reason: builder chain
+  return (query as any)
+    .order('is_cover',   { referencedTable: 'unit_media', ascending: false })
+    .order('sort_order', { referencedTable: 'unit_media', ascending: true })
+    .limit(1, { referencedTable: 'unit_media' })
+    .in('unit_translations.language_code', Array.from(new Set([locale, SOURCE_LOCALE]))) as T;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
+
 // Turkish is the source language every listing is authored in; all fallbacks
 // end here before dropping to the legacy unit_info free-text.
 const SOURCE_LOCALE = 'tr';
@@ -445,10 +483,42 @@ async function blockedUnitIds(
  * Optionally narrowed by `filters`. Returns [] on error (logged) — the page then
  * renders its empty state.
  */
+/**
+ * Attach live prices + cancellation policies to raw card rows and map them to
+ * UnitListing. Shared by the paged listing and the random-featured path. The
+ * two lookups are independent, so they run concurrently — the added price
+ * lookup costs the slower of the two, not the sum.
+ */
+async function mapCardRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  data: RawRow[],
+  locale: string,
+  checkIn?: string,
+  checkOut?: string,
+): Promise<UnitListing[]> {
+  const rows = data.filter(hasAdTitle);
+  const [policies, quotes] = await Promise.all([
+    fetchPolicies(supabase, rows.map((r) => r.cancellation_policy_id), locale),
+    fetchQuotes(supabase, rows.map((r) => r.id as string), checkIn, checkOut),
+  ]);
+  return rows.map((r) =>
+    mapRow(
+      r,
+      policies.get(r.cancellation_policy_id) ?? null,
+      locale,
+      quotes.get(r.id as string) ?? EMPTY_PRICING,
+    ),
+  );
+}
+
+const LISTING_PAGE_SIZE = 24;
+
 export async function getPublicUnits(
   locale: string = SOURCE_LOCALE,
   filters: StaysFilters = {},
-): Promise<UnitListing[]> {
+  page = 1,
+  pageSize = LISTING_PAGE_SIZE,
+): Promise<{ units: UnitListing[]; total: number }> {
   const supabase = await createClient();
 
   const { city, guests, checkIn, checkOut } = filters;
@@ -457,27 +527,27 @@ export async function getPublicUnits(
   let blocked: string[] = [];
   if (wantsAvailability) {
     const ids = await blockedUnitIds(supabase, checkIn, checkOut);
-    if (ids === null) return []; // fail closed — see blockedUnitIds
+    if (ids === null) return { units: [], total: 0 }; // fail closed — see blockedUnitIds
     blocked = ids;
   }
 
-  // Filters on an embedded table only drop the parent row when that embed is an
-  // inner join; without !inner PostgREST nulls the embed and returns every unit,
-  // which reads as a filter that silently does nothing. Verified against the live
-  // API: city=istanbul returns 41 rows with !inner, all 141 without.
-  // Applied only when the filter is active, so units missing a specifications row
-  // still appear in an unfiltered listing.
-  let select = LISTING_SELECT;
-  if (guests) select = select.replace('unit_specifications(', 'unit_specifications!inner(');
+  // The guests filter needs max_guests, which CARD_SELECT drops — add it back as
+  // an inner join (filter only, one column). City makes the geo_cities embed
+  // inner so it actually filters the parent (see the note that was here before:
+  // without !inner PostgREST nulls the embed and the filter silently does nothing).
+  let select = CARD_SELECT;
+  if (guests) select += ',unit_specifications!inner(max_guests)';
   if (city) select = select.replace('geo_cities:city_id(', 'geo_cities:city_id!inner(');
 
   let query = supabase
     .from('units')
-    .select(select)
+    .select(select, { count: 'exact' }) // count drives pagination (1ب)
     .eq('status', 'available')
     .is('archived_at', null)
     .not('unit_info.ad_title', 'is', null)
     .is('properties.archived_at', null);
+
+  query = cardTrims(query, locale);
 
   // City comes from properties.geo_cities — the normalised lookup the search
   // dropdown and the unit card both read. unit_info.city is free text and
@@ -486,9 +556,12 @@ export async function getPublicUnits(
   if (guests) query = query.gte('unit_specifications.max_guests', guests);
   if (blocked.length > 0) query = query.not('id', 'in', `(${blocked.join(',')})`);
 
-  const { data, error } = await query
+  const { data, error, count } = await query
     .order('property_id', { ascending: true })
-    .order('unit_name', { ascending: true });
+    .order('unit_name', { ascending: true })
+    // LIMIT so the listing stops fetching the whole catalogue. The pagination
+    // UI (page param, prev/next) is 1ب; this cap already delivers the payload win.
+    .range((page - 1) * pageSize, page * pageSize - 1);
 
   if (error) {
     console.error('[getPublicUnits]', {
@@ -498,26 +571,11 @@ export async function getPublicUnits(
       hint: error.hint,
       filters,
     });
-    return [];
+    return { units: [], total: 0 };
   }
 
-  const rows = ((data ?? []) as RawRow[]).filter(hasAdTitle);
-
-  // Independent of each other — run concurrently so the added price lookup
-  // costs the slower of the two, not the sum.
-  const [policies, quotes] = await Promise.all([
-    fetchPolicies(supabase, rows.map((r) => r.cancellation_policy_id), locale),
-    fetchQuotes(supabase, rows.map((r) => r.id as string), checkIn, checkOut),
-  ]);
-
-  return rows.map((r) =>
-    mapRow(
-      r,
-      policies.get(r.cancellation_policy_id) ?? null,
-      locale,
-      quotes.get(r.id as string) ?? EMPTY_PRICING,
-    ),
-  );
+  const units = await mapCardRows(supabase, (data ?? []) as RawRow[], locale, checkIn, checkOut);
+  return { units, total: count ?? units.length };
 }
 
 /**
@@ -585,18 +643,71 @@ export async function getPublicUnitBySlug(
  * Fisher-Yates at request time; call twice for two independent rails, or pass a
  * larger limit and slice disjoint halves.
  */
-export async function getRandomFeaturedUnits(
-  locale: string = SOURCE_LOCALE,
-  limit: number = 6,
+/** Fetch specific units as trimmed cards, preserving the given id order. */
+async function fetchCardsByIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  ids: string[],
+  locale: string,
 ): Promise<UnitListing[]> {
-  const units = await getPublicUnits(locale);
+  if (ids.length === 0) return [];
 
-  // Fisher-Yates shuffle (a fresh copy — never mutate the source array).
-  const shuffled = [...units];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  let query = supabase
+    .from('units')
+    .select(CARD_SELECT)
+    .in('id', ids)
+    .eq('status', 'available')
+    .is('archived_at', null)
+    .not('unit_info.ad_title', 'is', null)
+    .is('properties.archived_at', null);
+
+  query = cardTrims(query, locale);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('[fetchCardsByIds]', { message: error.message, code: error.code });
+    return [];
   }
 
-  return shuffled.slice(0, limit);
+  const mapped = await mapCardRows(supabase, (data ?? []) as RawRow[], locale);
+  // .in returns DB order; restore the shuffled order the caller chose.
+  const byId = new Map(mapped.map((u) => [u.id, u]));
+  return ids.map((id) => byId.get(id)).filter((u): u is UnitListing => !!u);
+}
+
+/**
+ * Random featured units for the homepage rails. Two cheap round trips instead
+ * of fetching the whole catalogue:
+ *   1. all available unit ids (one column) → shuffle in JS
+ *   2. fetch just `limit` of them as trimmed cards
+ * This keeps the randomness per-request AND gives a real LIMIT — the old path
+ * fetched every unit and threw most away.
+ */
+export async function getRandomFeaturedUnits(
+  locale: string = SOURCE_LOCALE,
+  limit: number = 12,
+): Promise<UnitListing[]> {
+  const supabase = await createClient();
+
+  // Same public-visibility guard as getPublicUnits, so the pool matches exactly.
+  const { data: idRows, error } = await supabase
+    .from('units')
+    .select('id, unit_info!inner(ad_title), properties!inner(archived_at)')
+    .eq('status', 'available')
+    .is('archived_at', null)
+    .not('unit_info.ad_title', 'is', null)
+    .is('properties.archived_at', null);
+
+  if (error) {
+    console.error('[getRandomFeaturedUnits]', { message: error.message, code: error.code });
+    return [];
+  }
+
+  const ids = (idRows ?? []).map((r: RawRow) => r.id as string);
+  // Fisher-Yates (mutates the local array only).
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+
+  return fetchCardsByIds(supabase, ids.slice(0, limit), locale);
 }

@@ -40,7 +40,9 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
   // filter lives in getPublicUnits; more units appear automatically as hosts
   // fill in ad_title. Card titles are resolved for the visitor's locale
   // (unit_translations).
-  const units = await getPublicUnits(locale, filters);
+  // First page only for now — capped at 24 in getPublicUnits. The prev/next UI
+  // that uses `total` is 1ب; this already stops the whole-catalogue fetch.
+  const { units } = await getPublicUnits(locale, filters);
 
   return (
     <div className="min-h-screen bg-paper">
