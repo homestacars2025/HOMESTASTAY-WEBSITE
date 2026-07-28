@@ -6,6 +6,7 @@ import {
   parseAuthenticationResponse,
 } from '@/lib/payment/kuveyt-turk';
 import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
+import { performRefund } from '@/lib/payment/refund-service';
 
 /**
  * The 3D Secure callback.
@@ -280,6 +281,10 @@ export async function POST(request: NextRequest) {
       console.error(`[payment/callback] ${completed.status} — REFUND REQUIRED`, {
         merchantOrderId, reference, amountTry: completed.amount_try,
       });
+      // Fire the refund in-process (idempotent, and gated by REFUND_LIVE_ENABLED
+      // until boatest passes — returns 'gated' with no bank call until then).
+      // after() so it never delays the guest's redirect.
+      after(() => performRefund({ merchantOrderId, reason: completed.status }));
       return NextResponse.redirect(
         new URL(`/booking-failed?reason=${completed.status}`, request.url),
         { status: 303 },
