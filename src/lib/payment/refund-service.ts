@@ -149,25 +149,38 @@ export async function performRefund(params: {
 
   // ── Record the outcome ─────────────────────────────────────────────────────
   if (isRefundApproved(result)) {
-    await supabase.from('booking_refunds').update({
-      status:               'succeeded',
-      res_rrn:              result.rrn,
-      res_stan:             result.stan,
-      res_provision_number: result.provisionNumber,
-      res_order_id:         result.orderId,
-      res_transaction_time: result.transactionTime,
-      res_business_key:     result.businessKey,
-      res_response_code:    result.responseCode,
-      res_response_message: result.responseMessage,
-    }).eq('id', refundId);
+    // One ATOMIC RPC does all three transitions that must not half-complete:
+    //   booking_refunds → succeeded (+ the new bank refs),
+    //   booking_payments → refunded / partially_refunded,
+    //   bookings → canceled (full refund only) — past guard_paid_booking_cancel
+    //     via SET LOCAL homesta.refund_authorized inside its own transaction,
+    //     the one thing supabase-js cannot do across separate .update() calls.
+    // Idempotent: a retry on an already-'succeeded' row is a no-op.
+    const { error: completeError } = await supabase.rpc('complete_refund', {
+      p_refund_id:            refundId,
+      p_txn_type:             txnType,
+      p_res_rrn:              result.rrn,
+      p_res_stan:             result.stan,
+      p_res_provision_number: result.provisionNumber,
+      p_res_order_id:         result.orderId,
+      p_res_transaction_time: result.transactionTime,
+      p_res_business_key:     result.businessKey,
+      p_res_response_code:    result.responseCode,
+      p_res_response_message: result.responseMessage,
+    });
 
-    // Flip the payment only from 'paid' — a guard against a concurrent change.
-    const newStatus = txnType === 'PartialDrawback' ? 'partially_refunded' : 'refunded';
-    await supabase
-      .from('booking_payments')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', payment.id)
-      .eq('status', 'paid');
+    if (completeError) {
+      // The bank returned the money but the DB finish failed. Do NOT mark
+      // failed — the money moved. Leave the row 'pending' for reconciliation;
+      // complete_refund is idempotent, so re-running it (with these same refs)
+      // finishes the transitions without re-calling the bank. ⚠️ the refs are
+      // only in this process's memory — see the residual-window note.
+      console.error('[refund] BANK OK but complete_refund failed — reconcile', {
+        merchantOrderId, refundId,
+        message: completeError.message, code: completeError.code,
+      });
+      return { status: 'pending' };
+    }
 
     return { status: 'refunded', refundId, resRrn: result.rrn };
   }
