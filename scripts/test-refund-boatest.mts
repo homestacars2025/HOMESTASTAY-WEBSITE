@@ -12,10 +12,16 @@
  * Config is EXPLICIT here (test creds + test host) — it never reads production
  * env, so this cannot touch a real charge.
  *
- * ⚠️ PROXY: boatest.kuveytturk.com.tr is a DIFFERENT host from production. The
- * pay-proxy only forwards the production boa host. Point BOATEST_PROXY at a
- * proxy that reaches boatest, OR run this from a whitelisted IP. If the request
- * times out, that routing is the reason, not the SOAP.
+ * ENDPOINT: the refund goes to the WCF query API at `.svc/Basic` (NOT the bare
+ * `.svc`, which 404s on POST — that was the original bug). toRefundConfig now
+ * defaults to the `.svc/Basic` path, so this script inherits the fix; the
+ * boatest query_api is
+ * https://boatest.kuveytturk.com.tr/BOA.Integration.WCFService/BOA.Integration.VirtualPos/VirtualPosService.svc/Basic
+ *
+ * ⚠️ PROXY: boatest.kuveytturk.com.tr is a DIFFERENT host from production, and
+ * per the reference it has no IP restriction — so BOATEST_PROXY defaults to the
+ * boatest host directly. If the request times out, that routing is the reason,
+ * not the SOAP.
  */
 import {
   buildRefundSoap, postRefundSoap, parseRefundResponse,

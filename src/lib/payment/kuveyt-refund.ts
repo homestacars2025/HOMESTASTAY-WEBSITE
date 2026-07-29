@@ -2,20 +2,37 @@
  * Kuveyt Türk refunds — SaleReversal / DrawBack / PartialDrawback. SERVER ONLY.
  *
  * A COMPLETELY DIFFERENT PROTOCOL from payment. Payment is plain XML
- * (KuveytTurkVPosMessage) to sanalposservice/Home/…; refund is SOAP 1.1 to
- * BOA.Integration.WCFService/…/VirtualPosService.svc. Shared with payment:
- * only the hash primitive and the minor-unit conversion.
+ * (KuveytTurkVPosMessage) to sanalposservice/Home/…; refund is SOAP 1.1 to the
+ * WCF "query API": BOA.Integration.WCFService/…/VirtualPosService.svc/Basic.
+ * Shared with payment: only the hash primitive and the minor-unit conversion.
  *
- * The hash is IDENTICAL to payment Request 2:
+ * ⚠️ THE `/Basic` SUFFIX IS LOAD-BEARING. The bare `.svc` is the WCF metadata
+ * page — 200 on GET, 404 on POST — which is exactly what an earlier attempt hit.
+ * The real SOAP 1.1 (basicHttpBinding) endpoint lives at `.svc/Basic`; a POST
+ * there returns a genuine <…Response> envelope. Confirmed live through the
+ * payment proxy (boa.kuveytturk.com.tr) and against the mews/pos reference
+ * (github.com/mewebstudio/pos) config, whose KuveytPos query_api is
+ * `…/VirtualPosService.svc/Basic`.
+ *
+ * The whole shape here — SOAP envelope, `ser:` prefix, `<ser:{Operation}>` >
+ * `<ser:request>` with top-level refs + a nested `<ser:VPosMessage>`, and the
+ * SOAPAction — is verbatim from mews/pos KuveytPosSoapApiHttpClient +
+ * KuveytPosRequestDataMapper::prepareCancel/RefundRequestData. Field ORDER
+ * matches that reference deliberately (WCF is order-sensitive on read).
+ *
+ * The hash is IDENTICAL to payment Request 2 (mews/pos KuveytPosCrypt::createHash
+ * with empty OkUrl/FailUrl for a non-3D request):
  *   base64(sha1( MerchantId + MerchantOrderId + Amount + UserName + HashedPassword ))
  *
- * Amount / DisplayAmount / CancelAmount are all the same minor-unit figure
- * (×100, no punctuation) and MUST match the original sale's currency (0949),
- * or the bank rejects. CurrencyCode is the 4-digit 0949, never 949.
+ * Amount / CancelAmount are the same minor-unit figure (×100, no punctuation)
+ * and MUST match the original sale's currency (0949), or the bank rejects.
+ * CurrencyCode is the 4-digit 0949, never 949. DisplayAmount follows the
+ * reference: the full amount for SaleReversal (cancel), 0 for DrawBack /
+ * PartialDrawback (refund). It is not part of the hash.
  *
  * NOTHING here calls the bank on its own. postRefundSoap is invoked only from
- * the refund route, which is gated until SOAPAction and proxy routing to the
- * BOA host are confirmed.
+ * the refund route, which stays gated until a live boatest/production reversal
+ * is verified end-to-end.
  */
 import { sha1Base64, hashedPassword, type KuveytConfig } from './kuveyt-turk';
 
@@ -42,11 +59,13 @@ export interface RefundConfig {
   soapAction: string;
 }
 
-/** The bank's default WCF path + SOAPAction shape. Both overridable per the
- *  finding that production metadata is disabled and the action may need tuning
- *  on boatest without a redeploy. */
+/** The bank's WCF query-API path + SOAPAction shape, verbatim from the mews/pos
+ *  KuveytPos config (query_api = `…/VirtualPosService.svc/Basic`) and the SOAP
+ *  client's SOAPAction. Both overridable via env, but these are the confirmed
+ *  live values — the `/Basic` suffix is what a POST must target (the bare `.svc`
+ *  404s; see the module header). */
 export const DEFAULT_REFUND_SERVICE_PATH =
-  '/BOA.Integration.WCFService/BOA.Integration.VirtualPos/VirtualPosService.svc';
+  '/BOA.Integration.WCFService/BOA.Integration.VirtualPos/VirtualPosService.svc/Basic';
 export const DEFAULT_REFUND_SOAP_ACTION_BASE =
   'http://boa.net/BOA.Integration.VirtualPos/Service/IVirtualPosService';
 
@@ -134,16 +153,29 @@ export interface RefundRequest {
 }
 
 /**
- * The full SOAP envelope. Element names, nesting and order are verbatim from
- * the bank doc — including the bank's own misspelling `QeryId` (keep it).
+ * The full SOAP envelope. Element names, nesting and ORDER are verbatim from the
+ * mews/pos KuveytPosRequestDataMapper (prepareCancel/RefundRequestData) — the
+ * proven reference — including the bank's own misspelling `QeryId` (keep it) and
+ * `CardType` = 'Visa' (title case, as the reference value-maps it).
+ *
+ * Top-level `<ser:request>` order: IsFromExternalNetwork, BusinessKey,
+ * ResourceId, ActionId, LanguageId, CustomerId, MailOrTelephoneOrder, Amount,
+ * MerchantId, OrderId, RRN, Stan, ProvisionNumber, then the nested VPosMessage.
+ * Inside VPosMessage the account trio (MerchantId, CustomerId, UserName) comes
+ * first — the reference prepends getRequestAccountData(). WCF is order-sensitive
+ * on read, so this order is not cosmetic.
  *
  * RRN / Stan / MerchantId / Amount / ProvisionNumber / OrderId appear at the
  * request top level AND MerchantId / CustomerId / Amount repeat inside
  * VPosMessage — both are required.
+ *
+ * DisplayAmount: the full amount for SaleReversal (cancel), 0 for DrawBack /
+ * PartialDrawback (refund) — exactly as the reference sets it. Not hashed.
  */
 export function buildRefundSoap(req: RefundRequest): string {
   const { cfg, operation, rrn, stan, provisionNumber, orderId, merchantOrderId, amountMinor } = req;
   const hash = refundHash(cfg, merchantOrderId, amountMinor);
+  const displayAmount = operation === 'SaleReversal' ? amountMinor : '0';
 
   return `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope ${NS}>
@@ -158,27 +190,27 @@ export function buildRefundSoap(req: RefundRequest): string {
         <ser:LanguageId>0</ser:LanguageId>
         <ser:CustomerId>${esc(cfg.customerId)}</ser:CustomerId>
         <ser:MailOrTelephoneOrder>true</ser:MailOrTelephoneOrder>
+        <ser:Amount>${esc(amountMinor)}</ser:Amount>
+        <ser:MerchantId>${esc(cfg.merchantId)}</ser:MerchantId>
+        <ser:OrderId>${esc(orderId)}</ser:OrderId>
         <ser:RRN>${esc(rrn)}</ser:RRN>
         <ser:Stan>${esc(stan)}</ser:Stan>
-        <ser:MerchantId>${esc(cfg.merchantId)}</ser:MerchantId>
-        <ser:Amount>${esc(amountMinor)}</ser:Amount>
         <ser:ProvisionNumber>${esc(provisionNumber)}</ser:ProvisionNumber>
-        <ser:OrderId>${esc(orderId)}</ser:OrderId>
         <ser:VPosMessage>
+          <ser:MerchantId>${esc(cfg.merchantId)}</ser:MerchantId>
+          <ser:CustomerId>${esc(cfg.customerId)}</ser:CustomerId>
+          <ser:UserName>${esc(cfg.userName)}</ser:UserName>
           <ser:APIVersion>TDV2.0.0</ser:APIVersion>
           <ser:InstallmentMaturityCommisionFlag>0</ser:InstallmentMaturityCommisionFlag>
           <ser:HashData>${esc(hash)}</ser:HashData>
-          <ser:MerchantId>${esc(cfg.merchantId)}</ser:MerchantId>
           <ser:SubMerchantId>0</ser:SubMerchantId>
-          <ser:CustomerId>${esc(cfg.customerId)}</ser:CustomerId>
-          <ser:UserName>${esc(cfg.userName)}</ser:UserName>
-          <ser:CardType>VISA</ser:CardType>
+          <ser:CardType>Visa</ser:CardType>
           <ser:BatchID>0</ser:BatchID>
           <ser:TransactionType>${operation}</ser:TransactionType>
           <ser:InstallmentCount>0</ser:InstallmentCount>
           <ser:Amount>${esc(amountMinor)}</ser:Amount>
+          <ser:DisplayAmount>${esc(displayAmount)}</ser:DisplayAmount>
           <ser:CancelAmount>${esc(amountMinor)}</ser:CancelAmount>
-          <ser:DisplayAmount>${esc(amountMinor)}</ser:DisplayAmount>
           <ser:MerchantOrderId>${esc(merchantOrderId)}</ser:MerchantOrderId>
           <ser:FECAmount>0</ser:FECAmount>
           <ser:CurrencyCode>0949</ser:CurrencyCode>

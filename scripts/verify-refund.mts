@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import {
   buildRefundSoap, refundHash, decideRefundType,
   parseRefundResponse, isRefundApproved, isAlreadySettled,
+  toRefundConfig, DEFAULT_REFUND_SERVICE_PATH,
   type RefundConfig,
 } from '../src/lib/payment/kuveyt-refund.ts';
 
@@ -66,10 +67,36 @@ ok('VPosMessage repeats MerchantId/CustomerId/Amount and carries the hash', () =
   assert.equal((soap.match(/<ser:CustomerId>97228291<\/ser:CustomerId>/g) ?? []).length, 2);
   assert.match(soap, /<ser:HashData>.{28}<\/ser:HashData>/);
 });
-ok('Amount == CancelAmount == DisplayAmount (all minor units)', () => {
+ok('SaleReversal: Amount == CancelAmount == DisplayAmount (all minor units)', () => {
   assert.match(soap, /<ser:Amount>10265<\/ser:Amount>/);
   assert.match(soap, /<ser:CancelAmount>10265<\/ser:CancelAmount>/);
   assert.match(soap, /<ser:DisplayAmount>10265<\/ser:DisplayAmount>/);
+});
+ok('DrawBack/PartialDrawback: DisplayAmount is 0 (per mews/pos), Amount/CancelAmount stay full', () => {
+  for (const operation of ['DrawBack', 'PartialDrawback'] as const) {
+    const s = buildRefundSoap({ ...REQ, operation });
+    assert.match(s, /<ser:Amount>10265<\/ser:Amount>/);
+    assert.match(s, /<ser:CancelAmount>10265<\/ser:CancelAmount>/);
+    assert.match(s, /<ser:DisplayAmount>0<\/ser:DisplayAmount>/);
+  }
+});
+ok('endpoint path targets the basicHttpBinding SOAP endpoint (.svc/Basic, not bare .svc)', () => {
+  assert.ok(
+    DEFAULT_REFUND_SERVICE_PATH.endsWith('/VirtualPosService.svc/Basic'),
+    'the bare .svc 404s on POST; the SOAP endpoint is .svc/Basic',
+  );
+  const built = toRefundConfig('DrawBack', {
+    merchantId: '57902', customerId: '97228291', userName: 'TEPKVT2021',
+    password: 'api123', proxyBase: 'https://proxy.example/',
+  });
+  assert.equal(
+    built.serviceUrl,
+    'https://proxy.example/BOA.Integration.WCFService/BOA.Integration.VirtualPos/VirtualPosService.svc/Basic',
+  );
+  assert.equal(
+    built.soapAction,
+    'http://boa.net/BOA.Integration.VirtualPos/Service/IVirtualPosService/DrawBack',
+  );
 });
 ok('fixed fields: CurrencyCode=0949, TransactionSecurity=1, TransactionType=operation, QeryId spelling', () => {
   assert.match(soap, /<ser:CurrencyCode>0949<\/ser:CurrencyCode>/);
