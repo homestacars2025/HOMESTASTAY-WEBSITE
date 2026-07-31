@@ -23,6 +23,7 @@ export const mesafeliSatisEn: LegalDocContent = {
       body:
         'SELLER / INTERMEDIARY SERVICE PROVIDER\n' +
         `Company: ${COMPANY.legalName}\nAddress: ${COMPANY.address}\nMERSIS: ${COMPANY.mersis}\n` +
+        `Trade registry no: ${COMPANY.tradeRegistryNo}\n` +
         `Tax office / number: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
         `Email: ${COMPANY.email}\nPhone: ${COMPANY.phone}\n\n` +
         'BUYER\nThe name, surname, email and telephone number declared during ' +

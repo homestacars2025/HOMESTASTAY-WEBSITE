@@ -30,6 +30,7 @@ export const onBilgilendirmeTr: LegalDocContent = {
       body:
         `Unvan: ${COMPANY.legalName}\n\n` +
         `Adres: ${COMPANY.address}\nMERSİS No: ${COMPANY.mersis}\n` +
+        `Ticaret Sicil No: ${COMPANY.tradeRegistryNo}\n` +
         `Vergi Dairesi / No: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
         `E-posta: ${COMPANY.email}\nTelefon: ${COMPANY.phone}\n\n` +
         'Homesta Stay, konaklama birimlerinin maliki değildir. Mülk sahibi ile ' +

@@ -23,6 +23,7 @@ export const mesafeliSatisTr: LegalDocContent = {
       body:
         'SATICI / ARACI HİZMET SAĞLAYICI\n' +
         `Unvan: ${COMPANY.legalName}\nAdres: ${COMPANY.address}\nMERSİS: ${COMPANY.mersis}\n` +
+        `Ticaret Sicil No: ${COMPANY.tradeRegistryNo}\n` +
         `Vergi Dairesi / No: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
         `E-posta: ${COMPANY.email}\nTelefon: ${COMPANY.phone}\n\n` +
         'ALICI\nRezervasyon sırasında beyan edilen ad, soyad, e-posta ve ' +

@@ -17,8 +17,13 @@ export const COMPANY = {
   address:   'KAYABAŞI MAH. GAZİ YAŞARGİL CAD. T2 BLOK NO: 2 Y BAŞAKŞEHİR / İSTANBUL',
   taxOffice: 'BAŞAKŞEHİR',
   taxNo:     '4631515171',
-  /** 16-digit MERSIS number (Merkezi Sicil Kayıt Sistemi). */
+  /** 16-digit MERSIS number (Merkezi Sicil Kayıt Sistemi). Verified from the
+   *  official registry. */
   mersis:    '0463151517100001',
+  /** Ticaret Sicil (trade registry) number. Note: the registry record still
+   *  shows the former Kağıthane address; the company has moved to the Başakşehir
+   *  address above, and the registry update is a separate admin task. */
+  tradeRegistryNo: '1075209',
   /** Kept single-sourced in social.ts so the contact widgets and the legal
    *  seller block always show the same address. */
   email:     CONTACT_EMAIL,

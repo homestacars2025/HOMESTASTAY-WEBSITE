@@ -32,6 +32,7 @@ export const onBilgilendirmeEn: LegalDocContent = {
       body:
         `Company: ${COMPANY.legalName}\n\n` +
         `Address: ${COMPANY.address}\nMERSIS No: ${COMPANY.mersis}\n` +
+        `Trade registry no: ${COMPANY.tradeRegistryNo}\n` +
         `Tax office / number: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
         `Email: ${COMPANY.email}\nPhone: ${COMPANY.phone}\n\n` +
         'Homesta Stay does not own the accommodation. We are an intermediary ' +
