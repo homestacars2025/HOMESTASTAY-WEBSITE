@@ -372,7 +372,14 @@
     "locationTitle": "Location",
     "whereYoullBe": "Where you'll be",
     "mapStreet": "Street",
-    "mapSatellite": "Satellite"
+    "mapSatellite": "Satellite",
+    "gallery": {
+      "showAllPhotos": "Show all photos",
+      "openPhoto": "Open photo {number}",
+      "close": "Close",
+      "previous": "Previous photo",
+      "next": "Next photo"
+    }
   },
   "auth": {
     "signIn": {

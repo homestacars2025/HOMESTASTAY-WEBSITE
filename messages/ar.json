@@ -372,7 +372,14 @@
     "locationTitle": "الموقع",
     "whereYoullBe": "أين ستقيم",
     "mapStreet": "الخريطة",
-    "mapSatellite": "القمر الصناعي"
+    "mapSatellite": "القمر الصناعي",
+    "gallery": {
+      "showAllPhotos": "عرض كل الصور",
+      "openPhoto": "افتح الصورة {number}",
+      "close": "إغلاق",
+      "previous": "الصورة السابقة",
+      "next": "الصورة التالية"
+    }
   },
   "auth": {
     "signIn": {

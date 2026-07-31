@@ -372,7 +372,14 @@
     "locationTitle": "Konum",
     "whereYoullBe": "Konaklayacağınız yer",
     "mapStreet": "Sokak",
-    "mapSatellite": "Uydu"
+    "mapSatellite": "Uydu",
+    "gallery": {
+      "showAllPhotos": "Tüm fotoğrafları gör",
+      "openPhoto": "{number}. fotoğrafı aç",
+      "close": "Kapat",
+      "previous": "Önceki fotoğraf",
+      "next": "Sonraki fotoğraf"
+    }
   },
   "auth": {
     "signIn": {
