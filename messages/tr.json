@@ -69,6 +69,13 @@
         "title": "Aramanıza uygun konaklama yok",
         "body": "Farklı tarihler, daha az misafir veya başka bir şehir deneyin — bu aramanın gösterdiğinden daha fazlası olabilir.",
         "cta": "Filtreleri temizle"
+      },
+      "loadingResults": "Konaklamalar yükleniyor…",
+      "pagination": {
+        "label": "Sayfalama",
+        "previous": "Önceki",
+        "next": "Sonraki",
+        "status": "Sayfa {current} / {total}"
       }
     },
     "blog": {

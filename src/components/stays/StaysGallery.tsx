@@ -12,6 +12,9 @@ import type { UnitListing, FilterCategory } from '@/lib/types/unit';
 
 interface StaysGalleryProps {
   units: UnitListing[];
+  /** Passed straight to each card's link so the current search dates/guests
+   *  survive the click into the unit page. */
+  searchQuery?: string;
 }
 
 const FILTER_ORDER: FilterCategory[] = ['all', 'apartment', 'villa', 'cabin', 'hotel', 'farm'];
@@ -25,7 +28,7 @@ const CATEGORY_I18N_KEY: Record<FilterCategory, string> = {
   farm:      'farms',
 };
 
-export function StaysGallery({ units }: StaysGalleryProps) {
+export function StaysGallery({ units, searchQuery }: StaysGalleryProps) {
   const tCategories = useTranslations('categories');
   const tPages      = useTranslations('pages.stays');
 
@@ -76,7 +79,7 @@ export function StaysGallery({ units }: StaysGalleryProps) {
         >
           {filtered.map((unit) => (
             <MotionCard key={unit.id}>
-              <UnitCard unit={unit} />
+              <UnitCard unit={unit} searchQuery={searchQuery} />
             </MotionCard>
           ))}
         </motion.div>

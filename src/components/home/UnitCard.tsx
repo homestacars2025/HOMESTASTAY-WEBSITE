@@ -11,9 +11,12 @@ interface UnitCardProps {
   /** Override width/flex classes. Defaults to w-full (for grid use).
    *  Pass e.g. "flex-none w-[260px] md:w-[280px]" for horizontal scroll. */
   className?: string;
+  /** Encoded checkIn/checkOut/guests carried from the search, so the unit page
+   *  preselects them instead of making the guest re-pick. '' when absent. */
+  searchQuery?: string;
 }
 
-export function UnitCard({ unit, className }: UnitCardProps) {
+export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
   const t = useTranslations('card');
 
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
@@ -23,8 +26,11 @@ export function UnitCard({ unit, className }: UnitCardProps) {
   // Live-resolved. total/nights are present only when the search carried dates.
   const { nightly_usd: nightlyUsd, total_usd: totalUsd, nights } = unit.pricing;
 
+  const href =
+    `/stays/${unit.slug ?? unit.id}${searchQuery ? `?${searchQuery}` : ''}`;
+
   return (
-    <Link href={`/stays/${unit.slug ?? unit.id}` as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
+    <Link href={href as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
       <article>
         {/* Image */}
         <div className="relative rounded-[14px] overflow-hidden aspect-[4/3] mb-3">

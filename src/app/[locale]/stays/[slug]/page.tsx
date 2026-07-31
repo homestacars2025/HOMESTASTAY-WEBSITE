@@ -13,6 +13,8 @@ import { UnitMapSection } from '@/components/unit/UnitMapSection';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnitBySlug } from '@/lib/queries/stays';
+import { parseStaysSearchParams } from '@/lib/stays/search-params';
+import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
 
@@ -35,8 +37,10 @@ export async function generateMetadata({
 
 export default async function UnitDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: 'unit' });
@@ -46,6 +50,16 @@ export default async function UnitDetailPage({
   // Title/description are resolved for the visitor's locale (unit_translations).
   const unit = await getPublicUnitBySlug(slug, locale);
   if (!unit) notFound();
+
+  // Dates/guests carried from the search (UnitCard link) so the guest doesn't
+  // re-pick. Reuses the listing parser — a lone/invalid date pair degrades to
+  // none. When a valid pair is present, quote it server-side so the booking
+  // card shows the right total on first paint (no client round-trip).
+  const search = parseStaysSearchParams(await searchParams);
+  const initialQuote =
+    search.checkIn && search.checkOut
+      ? await quoteStay(unit.id, search.checkIn, search.checkOut)
+      : null;
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const title = unit.ad_title ?? unit.unit_name ?? '—';
@@ -316,6 +330,10 @@ export default async function UnitDetailPage({
             unitId={unit.id}
             unitTitle={title}
             slug={slug}
+            initialCheckIn={search.checkIn}
+            initialCheckOut={search.checkOut}
+            initialGuests={search.guests}
+            initialQuote={initialQuote}
           />
         </div>
       </main>

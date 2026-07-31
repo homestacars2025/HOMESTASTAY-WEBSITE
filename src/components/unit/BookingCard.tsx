@@ -32,25 +32,47 @@ interface BookingCardProps {
   unitTitle:   string;
   /** URL segment for the checkout route (/book/{slug}). */
   slug:        string;
+  /** Dates/guests carried in the URL from the search, so the guest never
+   *  re-picks what they already chose. ISO strings; only a valid pair applies. */
+  initialCheckIn?: string;
+  initialCheckOut?: string;
+  initialGuests?:   number;
+  /** Server-resolved quote for the initial dates (date-aware total), so the
+   *  price is correct on first paint without a client round-trip. */
+  initialQuote?:    UnitPricing | null;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function BookingCard({ pricing, minNights, rating, reviewCount, unitId, unitTitle, slug }: BookingCardProps) {
+/** ISO yyyy-mm-dd → local Date at midday (avoids a TZ shift rolling the day). */
+function parseISODateLocal(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d, 12);
+}
+
+export function BookingCard({
+  pricing, minNights, rating, reviewCount, unitId, unitTitle, slug,
+  initialCheckIn, initialCheckOut, initialGuests, initialQuote,
+}: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
 
   // ── State ──────────────────────────────────────────────────────────────────
 
-  const [dateRange,   setDateRange]   = useState<DateRange>({ from: undefined });
-  const [guests,      setGuests]      = useState(1);
+  const [dateRange,   setDateRange]   = useState<DateRange>(() =>
+    initialCheckIn && initialCheckOut
+      ? { from: parseISODateLocal(initialCheckIn), to: parseISODateLocal(initialCheckOut) }
+      : { from: undefined });
+  const [guests,      setGuests]      = useState(
+    initialGuests && initialGuests > 0 ? initialGuests : 1);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [initialStep, setInitialStep] = useState<'pick' | 'confirm'>('pick');
 
-  // Live quote for the chosen dates. Starts as the representative rate the
-  // server resolved for this page load, and is replaced whenever a complete
-  // range exists. Prices are always derived — nothing here is ever cached.
-  const [quote, setQuote]      = useState<UnitPricing>(pricing);
+  // Live quote for the chosen dates. Seeded with the server-resolved quote for
+  // the initial dates when present (so the total is right on first paint),
+  // otherwise the representative rate. Replaced whenever a complete range exists.
+  // Prices are always derived — nothing here is ever cached.
+  const [quote, setQuote]      = useState<UnitPricing>(initialQuote ?? pricing);
   const [isQuoting, startQuote] = useTransition();
 
   /**

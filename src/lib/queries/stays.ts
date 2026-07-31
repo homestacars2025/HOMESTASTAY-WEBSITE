@@ -513,7 +513,7 @@ async function mapCardRows(
   );
 }
 
-const LISTING_PAGE_SIZE = 24;
+export const LISTING_PAGE_SIZE = 24;
 
 /**
  * Public listing.

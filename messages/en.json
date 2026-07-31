@@ -69,6 +69,13 @@
         "title": "No stays match your search",
         "body": "Try different dates, fewer guests, or another city — there may be more available than this search shows.",
         "cta": "Clear filters"
+      },
+      "loadingResults": "Loading stays…",
+      "pagination": {
+        "label": "Pagination",
+        "previous": "Previous",
+        "next": "Next",
+        "status": "Page {current} of {total}"
       }
     },
     "blog": {
