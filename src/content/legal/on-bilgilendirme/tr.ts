@@ -4,8 +4,7 @@ import { COMPANY } from '@/lib/config/company';
 /**
  * ÖN BİLGİLENDİRME FORMU — Türkçe (asıl metin).
  *
- * Bu dosya avukat onayı beklemektedir. Onaylı metin geldiğinde SADECE bu
- * dosyanın içeriği değiştirilecek ve DOCUMENT_VERSION yükseltilecektir.
+ * Avukat onaylı metin. İçerik her değiştiğinde DOCUMENT_VERSION yükseltilmelidir.
  * Satıcı kimlik bilgileri src/lib/config/company.ts dosyasından gelir.
  */
 export const onBilgilendirmeTr: LegalDocContent = {

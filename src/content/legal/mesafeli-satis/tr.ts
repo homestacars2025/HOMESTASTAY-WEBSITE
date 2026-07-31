@@ -4,8 +4,7 @@ import { COMPANY } from '@/lib/config/company';
 /**
  * MESAFELİ SATIŞ SÖZLEŞMESİ — Türkçe (asıl metin).
  *
- * Avukat onayı beklemektedir. Onaylı metin geldiğinde SADECE bu dosyanın
- * içeriği değiştirilecek ve DOCUMENT_VERSION yükseltilecektir.
+ * Avukat onaylı metin. İçerik her değiştiğinde DOCUMENT_VERSION yükseltilmelidir.
  */
 export const mesafeliSatisTr: LegalDocContent = {
   heading: 'Mesafeli Satış Sözleşmesi',

@@ -9,16 +9,15 @@ export type LegalDocSlug = 'on-bilgilendirme' | 'mesafeli-satis';
 /**
  * Locale → text, per document.
  *
- * DELIBERATELY TR + EN ONLY FOR NOW. These are Turkish legal instruments
- * awaiting the lawyer's approved wording; the current text is a draft that
- * will be replaced wholesale. Translating draft legalese into Arabic and
- * Russian would be thrown away on the swap, and a *wrong* translation of a
- * withdrawal-rights clause is worse than an untranslated one.
+ * DELIBERATELY TR + EN ONLY FOR NOW. These are Turkish legal instruments —
+ * the lawyer-approved Turkish original plus an English courtesy translation.
+ * Arabic and Russian translations have not been produced yet, and a *wrong*
+ * translation of a withdrawal-rights clause is worse than an untranslated one.
  *
  * ar/ru therefore fall back to English AND the page shows the guest an
  * explicit notice saying so — never a silent language substitution.
  *
- * When the approved text lands: add ar.ts / ru.ts here and the notice
+ * When ar/ru translations land: add ar.ts / ru.ts here and the notice
  * disappears on its own.
  */
 const DOCS: Record<LegalDocSlug, Partial<Record<string, LegalDocContent>>> = {

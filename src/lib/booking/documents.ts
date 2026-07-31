@@ -12,7 +12,7 @@
  * the version the guest actually saw, which is the whole point of the column.
  */
 
-export const DOCUMENT_VERSION = '2026-07-30-draft';
+export const DOCUMENT_VERSION = '2026-07-31';
 
 /** Matches the CHECK constraint on booking_document_acceptances.document. */
 export type LegalDocumentId = 'on_bilgilendirme' | 'mesafeli_satis';
