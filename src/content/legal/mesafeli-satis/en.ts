@@ -1,4 +1,5 @@
 import type { LegalDocContent } from '@/lib/booking/documents';
+import { COMPANY } from '@/lib/config/company';
 
 /**
  * DISTANCE SALES CONTRACT — English courtesy translation.
@@ -21,8 +22,9 @@ export const mesafeliSatisEn: LegalDocContent = {
       title: 'Article 1 — Parties',
       body:
         'SELLER / INTERMEDIARY SERVICE PROVIDER\n' +
-        'Company: [COMPANY NAME]\nAddress: [ADDRESS]\nMERSIS: [MERSIS]\n' +
-        'Email: [SUPPORT EMAIL]\nPhone: [PHONE]\n\n' +
+        `Company: ${COMPANY.legalName}\nAddress: ${COMPANY.address}\nMERSIS: ${COMPANY.mersis}\n` +
+        `Tax office / number: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
+        `Email: ${COMPANY.email}\nPhone: ${COMPANY.phone}\n\n` +
         'BUYER\nThe name, surname, email and telephone number declared during ' +
         'booking apply. The BUYER is responsible for the accuracy of this ' +
         'information.',

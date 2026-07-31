@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { CONTACT_EMAIL } from '@/lib/config/social';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -171,7 +172,7 @@ async function sendNotificationEmail({
 
     await resend.emails.send({
       from:    'noreply@homestastay.com',
-      to:      'info@homestastay.com',
+      to:      CONTACT_EMAIL,
       subject: `New host application — ${name}`,
       html,
     });

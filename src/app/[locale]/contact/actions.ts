@@ -1,6 +1,7 @@
 'use server';
 
 import { Resend } from 'resend';
+import { CONTACT_EMAIL } from '@/lib/config/social';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ export async function submitContact(data: ContactFormData): Promise<ContactResul
     const resend = new Resend(apiKey);
     await resend.emails.send({
       from:    'noreply@homestastay.com',
-      to:      'info@homestastay.com',
+      to:      CONTACT_EMAIL,
       replyTo: email,
       subject: subject ? `Contact: ${subject}` : `Contact message from ${name}`,
       html:    buildHtml({ name, email, subject, message, locale: data.locale }),

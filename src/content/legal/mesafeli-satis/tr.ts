@@ -1,4 +1,5 @@
 import type { LegalDocContent } from '@/lib/booking/documents';
+import { COMPANY } from '@/lib/config/company';
 
 /**
  * MESAFELİ SATIŞ SÖZLEŞMESİ — Türkçe (asıl metin).
@@ -22,8 +23,9 @@ export const mesafeliSatisTr: LegalDocContent = {
       title: 'Madde 1 — Taraflar',
       body:
         'SATICI / ARACI HİZMET SAĞLAYICI\n' +
-        'Unvan: [ŞİRKET UNVANI]\nAdres: [ADRES]\nMERSİS: [MERSİS]\n' +
-        'E-posta: [DESTEK E-POSTA]\nTelefon: [TELEFON]\n\n' +
+        `Unvan: ${COMPANY.legalName}\nAdres: ${COMPANY.address}\nMERSİS: ${COMPANY.mersis}\n` +
+        `Vergi Dairesi / No: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
+        `E-posta: ${COMPANY.email}\nTelefon: ${COMPANY.phone}\n\n` +
         'ALICI\nRezervasyon sırasında beyan edilen ad, soyad, e-posta ve ' +
         'telefon bilgileri esas alınır. Bu bilgilerin doğruluğundan ALICI ' +
         'sorumludur.',

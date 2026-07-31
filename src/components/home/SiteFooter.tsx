@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Instagram, Facebook } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { CONTACT_EMAIL, SOCIAL_LINKS } from '@/lib/config/social';
+import { COMPANY } from '@/lib/config/company';
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -54,8 +55,8 @@ export function SiteFooter() {
                 and its registered address) — not translatable content, so the
                 same across every locale, exactly like the values used elsewhere. */}
             <address className="not-italic text-[12px] leading-relaxed text-mute max-w-[220px] space-y-0.5">
-              <p>HOMESTA GRUP DANIŞMANLIK HİZMETLERİ LİMİTED ŞİRKETİ</p>
-              <p>KAYABAŞI MAH. GAZİ YAŞARGİL CAD. T2 BLOK NO: 2 Y BAŞAKŞEHİR / İSTANBUL</p>
+              <p>{COMPANY.legalName}</p>
+              <p>{COMPANY.address}</p>
             </address>
 
             <p className="text-[12px] mt-auto text-hairline-dark">

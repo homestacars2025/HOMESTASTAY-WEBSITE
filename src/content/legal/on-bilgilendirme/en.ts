@@ -1,4 +1,5 @@
 import type { LegalDocContent } from '@/lib/booking/documents';
+import { COMPANY } from '@/lib/config/company';
 
 /**
  * PRE-INFORMATION FORM — English courtesy translation.
@@ -29,9 +30,10 @@ export const onBilgilendirmeEn: LegalDocContent = {
       id: 'satici',
       title: '1. Seller / Intermediary Service Provider',
       body:
-        'Company: [COMPANY NAME — pending incorporation]\n\n' +
-        'Address: [ADDRESS]\nMERSIS No: [MERSIS]\nTax office / number: [TAX]\n' +
-        'Email: [SUPPORT EMAIL]\nPhone: [PHONE]\n\n' +
+        `Company: ${COMPANY.legalName}\n\n` +
+        `Address: ${COMPANY.address}\nMERSIS No: ${COMPANY.mersis}\n` +
+        `Tax office / number: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
+        `Email: ${COMPANY.email}\nPhone: ${COMPANY.phone}\n\n` +
         'Homesta Stay does not own the accommodation. We are an intermediary ' +
         'connecting property owners with guests. The property owner is ' +
         'responsible for actually providing the stay.',
@@ -124,7 +126,7 @@ export const onBilgilendirmeEn: LegalDocContent = {
       id: 'sikayet',
       title: '8. Complaints and Dispute Resolution',
       body:
-        'You can send requests and complaints to [SUPPORT EMAIL].\n\n' +
+        `You can send requests and complaints to ${COMPANY.email}.\n\n` +
         'In the event of a dispute, the Consumer Arbitration Committees and ' +
         'Consumer Courts in the consumer’s place of residence or the place ' +
         'where the transaction took place have jurisdiction, within the ' +

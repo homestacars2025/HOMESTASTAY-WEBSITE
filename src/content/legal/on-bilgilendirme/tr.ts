@@ -1,11 +1,12 @@
 import type { LegalDocContent } from '@/lib/booking/documents';
+import { COMPANY } from '@/lib/config/company';
 
 /**
  * ÖN BİLGİLENDİRME FORMU — Türkçe (asıl metin).
  *
  * Bu dosya avukat onayı beklemektedir. Onaylı metin geldiğinde SADECE bu
  * dosyanın içeriği değiştirilecek ve DOCUMENT_VERSION yükseltilecektir.
- * Köşeli parantezler ([...]) şirket kuruluşu sonrası doldurulacaktır.
+ * Satıcı kimlik bilgileri src/lib/config/company.ts dosyasından gelir.
  */
 export const onBilgilendirmeTr: LegalDocContent = {
   heading: 'Ön Bilgilendirme Formu',
@@ -28,9 +29,10 @@ export const onBilgilendirmeTr: LegalDocContent = {
       id: 'satici',
       title: '1. Satıcı / Aracı Hizmet Sağlayıcı Bilgileri',
       body:
-        'Unvan: [ŞİRKET UNVANI — kuruluş sonrası doldurulacaktır]\n\n' +
-        'Adres: [ADRES]\nMERSİS No: [MERSİS]\nVergi Dairesi / No: [VERGİ]\n' +
-        'E-posta: [DESTEK E-POSTA]\nTelefon: [TELEFON]\n\n' +
+        `Unvan: ${COMPANY.legalName}\n\n` +
+        `Adres: ${COMPANY.address}\nMERSİS No: ${COMPANY.mersis}\n` +
+        `Vergi Dairesi / No: ${COMPANY.taxOffice} / ${COMPANY.taxNo}\n` +
+        `E-posta: ${COMPANY.email}\nTelefon: ${COMPANY.phone}\n\n` +
         'Homesta Stay, konaklama birimlerinin maliki değildir. Mülk sahibi ile ' +
         'misafir arasında aracılık eden bir aracı hizmet sağlayıcıdır. ' +
         'Konaklama hizmetinin fiilî ifasından mülk sahibi sorumludur.',
@@ -125,7 +127,7 @@ export const onBilgilendirmeTr: LegalDocContent = {
       id: 'sikayet',
       title: '8. Şikâyet ve Uyuşmazlık Çözümü',
       body:
-        'Talep ve şikâyetlerinizi [DESTEK E-POSTA] adresine iletebilirsiniz.\n\n' +
+        `Talep ve şikâyetlerinizi ${COMPANY.email} adresine iletebilirsiniz.\n\n` +
         'Uyuşmazlık hâlinde, Ticaret Bakanlığınca her yıl belirlenen parasal ' +
         'sınırlar çerçevesinde, tüketicinin yerleşim yerindeki veya işlemin ' +
         'yapıldığı yerdeki Tüketici Hakem Heyetleri ile Tüketici Mahkemeleri ' +
