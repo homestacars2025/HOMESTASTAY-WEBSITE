@@ -1,34 +1,43 @@
 import type { LegalDocContent } from '@/lib/booking/documents';
 import { onBilgilendirmeTr } from './on-bilgilendirme/tr';
 import { onBilgilendirmeEn } from './on-bilgilendirme/en';
+import { onBilgilendirmeAr } from './on-bilgilendirme/ar';
+import { onBilgilendirmeRu } from './on-bilgilendirme/ru';
 import { mesafeliSatisTr } from './mesafeli-satis/tr';
 import { mesafeliSatisEn } from './mesafeli-satis/en';
+import { mesafeliSatisAr } from './mesafeli-satis/ar';
+import { mesafeliSatisRu } from './mesafeli-satis/ru';
 
 export type LegalDocSlug = 'on-bilgilendirme' | 'mesafeli-satis';
 
 /**
  * Locale → text, per document.
  *
- * DELIBERATELY TR + EN ONLY FOR NOW. These are Turkish legal instruments —
- * the lawyer-approved Turkish original plus an English courtesy translation.
- * Arabic and Russian translations have not been produced yet, and a *wrong*
- * translation of a withdrawal-rights clause is worse than an untranslated one.
+ * All four locales (tr, en, ar, ru) now render natively. The Turkish text is
+ * the lawyer-approved, legally-operative original; en/ar/ru are lawyer-reviewed
+ * courtesy translations (each carries a disclaimer that Turkish binds). Because
+ * every supported locale has real content, getLegalDoc never falls back and the
+ * page never shows the language-fallback notice.
  *
- * ar/ru therefore fall back to English AND the page shows the guest an
- * explicit notice saying so — never a silent language substitution.
- *
- * When ar/ru translations land: add ar.ts / ru.ts here and the notice
- * disappears on its own.
+ * A locale outside the four (shouldn't happen — the app only serves these)
+ * still falls back to English with the explicit notice, rather than a blank
+ * page or a silent substitution.
  */
 const DOCS: Record<LegalDocSlug, Partial<Record<string, LegalDocContent>>> = {
-  'on-bilgilendirme': { tr: onBilgilendirmeTr, en: onBilgilendirmeEn },
-  'mesafeli-satis':   { tr: mesafeliSatisTr,   en: mesafeliSatisEn   },
+  'on-bilgilendirme': {
+    tr: onBilgilendirmeTr, en: onBilgilendirmeEn,
+    ar: onBilgilendirmeAr, ru: onBilgilendirmeRu,
+  },
+  'mesafeli-satis': {
+    tr: mesafeliSatisTr, en: mesafeliSatisEn,
+    ar: mesafeliSatisAr, ru: mesafeliSatisRu,
+  },
 };
 
 export interface ResolvedLegalDoc {
   content: LegalDocContent;
-  /** The locale actually rendered — may differ from the requested one. */
-  shownLocale: 'tr' | 'en';
+  /** The locale actually rendered — equals the requested one unless we fell back. */
+  shownLocale: string;
   /** True when we fell back, so the page can say so out loud. */
   isFallback: boolean;
 }
@@ -41,11 +50,7 @@ export function getLegalDoc(
   const exact = byLocale[locale];
 
   if (exact) {
-    return {
-      content: exact,
-      shownLocale: locale === 'tr' ? 'tr' : 'en',
-      isFallback: false,
-    };
+    return { content: exact, shownLocale: locale, isFallback: false };
   }
 
   return { content: byLocale.en!, shownLocale: 'en', isFallback: true };
