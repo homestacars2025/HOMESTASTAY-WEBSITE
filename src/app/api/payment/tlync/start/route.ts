@@ -112,7 +112,18 @@ export async function POST(request: NextRequest) {
     .update({
       merchant_order_id: customRef,
       payment_gateway:   'tlync',
-      // The LYD figures have no column of their own — see encodeAmountNote.
+      // ⚠️ LOAD-BEARING, AND IT MUST BE WRITTEN HERE, BEFORE TLYNC IS CALLED.
+      // amount_lyd is what the manual-refund flow tells staff to give back —
+      // there is no refund API, so this number IS the refund instruction. A
+      // payment that completed while our write path died must still carry it,
+      // which is why it goes down with the custom_ref rather than on the paid
+      // edge. fx_rate_lyd sits beside it so the figure can be re-derived from
+      // amount_usd and audited later.
+      amount_lyd:        amountLyd,
+      fx_rate_lyd:       fx.rate,
+      // Human-readable duplicate of the same two numbers, for a dashboard
+      // cell. NOT read by anything any more — the columns above are the
+      // source of truth.
       response_message:  encodeAmountNote({ lyd: amountLyd, rate: fx.rate }),
       updated_at:        new Date().toISOString(),
     })

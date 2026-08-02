@@ -66,7 +66,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // never recomputed from the USD total (a refund must replay it exactly).
   const { data: payment } = await supabase
     .from('booking_payments')
-    .select('amount_try, fx_rate_used, paid_at, payment_gateway, response_message')
+    .select('amount_try, fx_rate_used, paid_at, payment_gateway, amount_lyd, response_message')
     .eq('booking_id', booking.id)
     .eq('status', 'paid')
     .maybeSingle();
@@ -90,11 +90,14 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
 
   const selectedMethod: 'card' | 'lyd' = pay === 'lyd' && lydAvailable ? 'lyd' : 'card';
 
-  // What a paid TLYNC booking was actually charged. The dinar figure has no
-  // column of its own — see encodeAmountNote in lib/payment/tlync.
+  // What a paid TLYNC booking was actually charged. amount_lyd is the source
+  // of truth; the note is parsed only for attempts started before that column
+  // existed, and that fallback can go once none are live.
   const paidViaTlync = payment?.payment_gateway === 'tlync';
   const paidLyd = paidViaTlync
-    ? parseAmountNote(payment?.response_message as string | null)?.lyd ?? null
+    ? num(payment?.amount_lyd) ??
+      parseAmountNote(payment?.response_message as string | null)?.lyd ??
+      null
     : null;
 
   const usd = new Intl.NumberFormat(locale === 'en' ? 'en-GB' : locale, {

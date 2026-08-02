@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
   const { data: attempt } = await supabase
     .from('booking_payments')
-    .select('id, booking_id, status, amount_try, amount_usd, response_message, payment_gateway')
+    .select('id, booking_id, status, amount_try, amount_usd, amount_lyd, fx_rate_lyd, response_message, payment_gateway')
     .eq('merchant_order_id', customRef)
     .maybeSingle();
 
@@ -148,9 +148,16 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Confirmed success. Check we were paid what we asked for ───────────────
-  const expected = parseAmountNote(attempt.response_message as string | null);
+  // amount_lyd / fx_rate_lyd are the source of truth, written with the
+  // custom_ref before TLYNC was ever called. The note fallback exists only for
+  // attempts started before those columns did, and can go once none are live.
+  const note = parseAmountNote(attempt.response_message as string | null);
+  const expected = {
+    lyd:  num(attempt.amount_lyd)  ?? note?.lyd  ?? null,
+    rate: num(attempt.fx_rate_lyd) ?? note?.rate ?? null,
+  };
 
-  if (expected && receipt.amount !== null && receipt.amount + 0.01 < expected.lyd) {
+  if (expected.lyd !== null && receipt.amount !== null && receipt.amount + 0.01 < expected.lyd) {
     // Underpaid. Recording this as paid would hand over a stay for less than
     // its price and, worse, tell the guest they are done.
     console.error('[tlync/callback] AMOUNT MISMATCH — not marking paid', {
@@ -159,9 +166,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'amount_mismatch' }, { status: 409 });
   }
 
-  const note = encodeAmountNote({
-    lyd:    expected?.lyd  ?? receipt.amount ?? 0,
-    rate:   expected?.rate ?? 0,
+  // What actually moved. Normally identical to what we asked for;
+  // underpayment already returned above, so a difference here can only be an
+  // overpayment or a rounding cent. The collected figure wins, because
+  // amount_lyd is what staff will refund by hand.
+  const settledLyd = receipt.amount ?? expected.lyd;
+
+  if (settledLyd !== null && expected.lyd !== null && Math.abs(settledLyd - expected.lyd) > 0.01) {
+    console.warn('[tlync/callback] collected amount differs from quoted', {
+      customRef, expectedLyd: expected.lyd, collectedLyd: settledLyd,
+    });
+  }
+
+  const auditNote = encodeAmountNote({
+    lyd:    settledLyd ?? 0,
+    rate:   expected.rate ?? 0,
     method: receipt.paymentMethod,
     tx:     receipt.transactionRef ?? transactionRef,
   });
@@ -186,8 +205,11 @@ export async function POST(request: NextRequest) {
       // refund_on_owner_reject reads exactly that column into
       // manual_refunds.tlync_transaction_ref.
       bank_order_id:   receipt.transactionRef ?? transactionRef,
+      // Re-asserted from the receipt so the row records what was collected,
+      // not only what was quoted. This is the number a manual refund replays.
+      ...(settledLyd !== null ? { amount_lyd: settledLyd } : {}),
       response_code:   'tlync_success',
-      response_message: note,
+      response_message: auditNote,
       updated_at:      new Date().toISOString(),
     })
     .eq('merchant_order_id', customRef)
@@ -208,7 +230,7 @@ export async function POST(request: NextRequest) {
         transactionRef: receipt.transactionRef ?? transactionRef,
         paymentMethod: receipt.paymentMethod,
         amountTry: num(attempt.amount_try),
-        amountLyd: expected?.lyd ?? receipt.amount,
+        amountLyd: settledLyd,
         reason: 'double_payment',
       });
       return NextResponse.json({ ok: false, error: 'duplicate_payment' }, { status: 409 });
@@ -249,7 +271,7 @@ export async function POST(request: NextRequest) {
       transactionRef: receipt.transactionRef ?? transactionRef,
       paymentMethod: receipt.paymentMethod,
       amountTry: num(attempt.amount_try),
-      amountLyd: expected?.lyd ?? receipt.amount,
+      amountLyd: settledLyd,
       reason: 'double_payment',
     });
     return NextResponse.json({ ok: false, error: 'duplicate_payment' }, { status: 409 });
@@ -269,7 +291,7 @@ export async function POST(request: NextRequest) {
       transactionRef: receipt.transactionRef ?? transactionRef,
       paymentMethod: receipt.paymentMethod,
       amountTry: num(attempt.amount_try),
-      amountLyd: expected?.lyd ?? receipt.amount,
+      amountLyd: settledLyd,
       reason: 'expired',
     });
     return NextResponse.json({ ok: false, error: 'booking_canceled' }, { status: 409 });
@@ -312,7 +334,7 @@ export async function POST(request: NextRequest) {
         totalUsd:         num(booking.total_amount_usd),
         amountChargedTry: num(booking.amount_charged_try),
         gateway:          'tlync',
-        amountChargedLyd: expected?.lyd ?? receipt.amount,
+        amountChargedLyd: settledLyd,
       });
     });
   } else {
