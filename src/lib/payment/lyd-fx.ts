@@ -24,8 +24,28 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * Rate convention matches currencies.rate_to_usd: units of LYD per 1 USD.
  */
 
-/** Same window current_try_rate(48) applies to TRY. */
+/**
+ * Same window current_try_rate(48) applies to TRY.
+ *
+ * ⚠️ IT APPLIES ONLY TO AUTO-SOURCED RATES. A rate carrying source='manual'
+ * is exempt and never expires from age alone.
+ *
+ * The staleness check exists to catch a FEED THAT DIED: TCMB refreshes TRY and
+ * EUR on a schedule, so a TRY rate two days old means the job stopped and the
+ * number drifted without anyone deciding it should. Age is a proxy for
+ * "nobody is looking after this".
+ *
+ * That proxy is simply wrong for a manual rate. Nothing refreshes LYD — a
+ * person typed it, on purpose, and it stays correct until that person changes
+ * it. Expiring it would mean the LYD option silently vanishing 48 hours after
+ * someone set it up correctly, with every payment failing as
+ * 'lyd_unavailable' and nothing in the DB looking broken. is_active remains
+ * the switch: to stop selling in dinar, deactivate the row.
+ */
 const MAX_RATE_AGE_HOURS = 48;
+
+/** Rates a human maintains. Exempt from the staleness window, by design. */
+const MANUAL_SOURCE = 'manual';
 
 export interface LydRate {
   /** LYD per 1 USD, safety margin already applied. */
@@ -38,22 +58,32 @@ export async function usdToLydRate(
 ): Promise<LydRate | null> {
   const { data: currency } = await supabase
     .from('currencies')
-    .select('rate_to_usd, fx_safety_margin_pct, updated_at, is_active')
+    .select('rate_to_usd, fx_safety_margin_pct, updated_at, is_active, source')
     .eq('code', 'LYD')
     .maybeSingle();
 
   if (currency?.is_active) {
     const raw = num(currency.rate_to_usd);
+
+    // A manually maintained rate is a decision, not a reading, so its age says
+    // nothing about whether it is still right. Only auto-sourced rates (TCMB
+    // and anything else on a feed) are aged out.
+    const isManual =
+      String(currency.source ?? '').trim().toLowerCase() === MANUAL_SOURCE;
+
     const ageMs = currency.updated_at
       ? Date.now() - new Date(currency.updated_at as string).getTime()
       : Number.POSITIVE_INFINITY;
 
+    const stale = !isManual && ageMs > MAX_RATE_AGE_HOURS * 3_600_000;
+
     if (raw !== null && raw > 0) {
-      if (ageMs > MAX_RATE_AGE_HOURS * 3_600_000) {
+      if (stale) {
         // Loud, and it fails closed. A stale rate under- or over-charges every
         // Libyan guest until someone notices.
         console.error('[lyd-fx] currencies.LYD is stale — refusing to quote LYD', {
           updatedAt: currency.updated_at,
+          source: currency.source,
           maxAgeHours: MAX_RATE_AGE_HOURS,
         });
       } else {
