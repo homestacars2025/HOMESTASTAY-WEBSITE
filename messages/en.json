@@ -563,7 +563,10 @@
       "heldTitle": "Your dates are held",
       "heldBody": "We’re holding these dates for you. The payment step isn’t live yet — nothing has been charged.",
       "browseMore": "Browse more stays",
-      "lockedRate": "Rate locked at {rate} TRY per USD."
+      "lockedRate": "Rate locked at {rate} TRY per USD.",
+      "refundBodyLyd": "You receive a full refund through the same Libyan payment channel. Our team issues it by hand and will contact you to complete it.",
+      "confirmingTitle": "Confirming your payment",
+      "confirmingBody": "You’ve returned from TLYNC and we’re confirming the payment with them now. This usually takes under a minute — refresh this page shortly. Please don’t pay again."
     },
     "legal": {
       "versionLabel": "Document version",
@@ -588,7 +591,17 @@
       "state": "State / province",
       "postCode": "Postcode",
       "submit": "Pay {amount}",
-      "secureNote": "Secured by 3D Secure. We never store your card details."
+      "secureNote": "Secured by 3D Secure. We never store your card details.",
+      "methodTitle": "How would you like to pay?",
+      "methodCard": "Pay with card (international)",
+      "methodCardHint": "Visa or Mastercard, via 3D Secure. Charged in Turkish lira.",
+      "methodLyd": "Pay in Libya (LYD)",
+      "methodLydHint": "Tadawul, MobiCash and other Libyan methods. Charged in Libyan dinar.",
+      "lydAmountLabel": "Amount to pay",
+      "lydRateNote": "Converted at {rate} LYD per US dollar, fixed the moment you pay.",
+      "lydRedirectNote": "You’ll continue on TLYNC’s secure page, where you choose your Libyan payment method.",
+      "lydSubmit": "Continue to payment",
+      "lydSecureNote": "You’ll be taken to TLYNC to complete the payment."
     },
     "failed": {
       "title": "Payment couldn’t be completed",
@@ -608,7 +621,10 @@
         "booking_canceled": "The hold on these dates expired while you were paying, so the booking could not be completed and your payment is being refunded in full.",
         "already_paid": "This booking has already been paid for.",
         "not_holdable": "This booking is no longer being held, so it can’t be paid for.",
-        "not_found": "We couldn’t find that booking."
+        "not_found": "We couldn’t find that booking.",
+        "gateway": "We couldn’t reach the Libyan payment provider. No payment was taken — please try again in a moment.",
+        "lyd_unavailable": "Paying in Libyan dinar isn’t available right now. You can pay by card instead, or contact us and we’ll help.",
+        "tlync_cancelled": "The payment wasn’t completed. Your dates are still held for a few more minutes, so you can go back and try again."
       }
     }
   }

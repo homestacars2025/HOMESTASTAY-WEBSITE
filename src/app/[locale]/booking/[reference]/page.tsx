@@ -7,6 +7,10 @@ import { Link } from '@/i18n/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { readBookingCookie } from '@/lib/booking/cookie';
 import { CardPaymentForm } from '@/components/booking/CardPaymentForm';
+import { LydPaymentForm } from '@/components/booking/LydPaymentForm';
+import { PaymentMethodChoice } from '@/components/booking/PaymentMethodChoice';
+import { isTlyncConfigured, parseAmountNote } from '@/lib/payment/tlync';
+import { usdToLydRate, convertUsdToLyd } from '@/lib/payment/lyd-fx';
 
 /**
  * Booking result.
@@ -31,10 +35,13 @@ export const metadata: Metadata = {
 
 interface PageProps {
   params: Promise<{ locale: string; reference: string }>;
+  /** `pay` selects the gateway; `pending` is set by TLYNC's return redirect. */
+  searchParams: Promise<{ pay?: string; pending?: string }>;
 }
 
-export default async function BookingResultPage({ params }: PageProps) {
+export default async function BookingResultPage({ params, searchParams }: PageProps) {
   const { locale, reference } = await params;
+  const { pay, pending } = await searchParams;
   const t = await getTranslations({ locale, namespace: 'booking.result' });
 
   const cookieBookingId = await readBookingCookie();
@@ -59,18 +66,45 @@ export default async function BookingResultPage({ params }: PageProps) {
   // never recomputed from the USD total (a refund must replay it exactly).
   const { data: payment } = await supabase
     .from('booking_payments')
-    .select('amount_try, fx_rate_used, paid_at')
+    .select('amount_try, fx_rate_used, paid_at, payment_gateway, response_message')
     .eq('booking_id', booking.id)
     .eq('status', 'paid')
     .maybeSingle();
 
   const isPaid = Boolean(booking.paid_at);
 
+  // ── The LYD option ────────────────────────────────────────────────────────
+  // Priced here, not in the form, so the figure the guest consents to is the
+  // one the server derives. Unavailable when TLYNC is unconfigured or no
+  // USD→LYD rate exists — the option then does not render at all, because
+  // offering a payment we cannot price is worse than offering one fewer.
+  const totalUsdForLyd = num(booking.total_amount_usd);
+  const lydFx =
+    !isPaid && isTlyncConfigured() && totalUsdForLyd !== null && totalUsdForLyd > 0
+      ? await usdToLydRate(supabase)
+      : null;
+
+  const lydAvailable = lydFx !== null;
+  const amountLyd =
+    lydFx && totalUsdForLyd !== null ? convertUsdToLyd(totalUsdForLyd, lydFx.rate) : null;
+
+  const selectedMethod: 'card' | 'lyd' = pay === 'lyd' && lydAvailable ? 'lyd' : 'card';
+
+  // What a paid TLYNC booking was actually charged. The dinar figure has no
+  // column of its own — see encodeAmountNote in lib/payment/tlync.
+  const paidViaTlync = payment?.payment_gateway === 'tlync';
+  const paidLyd = paidViaTlync
+    ? parseAmountNote(payment?.response_message as string | null)?.lyd ?? null
+    : null;
+
   const usd = new Intl.NumberFormat(locale === 'en' ? 'en-GB' : locale, {
     style: 'currency', currency: 'USD', maximumFractionDigits: 2,
   });
   const tryFmt = new Intl.NumberFormat(locale === 'en' ? 'en-GB' : locale, {
     style: 'currency', currency: 'TRY', maximumFractionDigits: 2,
+  });
+  const lydFmt = new Intl.NumberFormat(locale === 'en' ? 'en-GB' : locale, {
+    style: 'currency', currency: 'LYD', maximumFractionDigits: 2,
   });
 
   const totalUsd = num(booking.total_amount_usd);
@@ -112,14 +146,19 @@ export default async function BookingResultPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Amount actually charged, with the USD equivalent beside it */}
-            {amountTry !== null && (
+            {/* Amount actually charged, with the USD equivalent beside it.
+                A guest who paid in dinar must never be shown a lira figure —
+                the lira amount is the booking's internal reference, not
+                anything that left their account. */}
+            {(paidLyd !== null || amountTry !== null) && (
               <div className="border border-rule rounded-[14px] p-5 mb-4">
                 <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3">
                   {t('chargedLabel')}
                 </p>
                 <p className="text-[1.5rem] font-semibold text-ink tabular-nums leading-none">
-                  {tryFmt.format(amountTry)}
+                  {paidLyd !== null
+                    ? lydFmt.format(paidLyd)
+                    : tryFmt.format(amountTry as number)}
                 </p>
                 {totalUsd !== null && (
                   <p className="mt-2 text-[13px] text-mute">
@@ -137,13 +176,34 @@ export default async function BookingResultPage({ params }: PageProps) {
                   <p className="text-[15px] font-medium text-ink mb-1">
                     {t('refundTitle')}
                   </p>
+                  {/* TLYNC has no refund API: a dinar refund is issued by hand
+                      through the same Libyan channel. Promising a card refund
+                      in 3–10 days would be a promise we cannot keep. */}
                   <p className="text-[13px] text-ink-soft leading-relaxed">
-                    {t('refundBody')}
+                    {paidViaTlync ? t('refundBodyLyd') : t('refundBody')}
                   </p>
                 </div>
               </div>
             </div>
           </>
+        ) : pending === 'tlync' ? (
+          /* Back from TLYNC, paid there but not yet confirmed here.
+             DELIBERATELY NO PAYMENT FORM: only the server-to-server callback
+             may mark this paid, and a guest who has just paid must not be
+             shown a button that would take their money a second time. */
+          <div className="border border-rule rounded-[14px] p-5">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
+              <div>
+                <p className="text-[15px] font-medium text-ink mb-1">
+                  {t('confirmingTitle')}
+                </p>
+                <p className="text-[13px] text-ink-soft leading-relaxed">
+                  {t('confirmingBody')}
+                </p>
+              </div>
+            </div>
+          </div>
         ) : (
           /* Held, not yet paid — the payment step. */
           <>
@@ -154,11 +214,13 @@ export default async function BookingResultPage({ params }: PageProps) {
               <p className="text-[13px] text-ink-soft leading-relaxed">
                 {t('heldBody')}
               </p>
-              {/* Ön Bilgilendirme §3: the guest sees the exact TRY figure
-                  that will be charged, with the USD it was quoted in beside
-                  it, BEFORE consenting. TRY is primary because TRY is what
-                  leaves their account. */}
-              {lockedTry !== null && (
+              {/* Ön Bilgilendirme §3: the guest sees the exact figure that
+                  will be charged, with the USD it was quoted in beside it,
+                  BEFORE consenting. The charged currency is primary because
+                  that is what leaves their account — so on the LYD path this
+                  lira block gives way to the dinar figure on the form below,
+                  rather than showing two amounts and no clarity. */}
+              {selectedMethod === 'card' && lockedTry !== null && (
                 <p className="mt-3 flex flex-wrap items-baseline gap-2">
                   <span className="text-[1.5rem] font-semibold text-stay tabular-nums leading-none">
                     {tryFmt.format(lockedTry)}
@@ -170,20 +232,37 @@ export default async function BookingResultPage({ params }: PageProps) {
                   )}
                 </p>
               )}
-              {booking.fx_rate_used !== null && booking.fx_rate_used !== undefined && (
+              {selectedMethod === 'card' &&
+                booking.fx_rate_used !== null && booking.fx_rate_used !== undefined && (
                 <p className="mt-2 text-xs text-mute">
                   {t('lockedRate', { rate: String(booking.fx_rate_used) })}
                 </p>
               )}
             </div>
 
-            {/* No amount is passed to the bank from here — the charged figure
-                is read server-side from the payment attempt. This label is
-                display only. */}
-            <CardPaymentForm
+            <PaymentMethodChoice
               locale={locale}
-              amountLabel={lockedTry !== null ? tryFmt.format(lockedTry) : ''}
+              reference={booking.booking_reference as string}
+              selected={selectedMethod}
+              lydAvailable={lydAvailable}
             />
+
+            {/* Neither form carries an amount. What is charged is read
+                server-side from the booking, so nothing here can move it —
+                these labels are display only. */}
+            {selectedMethod === 'lyd' && amountLyd !== null && lydFx ? (
+              <LydPaymentForm
+                locale={locale}
+                amountLabel={lydFmt.format(amountLyd)}
+                usdLabel={totalUsd !== null ? usd.format(totalUsd) : ''}
+                rateLabel={lydFx.rate.toFixed(2)}
+              />
+            ) : (
+              <CardPaymentForm
+                locale={locale}
+                amountLabel={lockedTry !== null ? tryFmt.format(lockedTry) : ''}
+              />
+            )}
           </>
         )}
 

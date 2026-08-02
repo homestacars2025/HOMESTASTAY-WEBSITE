@@ -33,6 +33,10 @@ export interface BookingConfirmationData {
   guests:         number;
   totalUsd:       number | null;
   amountChargedTry: number | null;
+  /** Absent means Kuveyt — the original path, unchanged in every respect. */
+  gateway?:         'kuveyt' | 'tlync';
+  /** TLYNC only: what the guest actually paid, in Libyan dinar. */
+  amountChargedLyd?: number | null;
 }
 
 /** "59.924,37 TL" — never the ₺ glyph: Geist has no glyph for it (tofu in PDF). */
@@ -40,6 +44,13 @@ function formatTry(amount: number): string {
   return `${new Intl.NumberFormat('tr-TR', {
     minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(amount)} TL`;
+}
+
+/** "1.234,56 LYD" — spelled out for the same reason as TL: no glyph, no tofu. */
+function formatLyd(amount: number): string {
+  return `${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(amount)} LYD`;
 }
 
 function formatUsd(amount: number): string {
@@ -91,7 +102,17 @@ export async function sendBookingConfirmation(
       { label: 'Çıkış',  value: formatDate(data.checkOut) },
       { label: 'Misafir', value: String(data.guests) },
     ];
-    if (data.amountChargedTry !== null) {
+    // A TLYNC guest paid in dinar and never in lira, so the lira figure — the
+    // booking's internal reference amount — must not be presented to them as
+    // "the amount charged".
+    const chargedLyd =
+      data.gateway === 'tlync' && data.amountChargedLyd != null
+        ? data.amountChargedLyd
+        : null;
+
+    if (chargedLyd !== null) {
+      annex.push({ label: 'Tahsil edilen tutar', value: formatLyd(chargedLyd) });
+    } else if (data.amountChargedTry !== null) {
       annex.push({ label: 'Tahsil edilen tutar', value: formatTry(data.amountChargedTry) });
     }
     if (data.totalUsd !== null) {
@@ -106,7 +127,10 @@ export async function sendBookingConfirmation(
     const resend = new Resend(apiKey);
 
     const amountLine =
-      data.amountChargedTry !== null
+      chargedLyd !== null
+        ? formatLyd(chargedLyd) +
+          (data.totalUsd !== null ? ` (${formatUsd(data.totalUsd)})` : '')
+        : data.amountChargedTry !== null
         ? formatTry(data.amountChargedTry) +
           (data.totalUsd !== null ? ` (${formatUsd(data.totalUsd)})` : '')
         : data.totalUsd !== null ? formatUsd(data.totalUsd) : '';
@@ -162,12 +186,19 @@ function confirmationHtml(data: BookingConfirmationData, amountLine: string): st
       <p style="margin:0;font-size:20px;font-weight:600;color:#0E0E10;">${esc(amountLine)}</p>
     </div>` : ''}
 
-    <p style="margin:0 0 6px;font-size:13px;color:#45454B;line-height:1.6;">
+    ${data.gateway === 'tlync'
+      ? `<p style="margin:0 0 6px;font-size:13px;color:#45454B;line-height:1.6;">
+      Onaylanmazsa ödemenizin tamamı, ödeme yaptığınız Libya kanalı üzerinden ekibimiz tarafından iade edilir. İade için sizinle iletişime geçeceğiz.
+    </p>
+    <p style="margin:0 0 20px;font-size:12px;color:#8C8881;line-height:1.6;">
+      If not approved, you’re refunded in full through the same Libyan payment channel. Our team processes this by hand and will contact you to complete it.
+    </p>`
+      : `<p style="margin:0 0 6px;font-size:13px;color:#45454B;line-height:1.6;">
       Onaylanmazsa ödemenizin tamamı aynı kartınıza iade edilir (3–10 iş günü).
     </p>
     <p style="margin:0 0 20px;font-size:12px;color:#8C8881;line-height:1.6;">
       If not approved, you’re refunded in full to the same card (3–10 business days).
-    </p>
+    </p>`}
 
     <p style="margin:0;font-size:12px;color:#8C8881;line-height:1.6;">
       Ekte Ön Bilgilendirme Formu ve Mesafeli Satış Sözleşmesi PDF olarak yer almaktadır. · The Pre-Information Form and Distance Sales Contract are attached as PDFs.

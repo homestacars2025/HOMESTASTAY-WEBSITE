@@ -563,7 +563,10 @@
       "heldTitle": "Tarihleriniz tutuldu",
       "heldBody": "Bu tarihleri sizin için tutuyoruz. Ödeme adımı henüz aktif değil — hiçbir ücret alınmadı.",
       "browseMore": "Diğer konaklamalara göz at",
-      "lockedRate": "Kur {rate} TRY/USD olarak sabitlendi."
+      "lockedRate": "Kur {rate} TRY/USD olarak sabitlendi.",
+      "refundBodyLyd": "Ödemenizin tamamı, ödeme yaptığınız Libya kanalı üzerinden iade edilir. Ekibimiz iadeyi elle işler ve tamamlamak için sizinle iletişime geçer.",
+      "confirmingTitle": "Ödemeniz doğrulanıyor",
+      "confirmingBody": "TLYNC’ten döndünüz; ödemeyi şimdi onlarla doğruluyoruz. Bu genellikle bir dakikadan kısa sürer — birazdan sayfayı yenileyin. Lütfen tekrar ödeme yapmayın."
     },
     "legal": {
       "versionLabel": "Belge sürümü",
@@ -588,7 +591,17 @@
       "state": "İlçe / bölge",
       "postCode": "Posta kodu",
       "submit": "{amount} öde",
-      "secureNote": "3D Secure ile korunur. Kart bilgileriniz saklanmaz."
+      "secureNote": "3D Secure ile korunur. Kart bilgileriniz saklanmaz.",
+      "methodTitle": "Nasıl ödemek istersiniz?",
+      "methodCard": "Kartla ödeyin (uluslararası)",
+      "methodCardHint": "Visa veya Mastercard, 3D Secure ile. Türk lirası olarak tahsil edilir.",
+      "methodLyd": "Libya’da ödeyin (LYD)",
+      "methodLydHint": "Tadawul, MobiCash ve diğer Libya yöntemleri. Libya dinarı olarak tahsil edilir.",
+      "lydAmountLabel": "Ödenecek tutar",
+      "lydRateNote": "1 ABD doları = {rate} Libya dinarı kuruyla çevrildi; ödeme anında sabitlenir.",
+      "lydRedirectNote": "Ödemeyi TLYNC’in güvenli sayfasında tamamlayacaksınız; Libya ödeme yönteminizi orada seçersiniz.",
+      "lydSubmit": "Ödemeye devam et",
+      "lydSecureNote": "Ödemeyi tamamlamak için TLYNC’e yönlendirileceksiniz."
     },
     "failed": {
       "title": "Ödeme tamamlanamadı",
@@ -608,7 +621,10 @@
         "booking_canceled": "Siz ödeme yaparken bu tarihlerdeki tutma süresi doldu; rezervasyon tamamlanamadı ve ödemeniz tamamen iade edilmektedir.",
         "already_paid": "Bu rezervasyonun ödemesi zaten yapılmış.",
         "not_holdable": "Bu rezervasyon artık tutulmuyor, bu nedenle ödeme yapılamaz.",
-        "not_found": "Bu rezervasyon bulunamadı."
+        "not_found": "Bu rezervasyon bulunamadı.",
+        "gateway": "Libya ödeme sağlayıcısına ulaşamadık. Herhangi bir tahsilat yapılmadı — lütfen birazdan tekrar deneyin.",
+        "lyd_unavailable": "Libya dinarıyla ödeme şu anda kullanılamıyor. Kartla ödeyebilir veya bize ulaşabilirsiniz.",
+        "tlync_cancelled": "Ödeme tamamlanmadı. Tarihleriniz birkaç dakika daha tutuluyor; geri dönüp tekrar deneyebilirsiniz."
       }
     }
   }
