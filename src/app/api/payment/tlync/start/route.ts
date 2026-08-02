@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { readBookingCookie } from '@/lib/booking/cookie';
 import {
-  tlyncConfig, initiatePayment, buildCustomRef, encodeAmountNote,
+  tlyncConfig, tlyncDiagnostics, initiatePayment, buildCustomRef, encodeAmountNote,
 } from '@/lib/payment/tlync';
 import { usdToLydRate, convertUsdToLyd } from '@/lib/payment/lyd-fx';
 import { tlyncBackendUrl, tlyncFrontendUrl } from '@/lib/payment/urls';
@@ -127,9 +127,31 @@ export async function POST(request: NextRequest) {
   }
 
   // ── TLYNC ─────────────────────────────────────────────────────────────────
+  let cfg;
+  try {
+    cfg = tlyncConfig();
+  } catch (err) {
+    console.error('[tlync/start] config invalid', {
+      customRef, error: err instanceof Error ? err.message : String(err),
+    });
+    await markFailed(supabase, customRef, 'tlync_unconfigured');
+    return fail('gateway');
+  }
+
+  // Logged on EVERY initiate, success or not: which host, which path, which
+  // header shape. A refusal caused by the wrong base URL is indistinguishable
+  // from a bad token unless this line is already in the log next to it.
+  const diagnostics = tlyncDiagnostics(cfg);
+  console.log('[tlync/start] target', { customRef, ...diagnostics });
+  if (diagnostics.warning) {
+    console.error('[tlync/start] BASE URL LOOKS WRONG', {
+      customRef, warning: diagnostics.warning,
+    });
+  }
+
   let initiated;
   try {
-    initiated = await initiatePayment(tlyncConfig(), {
+    initiated = await initiatePayment(cfg, {
       amountLyd,
       phone:       customer.phone,
       email:       customer.email,
@@ -138,18 +160,43 @@ export async function POST(request: NextRequest) {
       customRef,
     });
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
     console.error('[tlync/start] initiate threw', {
-      customRef, error: err instanceof Error ? err.message : String(err),
+      customRef, endpoint: diagnostics.initiateUrl, error: detail,
     });
-    await markFailed(supabase, customRef, 'tlync_unreachable');
+    await markFailed(
+      supabase, customRef, 'tlync_unreachable',
+      `tlync_unreachable url=${diagnostics.initiateUrl} error=${detail}`,
+    );
     return fail('gateway');
   }
 
   if (!initiated.ok) {
-    console.error('[tlync/start] initiate refused', {
-      customRef, status: initiated.status, message: initiated.message,
+    // ⚠️ TEMPORARY DEBUG CAPTURE — remove once initiate is confirmed working.
+    // 'tlync_refused' alone told us nothing, so TLYNC's own words go to the
+    // log AND to response_message. That column normally holds the LYD amount
+    // note, which is dead weight on a failed attempt, so nothing is lost —
+    // but this is a debugging affordance, not a design, and it goes when the
+    // integration is green.
+    console.error('[tlync/start] initiate refused — RAW TLYNC RESPONSE', {
+      customRef,
+      httpStatus:  initiated.status,
+      endpoint:    initiated.endpoint,
+      baseUrl:     diagnostics.baseUrl,
+      env:         diagnostics.env,
+      storeId:     diagnostics.storeId,
+      tokenLength: diagnostics.tokenLength,
+      tokenHasBearerPrefix: diagnostics.tokenHasBearerPrefix,
+      tokenHasWhitespace:   diagnostics.tokenHasWhitespace,
+      sent:        initiated.sent,
+      rawBody:     initiated.raw,
     });
-    await markFailed(supabase, customRef, 'tlync_refused');
+
+    await markFailed(
+      supabase, customRef, 'tlync_refused',
+      `tlync_refused status=${initiated.status} url=${initiated.endpoint} ` +
+        `sent=${JSON.stringify(initiated.sent)} body=${initiated.raw}`,
+    );
     return fail('gateway');
   }
 
@@ -171,17 +218,25 @@ export async function POST(request: NextRequest) {
   return NextResponse.redirect(initiated.url, { status: 303 });
 }
 
-/** Marks an attempt dead. Never touches the booking — the hold expires on its own. */
+/**
+ * Marks an attempt dead. Never touches the booking — the hold expires on its own.
+ *
+ * `detail` is the TEMPORARY debug capture: TLYNC's verbatim refusal, stored on
+ * the dead attempt so a failure can be diagnosed from the row without needing
+ * the log window it happened in. Capped at 2000 chars.
+ */
 async function markFailed(
   supabase: ReturnType<typeof createAdminClient>,
   merchantOrderId: string,
   code: string,
+  detail?: string,
 ): Promise<void> {
   const { error } = await supabase
     .from('booking_payments')
     .update({
       status:        'failed',
       response_code: code,
+      ...(detail ? { response_message: detail.slice(0, 2000) } : {}),
       updated_at:    new Date().toISOString(),
     })
     .eq('merchant_order_id', merchantOrderId)

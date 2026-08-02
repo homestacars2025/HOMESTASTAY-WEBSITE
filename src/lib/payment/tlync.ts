@@ -88,6 +88,76 @@ export function tlyncConfig(): TlyncConfig {
   return { baseUrl, storeId, token, env };
 }
 
+/**
+ * What we are actually about to call, and in what shape — logged before every
+ * initiate.
+ *
+ * THE MISTAKE THIS EXISTS TO CATCH: uat-api.tlync.ly is the API. test-buyer
+ * (and any other buyer/checkout host) is the page a HUMAN pays on. Pointing
+ * TLYNC_BASE_URL at the buyer host produces a refusal that looks exactly like
+ * a credential problem, because the endpoint simply is not there.
+ *
+ * Nothing here reveals the token: only its length and the two shapes that
+ * silently break Bearer auth — a pasted "Bearer " prefix (giving
+ * "Bearer Bearer …") and stray whitespace or a trailing newline from a copy
+ * out of a PDF.
+ */
+export interface TlyncDiagnostics {
+  env: TlyncEnv;
+  baseUrl: string;
+  initiateUrl: string;
+  receiptUrl: string;
+  baseUrlOverridden: boolean;
+  storeId: string;
+  acceptHeader: string;
+  contentTypeHeader: string;
+  authScheme: string;
+  tokenLength: number;
+  tokenHasBearerPrefix: boolean;
+  tokenHasWhitespace: boolean;
+  /** Set when the base URL is not an api host — the buyer-page mistake. */
+  warning?: string;
+}
+
+export function tlyncDiagnostics(cfg: TlyncConfig): TlyncDiagnostics {
+  const expected = DEFAULT_BASE_URL[cfg.env];
+  const host = safeHost(cfg.baseUrl);
+
+  let warning: string | undefined;
+  if (!/^(uat-)?api\.tlync\.ly$/.test(host)) {
+    warning =
+      `base URL host is "${host}", not an API host. The API is ` +
+      `${expected} — a buyer/checkout host (e.g. test-buyer.tlync.ly) has no ` +
+      `payment/initiate endpoint and will refuse every call.`;
+  } else if (!cfg.baseUrl.endsWith('/api/v3')) {
+    warning = `base URL does not end in /api/v3; expected ${expected}.`;
+  }
+
+  return {
+    env:               cfg.env,
+    baseUrl:           cfg.baseUrl,
+    initiateUrl:       `${cfg.baseUrl}/payment/initiate`,
+    receiptUrl:        `${cfg.baseUrl}/receipt/transaction`,
+    baseUrlOverridden: Boolean(process.env.TLYNC_BASE_URL?.trim()),
+    storeId:           cfg.storeId,
+    acceptHeader:      'application/json',
+    contentTypeHeader: 'application/x-www-form-urlencoded',
+    authScheme:        'Bearer',
+    tokenLength:          cfg.token.length,
+    tokenHasBearerPrefix: /^bearer\s/i.test(cfg.token),
+    tokenHasWhitespace:   /\s/.test(cfg.token),
+    ...(warning ? { warning } : {}),
+  };
+}
+
+function safeHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return '(unparseable)';
+  }
+}
+
 // ── HTTP ──────────────────────────────────────────────────────────────────────
 
 /**
@@ -98,8 +168,10 @@ async function postForm(
   cfg: TlyncConfig,
   path: string,
   fields: Record<string, string>,
-): Promise<{ status: number; body: unknown; text: string }> {
-  const response = await fetch(`${cfg.baseUrl}/${path}`, {
+): Promise<{ status: number; body: unknown; text: string; url: string }> {
+  const url = `${cfg.baseUrl}/${path}`;
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       Accept:          'application/json',
@@ -123,7 +195,7 @@ async function postForm(
     // raw text so the caller can log what actually arrived.
   }
 
-  return { status: response.status, body, text };
+  return { status: response.status, body, text, url };
 }
 
 function field(body: unknown, name: string): string | null {
@@ -150,13 +222,23 @@ export interface TlyncInitiateInput {
 
 export type TlyncInitiateResult =
   | { ok: true;  url: string; customRef: string | null }
-  | { ok: false; message: string; status: number };
+  | {
+      ok: false;
+      message: string;
+      status: number;
+      /** The endpoint we actually called, for when the base URL is the fault. */
+      endpoint: string;
+      /** TLYNC's response body, VERBATIM and unparsed. */
+      raw: string;
+      /** Exactly what we sent, so a rejected field is visible. Never the token. */
+      sent: Record<string, string>;
+    };
 
 export async function initiatePayment(
   cfg: TlyncConfig,
   input: TlyncInitiateInput,
 ): Promise<TlyncInitiateResult> {
-  const { status, body, text } = await postForm(cfg, 'payment/initiate', {
+  const sent = {
     id:           cfg.storeId,
     // A float with exactly two decimals. Never a locale-formatted string —
     // toLocaleString would emit a comma in half the world's locales.
@@ -166,7 +248,11 @@ export async function initiatePayment(
     backend_url:  input.backendUrl,
     frontend_url: input.frontendUrl,
     custom_ref:   input.customRef,
-  });
+  };
+
+  const { status, body, text, url: endpoint } = await postForm(
+    cfg, 'payment/initiate', sent,
+  );
 
   const url = field(body, 'url');
 
@@ -177,8 +263,28 @@ export async function initiatePayment(
   return {
     ok: false,
     status,
+    endpoint,
+    // Capped, but generously: a validation error listing several fields runs
+    // long, and truncating it to 300 chars is how the actual reason gets lost.
+    raw: text.slice(0, 2000),
+    // Email and phone are masked — this string is logged and, while we debug,
+    // written to a DB column. The SHAPE of the phone is what matters here
+    // (TLYNC wants Libyan national format), not the number itself.
+    sent: { ...sent, email: maskEmail(sent.email), phone: maskPhone(sent.phone) },
     message: field(body, 'message') ?? field(body, 'result') ?? text.slice(0, 300),
   };
+}
+
+/** "09xx***45" — enough to see the format, not enough to be the number. */
+function maskPhone(phone: string): string {
+  if (phone.length <= 5) return `${phone.length} chars`;
+  return `${phone.slice(0, 4)}***${phone.slice(-2)}`;
+}
+
+function maskEmail(email: string): string {
+  const at = email.indexOf('@');
+  if (at < 1) return 'invalid';
+  return `${email[0]}***${email.slice(at)}`;
 }
 
 // ── receipt/transaction — the source of truth ─────────────────────────────────
