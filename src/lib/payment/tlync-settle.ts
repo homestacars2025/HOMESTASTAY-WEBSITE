@@ -107,6 +107,10 @@ export async function settleTlyncPayment(
           amount: receipt.amount,
           paymentMethod: receipt.paymentMethod,
           transactionRef: receipt.transactionRef,
+          // ⚠️ TEMPORARY: TLYNC's receipt shape is undocumented and reading it
+          // wrong is what stalled every payment. Keep this until the parsed
+          // fields are confirmed non-null in production, then drop it.
+          rawReceipt: receipt.raw,
         }
       : receipt.result === 'error'
       ? { httpStatus: receipt.status, message: receipt.message }
@@ -142,11 +146,22 @@ export async function settleTlyncPayment(
     rate: num(attempt.fx_rate_lyd) ?? note?.rate ?? null,
   };
 
+  // The underpayment guard runs only when TLYNC actually tells us an amount.
+  // An ABSENT amount is not a zero payment — conflating the two refused to
+  // settle payments TLYNC had confirmed as 'success'. When the amount is
+  // unknown we trust the 'success' verdict and record what we quoted, which is
+  // what the guest agreed to pay.
   if (expected.lyd !== null && receipt.amount !== null && receipt.amount + 0.01 < expected.lyd) {
     console.error('[tlync/settle] AMOUNT MISMATCH — not marking paid', {
       customRef, trigger, expectedLyd: expected.lyd, receiptLyd: receipt.amount,
     });
     return { status: 'amount_mismatch', expected: expected.lyd, collected: receipt.amount };
+  }
+
+  if (receipt.amount === null) {
+    console.warn('[tlync/settle] receipt carried no amount — settling on the quoted figure', {
+      customRef, trigger, quotedLyd: expected.lyd,
+    });
   }
 
   const settledLyd = receipt.amount ?? expected.lyd;

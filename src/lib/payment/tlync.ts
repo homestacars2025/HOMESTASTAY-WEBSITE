@@ -205,6 +205,57 @@ function field(body: unknown, name: string): string | null {
   return String(value);
 }
 
+/**
+ * Same as field(), but looks inside nested objects too.
+ *
+ * TLYNC's receipt payload shape is not documented, and reading only the top
+ * level produced a receipt that said 'success' with amount 0, no method and no
+ * transaction ref — every field silently absent because they were one level
+ * down. Rather than guess a wrapper name ('data', 'transaction', 'result', …),
+ * this walks the object.
+ *
+ * Depth-limited and breadth-first, so the shallowest match wins: a top-level
+ * `amount` always beats a nested one.
+ */
+function deepField(body: unknown, name: string, maxDepth = 4): string | null {
+  let level: unknown[] = [body];
+
+  for (let depth = 0; depth <= maxDepth && level.length > 0; depth++) {
+    const next: unknown[] = [];
+
+    for (const node of level) {
+      if (!node || typeof node !== 'object') continue;
+
+      const direct = field(node, name);
+      if (direct !== null && direct !== '') return direct;
+
+      for (const value of Object.values(node as Record<string, unknown>)) {
+        if (value && typeof value === 'object') next.push(value);
+      }
+    }
+
+    level = next;
+  }
+
+  return null;
+}
+
+/**
+ * A money field that is ABSENT must stay null, never 0.
+ *
+ * Number(null) is 0 and Number.isFinite(0) is true, so a missing amount used
+ * to read as "they paid nothing" — which tripped the underpayment guard and
+ * refused to settle a payment TLYNC had confirmed. Absent and zero are
+ * different facts and must not collapse into one.
+ */
+function money(raw: string | null): number | null {
+  if (raw === null) return null;
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
 // ── payment/initiate ──────────────────────────────────────────────────────────
 
 export interface TlyncInitiateInput {
@@ -292,13 +343,15 @@ function maskEmail(email: string): string {
 export type TlyncReceipt =
   | {
       result: 'success';
-      /** Amount TLYNC actually collected, in LYD. */
+      /** Amount TLYNC actually collected, in LYD. NULL means absent, not zero. */
       amount: number | null;
       /** e.g. "tadawul", "mobicash". Stored VERBATIM — it routes the manual refund. */
       paymentMethod: string | null;
       customRef: string | null;
       transactionRef: string | null;
       customerPhone: string | null;
+      /** TLYNC's response body, verbatim. Logged while the shape is unproven. */
+      raw: string;
     }
   /** TLYNC knows the payment; the guest has not completed it. */
   | { result: 'incomplete' }
@@ -341,17 +394,25 @@ export async function fetchReceipt(
 
   if (status === 404) return { result: 'not_found' };
 
-  const result = field(body, 'result');
+  const result = field(body, 'result') ?? deepField(body, 'result');
 
   if (status >= 200 && status < 300 && result === 'success') {
-    const amount = Number(field(body, 'amount'));
+    // deepField throughout: the receipt's nesting is undocumented, and reading
+    // only the top level is exactly how a confirmed payment came back with
+    // amount 0 and no payment method.
     return {
       result: 'success',
-      amount: Number.isFinite(amount) ? amount : null,
-      paymentMethod:  field(body, 'payment_method'),
-      customRef:      field(body, 'custom_ref'),
-      transactionRef: field(body, 'transaction_ref') ?? field(body, 'transaction_id'),
-      customerPhone:  field(body, 'customer_phone'),
+      amount: money(deepField(body, 'amount')),
+      paymentMethod:
+        deepField(body, 'payment_method') ?? deepField(body, 'paymentMethod'),
+      customRef:
+        deepField(body, 'custom_ref') ?? deepField(body, 'customRef'),
+      transactionRef:
+        deepField(body, 'transaction_ref') ?? deepField(body, 'transactionRef') ??
+        deepField(body, 'transaction_id') ?? deepField(body, 'transactionId'),
+      customerPhone:
+        deepField(body, 'customer_phone') ?? deepField(body, 'customerPhone'),
+      raw: text.slice(0, 2000),
     };
   }
 
