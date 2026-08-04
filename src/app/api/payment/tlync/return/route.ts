@@ -1,20 +1,24 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { tlyncConfig, fetchReceipt } from '@/lib/payment/tlync';
+import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
 import { routing } from '@/i18n/routing';
 
 /**
  * Where TLYNC sends the guest's browser back (frontend_url).
  *
- * ⚠️ THIS ROUTE WRITES NOTHING. Not a status, not a paid_at, not a failure.
- *   A browser redirect can be replayed, bookmarked, or hand-typed by anyone
- *   who saw the URL; only the server-to-server callback, backed by a receipt
- *   check, may change what a payment is. All this route decides is which page
- *   the guest lands on.
+ * ⚠️ THIS ROUTE NOW SETTLES. That is a deliberate reversal of the original
+ *   rule, and the reason is in the data: TLYNC's UAT does not POST
+ *   backend_url. Payments its own receipt endpoint reports as 'success' sat at
+ *   3ds_pending until their holds expired and the bookings were cancelled. A
+ *   design where the only path to 'paid' is a callback that never arrives is
+ *   not a safe design; it is a silent one.
  *
- * It does READ the receipt, because the alternative is telling a guest who
- * cancelled that we are confirming their payment. Reading is free of
- * consequence; writing is not.
+ *   The safety property is untouched, because it never lived in "only the
+ *   callback may write". It lives in settleTlyncPayment always re-confirming
+ *   against receipt/transaction before believing anything. This route can ask
+ *   us to look; it cannot tell us what we saw. A replayed or hand-typed return
+ *   URL therefore does exactly what a replayed callback does: another receipt
+ *   check, and no second write.
  *
  * TLYNC's method for this redirect is undocumented, so both verbs are handled.
  */
@@ -35,58 +39,61 @@ async function handle(request: NextRequest) {
   const locale = localeOf(url.searchParams.get('locale'));
   const customRef = url.searchParams.get('ref')?.trim() ?? '';
 
+  console.log('[tlync/return] INBOUND', {
+    method: request.method,
+    url: request.url,
+    customRef: customRef || '(none)',
+    userAgent: request.headers.get('user-agent') ?? '',
+  });
+
   const to = (path: string) =>
     NextResponse.redirect(new URL(path, request.url), { status: 303 });
 
   if (!customRef) return to(`/${locale}/booking-failed?reason=session`);
 
-  const supabase = createAdminClient();
+  const outcome = await settleTlyncPayment(createAdminClient(), {
+    customRef, trigger: 'return',
+  });
 
-  const { data: attempt } = await supabase
-    .from('booking_payments')
-    .select('status, bookings(booking_reference)')
-    .eq('merchant_order_id', customRef)
-    .eq('payment_gateway', 'tlync')
-    .maybeSingle();
+  console.log('[tlync/return] outcome', { customRef, ...outcome });
 
-  if (!attempt) {
-    console.warn('[tlync/return] unknown ref', { customRef });
-    return to(`/${locale}/booking-failed?reason=unknown`);
-  }
+  const result = outcome.status === 'paid' || outcome.status === 'already_paid'
+    ? outcome.reference
+      ? `/${locale}/booking/${encodeURIComponent(outcome.reference)}`
+      : null
+    : null;
 
-  const reference =
-    (one(attempt.bookings) as { booking_reference: string | null } | undefined)
-      ?.booking_reference ?? null;
+  switch (outcome.status) {
+    case 'paid':
+    case 'already_paid':
+      // Settled. The result page shows the real paid state, not a promise.
+      return to(result ?? `/${locale}/booking-failed?reason=unknown`);
 
-  if (!reference) return to(`/${locale}/booking-failed?reason=unknown`);
-
-  const result = `/${locale}/booking/${encodeURIComponent(reference)}`;
-
-  // The callback got here first — the booking page will show the paid state.
-  if (attempt.status === 'paid') return to(result);
-
-  const receipt = await fetchReceipt(tlyncConfig(), { customRef });
-
-  switch (receipt.result) {
-    case 'success':
-      // Paid at TLYNC, not yet written here. The callback is the only thing
-      // allowed to write it, so the guest is told we are confirming rather
-      // than told they are done.
-      return to(`${result}?pending=tlync`);
-
-    case 'incomplete':
-    case 'not_found':
-      // The guest backed out. Their dates are still held for a few minutes,
-      // so this page invites them to try again rather than mourning.
+    case 'not_completed':
+      // The guest backed out, confirmed by receipt. Their dates may still be
+      // held, so this page invites them to try again rather than mourning.
       return to(`/${locale}/booking-failed?reason=tlync_cancelled`);
 
+    case 'refund_required':
+      // Money moved and the stay cannot be given: either the booking was
+      // already paid, or the hold expired AND the dates were resold in the
+      // gap. A manual refund is already queued and staff notified.
+      return to(`/${locale}/booking-failed?reason=tlync_refund_manual`);
+
+    case 'receipt_unavailable':
+    case 'write_failed':
+    case 'amount_mismatch':
+      // We genuinely do not know, or we know and could not write it. Never
+      // tell the guest they failed and never tell them they succeeded — the
+      // 'pending' copy says we are checking and asks them not to pay again,
+      // which is exactly true. The reconcile sweep settles it.
+      return to(`/${locale}/booking-failed?reason=pending`);
+
+    case 'already_refunded':
+    case 'unknown_ref':
+    case 'wrong_gateway':
     default:
-      // We could not reach TLYNC. Saying "we are checking" is the only honest
-      // message; the callback will settle it.
-      console.error('[tlync/return] receipt unavailable', {
-        customRef, status: receipt.status, message: receipt.message,
-      });
-      return to(`${result}?pending=tlync`);
+      return to(`/${locale}/booking-failed?reason=unknown`);
   }
 }
 
@@ -94,9 +101,4 @@ function localeOf(value: string | null): string {
   return value && (routing.locales as readonly string[]).includes(value)
     ? value
     : routing.defaultLocale;
-}
-
-/** PostgREST returns an embedded to-one as either an object or a 1-element array. */
-function one(value: unknown): unknown {
-  return Array.isArray(value) ? value[0] : value;
 }

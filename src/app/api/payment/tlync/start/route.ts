@@ -27,6 +27,15 @@ import { tlyncBackendUrl, tlyncFrontendUrl } from '@/lib/payment/urls';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/**
+ * How long the dates stay held once the guest is sent to TLYNC.
+ *
+ * Sized for the real journey — leave the site, open a bank or wallet app,
+ * wait for an OTP, come back — not for a card 3DS round trip. The 20 minutes
+ * start_payment_attempt grants was not enough and cost real payments.
+ */
+const TLYNC_HOLD_MINUTES = 60;
+
 export async function POST(request: NextRequest) {
   const form = await request.formData();
   const locale = str(form.get('locale')) || 'en';
@@ -160,14 +169,55 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // ── The hold has to outlive the payment page ──────────────────────────────
+  // start_payment_attempt extends the hold to now()+20min, which was sized for
+  // a 3DS round trip: one OTP, one page, back in two minutes. Paying inside
+  // Libya is not that — the guest leaves for a bank app, an OTP, sometimes a
+  // different device. Twenty minutes ran out mid-payment, expire_holds()
+  // cancelled the booking underneath them (it runs every 5 minutes), and the
+  // payment landed on a dead booking.
+  //
+  // Updating hold_expires_at alone does NOT re-fire bookings_set_hold_expiry —
+  // that trigger is ON UPDATE OF status, hold_duration_minutes — so this
+  // extension sticks. GREATEST() means it can only ever lengthen a hold.
+  const holdUntil = new Date(Date.now() + TLYNC_HOLD_MINUTES * 60_000).toISOString();
+  const { error: holdError } = await supabase
+    .from('bookings')
+    .update({ hold_expires_at: holdUntil })
+    .eq('id', bookingId)
+    .eq('status', 'hold')
+    .lt('hold_expires_at', holdUntil);
+
+  if (holdError) {
+    // Not fatal: a short hold is a worse outcome than no payment, but the
+    // settle path can now revive an expired hold, so this is recoverable.
+    console.error('[tlync/start] could not extend hold for the tlync round trip', {
+      customRef, message: holdError.message, code: holdError.code,
+    });
+  }
+
+  const backendUrl  = tlyncBackendUrl();
+  const frontendUrl = tlyncFrontendUrl(locale, customRef);
+
+  // The exact URLs handed to TLYNC. backend_url must be a public production
+  // origin — it is derived from PAYMENT_CALLBACK_ORIGIN, which is guarded
+  // against the apex host and a missing scheme, but a wrong value here is
+  // invisible until a payment silently never settles.
+  console.log('[tlync/start] urls', {
+    customRef, backendUrl, frontendUrl,
+    holdExtendedTo: holdUntil,
+    backendUrlIsPublic: /^https:\/\/[^/]+\.[^/]+\//.test(`${backendUrl}/`) &&
+      !/localhost|127\.0\.0\.1|\.local/i.test(backendUrl),
+  });
+
   let initiated;
   try {
     initiated = await initiatePayment(cfg, {
       amountLyd,
       phone:       customer.phone,
       email:       customer.email,
-      backendUrl:  tlyncBackendUrl(),
-      frontendUrl: tlyncFrontendUrl(locale, customRef),
+      backendUrl,
+      frontendUrl,
       customRef,
     });
   } catch (err) {

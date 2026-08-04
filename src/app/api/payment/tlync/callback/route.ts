@@ -1,37 +1,37 @@
-import { NextResponse, after, type NextRequest } from 'next/server';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import {
-  tlyncConfig, fetchReceipt, parseAmountNote, encodeAmountNote,
-} from '@/lib/payment/tlync';
-import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
+import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
 
 /**
  * TLYNC's server-to-server callback (backend_url).
  *
  * ⚠️ THE CALLBACK IS A DOORBELL, NOT A VERDICT.
  *   TLYNC publishes no signature scheme for this POST, so its body is treated
- *   as untrusted in full: it tells us WHICH payment to look at and nothing
- *   more. Every status decision below comes from receipt/transaction, called
- *   server-to-server with our store token. Anyone can POST here; nobody can
- *   make a booking paid by doing so.
+ *   as untrusted in full: it says WHICH payment to look at and nothing more.
+ *   Every status decision is made in settleTlyncPayment, from
+ *   receipt/transaction, called server-to-server with our store token. Anyone
+ *   can POST here; nobody can make a booking paid by doing so.
  *
- * Resolution is by custom_ref, which we generated and stored in
- * booking_payments.merchant_order_id. No cookies arrive on this request — the
- * ref is the only identity there is.
+ * ⚠️ AND IT MAY NEVER RING AT ALL.
+ *   In UAT, TLYNC has not been observed POSTing here even for payments its own
+ *   receipt endpoint confirms as 'success' — attempts sat unresolved for days.
+ *   So this route is no longer the only way a payment settles: the guest's
+ *   return from TLYNC and the reconcile sweep call the same function. This
+ *   endpoint is now the fast path, not the load-bearing one.
  *
- * Idempotent by construction: TLYNC may retry, and a replay must produce the
- * same answer, no second email, and above all no second owner notification.
+ * EVERY inbound request is logged in full — method, headers, raw body — so the
+ * question "is TLYNC calling us at all?" is answerable from the log rather
+ * than by inference from what did not happen.
  *
- * Returns plain JSON — this endpoint is never seen by a guest. The browser
- * journey is /api/payment/tlync/return.
+ * Returns plain JSON; no guest ever sees this. The browser journey is
+ * /api/payment/tlync/return.
  */
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** The 12-hour owner window. Identical to complete_payment's, by requirement. */
-const OWNER_DECISION_HOURS = 12;
+/** Never log these, whatever TLYNC decides to send. */
+const REDACTED_HEADERS = new Set(['authorization', 'cookie', 'proxy-authorization']);
 
 export async function POST(request: NextRequest) {
   // ── Optional network-level narrowing ──────────────────────────────────────
@@ -42,404 +42,134 @@ export async function POST(request: NextRequest) {
   const allowed = (process.env.TLYNC_CALLBACK_IPS ?? '')
     .split(',').map((s) => s.trim()).filter(Boolean);
 
-  if (allowed.length > 0) {
-    const ip =
-      request.headers.get('x-real-ip')?.trim() ||
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      '';
-    if (!allowed.includes(ip)) {
-      console.warn('[tlync/callback] rejected callback from unlisted ip', { ip });
-      return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
-    }
-  }
+  const clientIp =
+    request.headers.get('x-real-ip')?.trim() ||
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    '';
 
-  // ── Read the body once, tolerate either encoding ──────────────────────────
-  const contentType = request.headers.get('content-type') ?? '';
+  // ── Full inbound capture, before any decision ─────────────────────────────
+  const headers: Record<string, string> = {};
+  request.headers.forEach((value, key) => {
+    headers[key] = REDACTED_HEADERS.has(key.toLowerCase()) ? '[redacted]' : value;
+  });
+
   let raw = '';
+  let readError: string | null = null;
   try {
     raw = await request.text();
   } catch (err) {
-    console.error('[tlync/callback] unreadable body', {
-      contentType, error: err instanceof Error ? err.message : String(err),
-    });
+    readError = err instanceof Error ? err.message : String(err);
+  }
+
+  console.log('[tlync/callback] INBOUND', {
+    method: request.method,
+    url: request.url,
+    ip: clientIp,
+    headers,
+    bodyLength: raw.length,
+    // Verbatim. TLYNC's callback body has no documented shape and carries no
+    // card data — the whole point is to find out what actually arrives.
+    body: raw.slice(0, 4000),
+    ...(readError ? { readError } : {}),
+  });
+
+  if (readError) {
     return NextResponse.json({ ok: false, error: 'unreadable' }, { status: 400 });
   }
 
+  if (allowed.length > 0 && !allowed.includes(clientIp)) {
+    console.warn('[tlync/callback] rejected callback from unlisted ip', {
+      ip: clientIp, allowed,
+    });
+    return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+  }
+
+  const contentType = request.headers.get('content-type') ?? '';
   const payload = parseBody(raw, contentType);
 
+  // The ref may also ride in the query string — TLYNC's callback contract is
+  // undocumented enough that both are worth reading.
+  const query = new URL(request.url).searchParams;
+
   const customRef =
-    pick(payload, 'custom_ref') ?? pick(payload, 'customRef') ?? '';
+    pick(payload, 'custom_ref') ?? pick(payload, 'customRef') ??
+    query.get('custom_ref')?.trim() ?? query.get('ref')?.trim() ?? '';
+
   const transactionRef =
     pick(payload, 'transaction_ref') ?? pick(payload, 'transactionRef') ??
-    pick(payload, 'transaction_id') ?? null;
+    pick(payload, 'transaction_id') ?? query.get('transaction_ref')?.trim() ?? null;
+
+  console.log('[tlync/callback] extracted', {
+    customRef: customRef || '(none)',
+    transactionRef: transactionRef ?? '(none)',
+    payloadKeys: Object.keys(payload),
+  });
 
   if (!customRef) {
-    console.error('[tlync/callback] no custom_ref in callback', {
-      contentType, keys: Object.keys(payload), body: raw.slice(0, 500),
+    console.error('[tlync/callback] no custom_ref anywhere in callback', {
+      contentType, payloadKeys: Object.keys(payload), body: raw.slice(0, 1000),
     });
     return NextResponse.json({ ok: false, error: 'no_ref' }, { status: 400 });
   }
 
-  const supabase = createAdminClient();
-
-  const { data: attempt } = await supabase
-    .from('booking_payments')
-    .select('id, booking_id, status, amount_try, amount_usd, amount_lyd, fx_rate_lyd, response_message, payment_gateway')
-    .eq('merchant_order_id', customRef)
-    .maybeSingle();
-
-  if (!attempt) {
-    console.error('[tlync/callback] unknown custom_ref', { customRef });
-    return NextResponse.json({ ok: false, error: 'unknown_ref' }, { status: 404 });
-  }
-
-  // A Kuveyt attempt must never be completed through this route: it would
-  // record a card payment with no bank references, which is a payment we
-  // could not refund.
-  if (attempt.payment_gateway !== 'tlync') {
-    console.error('[tlync/callback] ref belongs to a non-tlync attempt — refusing', {
-      customRef, gateway: attempt.payment_gateway,
-    });
-    return NextResponse.json({ ok: false, error: 'wrong_gateway' }, { status: 409 });
-  }
-
-  if (attempt.status === 'paid') {
-    // Callback replay. Same answer, no writes, no second email.
-    return NextResponse.json({ ok: true, status: 'already_paid' });
-  }
-
-  if (attempt.status === 'refunded' || attempt.status === 'partially_refunded') {
-    console.error('[tlync/callback] refunded attempt reported as paid — not writing', {
-      customRef, status: attempt.status,
-    });
-    return NextResponse.json({ ok: false, error: 'already_refunded' }, { status: 409 });
-  }
-
-  // ── The source of truth ───────────────────────────────────────────────────
-  const receipt = await fetchReceipt(tlyncConfig(), {
-    customRef,
-    transactionRef: transactionRef ?? undefined,
+  const outcome = await settleTlyncPayment(createAdminClient(), {
+    customRef, transactionRef, trigger: 'callback',
   });
 
-  if (receipt.result === 'error') {
-    // We do not know. Never write a verdict on "do not know" — leave the
-    // attempt where it is and answer 502 so TLYNC retries.
-    console.error('[tlync/callback] RECEIPT UNKNOWN — reconcile if it repeats', {
-      customRef, status: receipt.status, message: receipt.message,
-    });
-    return NextResponse.json({ ok: false, error: 'receipt_unavailable' }, { status: 502 });
+  console.log('[tlync/callback] outcome', { customRef, ...outcome });
+
+  // Status codes are chosen for TLYNC's retry logic: 502 on "we could not
+  // reach the receipt endpoint" invites a retry, everything settled answers 200.
+  switch (outcome.status) {
+    case 'paid':
+    case 'already_paid':
+    case 'not_completed':
+      return NextResponse.json({ ok: true, status: outcome.status });
+    case 'receipt_unavailable':
+      return NextResponse.json({ ok: false, error: outcome.status }, { status: 502 });
+    case 'unknown_ref':
+      return NextResponse.json({ ok: false, error: outcome.status }, { status: 404 });
+    case 'write_failed':
+      return NextResponse.json({ ok: false, error: outcome.status }, { status: 500 });
+    default:
+      return NextResponse.json({ ok: false, error: outcome.status }, { status: 409 });
   }
-
-  if (receipt.result === 'incomplete' || receipt.result === 'not_found') {
-    console.warn('[tlync/callback] payment not completed', {
-      customRef, receipt: receipt.result,
-    });
-    await supabase
-      .from('booking_payments')
-      .update({
-        status:        'failed',
-        response_code: `tlync_${receipt.result}`,
-        updated_at:    new Date().toISOString(),
-      })
-      .eq('merchant_order_id', customRef)
-      .neq('status', 'paid');
-    // The hold is left to expire on its own, exactly as a declined card does.
-    return NextResponse.json({ ok: true, status: receipt.result });
-  }
-
-  // ── Confirmed success. Check we were paid what we asked for ───────────────
-  // amount_lyd / fx_rate_lyd are the source of truth, written with the
-  // custom_ref before TLYNC was ever called. The note fallback exists only for
-  // attempts started before those columns did, and can go once none are live.
-  const note = parseAmountNote(attempt.response_message as string | null);
-  const expected = {
-    lyd:  num(attempt.amount_lyd)  ?? note?.lyd  ?? null,
-    rate: num(attempt.fx_rate_lyd) ?? note?.rate ?? null,
-  };
-
-  if (expected.lyd !== null && receipt.amount !== null && receipt.amount + 0.01 < expected.lyd) {
-    // Underpaid. Recording this as paid would hand over a stay for less than
-    // its price and, worse, tell the guest they are done.
-    console.error('[tlync/callback] AMOUNT MISMATCH — not marking paid', {
-      customRef, expectedLyd: expected.lyd, receiptLyd: receipt.amount,
-    });
-    return NextResponse.json({ ok: false, error: 'amount_mismatch' }, { status: 409 });
-  }
-
-  // What actually moved. Normally identical to what we asked for;
-  // underpayment already returned above, so a difference here can only be an
-  // overpayment or a rounding cent. The collected figure wins, because
-  // amount_lyd is what staff will refund by hand.
-  const settledLyd = receipt.amount ?? expected.lyd;
-
-  if (settledLyd !== null && expected.lyd !== null && Math.abs(settledLyd - expected.lyd) > 0.01) {
-    console.warn('[tlync/callback] collected amount differs from quoted', {
-      customRef, expectedLyd: expected.lyd, collectedLyd: settledLyd,
-    });
-  }
-
-  const auditNote = encodeAmountNote({
-    lyd:    settledLyd ?? 0,
-    rate:   expected.rate ?? 0,
-    method: receipt.paymentMethod,
-    tx:     receipt.transactionRef ?? transactionRef,
-  });
-
-  // ── The paid transition ───────────────────────────────────────────────────
-  // Two statements rather than one RPC: complete_payment demands RRN, Stan and
-  // a provision number, which are card-network references TLYNC does not have
-  // and must never be faked into that table.
-  //
-  // Payment row first, booking second — the same ordering complete_payment
-  // uses, and the reason the partial unique index on (booking_id) WHERE
-  // status = 'paid' can still do its job.
-  const { data: paidRows, error: paidError } = await supabase
-    .from('booking_payments')
-    .update({
-      status:          'paid',
-      paid_at:         new Date().toISOString(),
-      // VERBATIM from TLYNC — this string tells staff which Libyan portal a
-      // manual refund has to be issued from.
-      payment_method:  receipt.paymentMethod,
-      // TLYNC's transaction reference lands in bank_order_id because
-      // refund_on_owner_reject reads exactly that column into
-      // manual_refunds.tlync_transaction_ref.
-      bank_order_id:   receipt.transactionRef ?? transactionRef,
-      // Re-asserted from the receipt so the row records what was collected,
-      // not only what was quoted. This is the number a manual refund replays.
-      ...(settledLyd !== null ? { amount_lyd: settledLyd } : {}),
-      response_code:   'tlync_success',
-      response_message: auditNote,
-      updated_at:      new Date().toISOString(),
-    })
-    .eq('merchant_order_id', customRef)
-    .neq('status', 'paid')
-    .select('id, booking_id, amount_try');
-
-  if (paidError) {
-    // 23505 on booking_payments_one_paid_per_booking: another attempt already
-    // paid for this booking. The money here is real and has to go back.
-    if (paidError.code === '23505') {
-      console.error('[tlync/callback] DUPLICATE PAYMENT — MANUAL REFUND REQUIRED', {
-        customRef, bookingId: attempt.booking_id,
-      });
-      await queueManualRefund(supabase, {
-        bookingId: attempt.booking_id as string,
-        paymentId: attempt.id as string,
-        customRef,
-        transactionRef: receipt.transactionRef ?? transactionRef,
-        paymentMethod: receipt.paymentMethod,
-        amountTry: num(attempt.amount_try),
-        amountLyd: settledLyd,
-        reason: 'double_payment',
-      });
-      return NextResponse.json({ ok: false, error: 'duplicate_payment' }, { status: 409 });
-    }
-
-    console.error('[tlync/callback] could not mark attempt paid — MONEY MOVED', {
-      customRef, message: paidError.message, code: paidError.code,
-    });
-    return NextResponse.json({ ok: false, error: 'write_failed' }, { status: 500 });
-  }
-
-  if (!paidRows || paidRows.length === 0) {
-    // Raced with another delivery of the same callback, which won. Its side
-    // effects have run; ours must not run again.
-    return NextResponse.json({ ok: true, status: 'already_paid' });
-  }
-
-  // ── The booking ───────────────────────────────────────────────────────────
-  const { data: booking } = await supabase
-    .from('bookings')
-    .select('id, booking_reference, status, paid_at, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, customers(email)')
-    .eq('id', attempt.booking_id)
-    .maybeSingle();
-
-  if (!booking) {
-    console.error('[tlync/callback] paid attempt has no booking', { customRef });
-    return NextResponse.json({ ok: false, error: 'no_booking' }, { status: 500 });
-  }
-
-  if (booking.paid_at) {
-    console.error('[tlync/callback] booking already paid — MANUAL REFUND REQUIRED', {
-      customRef, reference: booking.booking_reference,
-    });
-    await queueManualRefund(supabase, {
-      bookingId: booking.id as string,
-      paymentId: attempt.id as string,
-      customRef,
-      transactionRef: receipt.transactionRef ?? transactionRef,
-      paymentMethod: receipt.paymentMethod,
-      amountTry: num(attempt.amount_try),
-      amountLyd: settledLyd,
-      reason: 'double_payment',
-    });
-    return NextResponse.json({ ok: false, error: 'duplicate_payment' }, { status: 409 });
-  }
-
-  if (booking.status !== 'hold') {
-    // The hold expired while the guest was on TLYNC's page. The payment is
-    // recorded — never discard a real payment — but paid_at stays NULL so no
-    // owner is prompted for a dead booking, mirroring complete_payment.
-    console.error('[tlync/callback] paid onto a cancelled booking — MANUAL REFUND REQUIRED', {
-      customRef, reference: booking.booking_reference, bookingStatus: booking.status,
-    });
-    await queueManualRefund(supabase, {
-      bookingId: booking.id as string,
-      paymentId: attempt.id as string,
-      customRef,
-      transactionRef: receipt.transactionRef ?? transactionRef,
-      paymentMethod: receipt.paymentMethod,
-      amountTry: num(attempt.amount_try),
-      amountLyd: settledLyd,
-      reason: 'expired',
-    });
-    return NextResponse.json({ ok: false, error: 'booking_canceled' }, { status: 409 });
-  }
-
-  // The paid_at NULL → NOT NULL edge fires trg_notify_booking_paid exactly
-  // once, which is the existing owner prompt — identical for both gateways.
-  // payment_gateway is set in the SAME statement so the trigger's NEW row
-  // already knows which gateway paid.
-  const { error: bookingError } = await supabase
-    .from('bookings')
-    .update({
-      paid_at:               new Date().toISOString(),
-      payment_gateway:       'tlync',
-      owner_decision_due_at: new Date(Date.now() + OWNER_DECISION_HOURS * 3_600_000).toISOString(),
-      hold_expires_at:       null,
-    })
-    .eq('id', booking.id)
-    .is('paid_at', null);
-
-  if (bookingError) {
-    console.error('[tlync/callback] attempt is paid but booking did not transition', {
-      customRef, reference: booking.booking_reference,
-      message: bookingError.message, code: bookingError.code,
-    });
-    return NextResponse.json({ ok: false, error: 'booking_write_failed' }, { status: 500 });
-  }
-
-  // Guest confirmation, once, on the genuine paid edge. after() so a slow PDF
-  // render never holds the response open; it swallows its own errors.
-  const email = (one(booking.customers) as { email: string | null } | undefined)?.email;
-  if (email) {
-    after(async () => {
-      await sendBookingConfirmation({
-        reference:        booking.booking_reference as string,
-        email,
-        checkIn:          booking.check_in as string,
-        checkOut:         booking.check_out as string,
-        guests:           booking.guests_count as number,
-        totalUsd:         num(booking.total_amount_usd),
-        amountChargedTry: num(booking.amount_charged_try),
-        gateway:          'tlync',
-        amountChargedLyd: settledLyd,
-      });
-    });
-  } else {
-    console.error('[tlync/callback] paid but no email to confirm to', {
-      customRef, reference: booking.booking_reference,
-    });
-  }
-
-  console.log('[tlync/callback] paid', {
-    customRef,
-    reference: booking.booking_reference,
-    method: receipt.paymentMethod,
-  });
-
-  return NextResponse.json({ ok: true, status: 'paid' });
 }
 
 /**
- * Opens a manual refund and pings staff.
- *
- * NOT the refund machinery — that is the DB's (refund_on_owner_reject) and
- * staff's. This covers the two cases the DB trigger cannot see, because both
- * happen at payment time and neither involves an owner decision: money landing
- * on a booking that was already paid, and money landing on a hold that had
- * already expired. Without this, a real payment in a currency with no refund
- * API would sit unrecorded and unrefunded.
- *
- * The partial unique index keeps one open refund per booking; a conflict here
- * means one is already queued, which is the desired end state either way.
+ * Reachability probe. Answers "can TLYNC's server see this URL at all?" without
+ * touching a payment — the question that took days to answer by inference.
+ * Deliberately state-free: it settles nothing and reveals nothing.
  */
-async function queueManualRefund(
-  supabase: SupabaseClient,
-  input: {
-    bookingId: string;
-    paymentId: string;
-    customRef: string;
-    transactionRef: string | null;
-    paymentMethod: string | null;
-    amountTry: number | null;
-    amountLyd: number | null;
-    reason: 'double_payment' | 'expired';
-  },
-): Promise<void> {
-  const { data: reference } = await supabase
-    .from('bookings')
-    .select('booking_reference')
-    .eq('id', input.bookingId)
-    .maybeSingle();
-
-  const { data: rows, error } = await supabase
-    .from('manual_refunds')
-    .insert({
-      booking_id:            input.bookingId,
-      booking_reference:     reference?.booking_reference ?? null,
-      booking_payment_id:    input.paymentId,
-      gateway:               'tlync',
-      payment_method:        input.paymentMethod,
-      amount_try:            input.amountTry,
-      amount_lyd:            input.amountLyd,
-      currency:              'LYD',
-      tlync_custom_ref:      input.customRef,
-      tlync_transaction_ref: input.transactionRef,
-      reason:                input.reason,
-      status:                'pending',
-    })
-    .select('id');
-
-  if (error) {
-    if (error.code === '23505') {
-      console.warn('[tlync/callback] manual refund already open for booking', {
-        bookingId: input.bookingId,
-      });
-      return;
-    }
-    console.error('[tlync/callback] COULD NOT QUEUE MANUAL REFUND — chase by hand', {
-      bookingId: input.bookingId, customRef: input.customRef,
-      message: error.message, code: error.code,
-    });
-    return;
-  }
-
-  const refundId = rows?.[0]?.id;
-  if (!refundId) return;
-
-  const { error: notifyError } = await supabase.rpc('notify_manual_refund', {
-    p_refund_id: refundId,
+export async function GET(request: NextRequest) {
+  console.log('[tlync/callback] GET probe', {
+    url: request.url,
+    ip: request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for') ?? '',
+    userAgent: request.headers.get('user-agent') ?? '',
   });
-
-  if (notifyError) {
-    // The row exists and is visible to staff; only the ping failed.
-    console.error('[tlync/callback] manual refund queued but staff not notified', {
-      refundId, message: notifyError.message,
-    });
-  }
+  return NextResponse.json({
+    ok: true,
+    endpoint: 'tlync-backend-callback',
+    accepts: 'POST',
+  });
 }
 
 /** urlencoded or JSON — TLYNC's callback encoding is not documented. */
 function parseBody(raw: string, contentType: string): Record<string, unknown> {
-  if (contentType.includes('application/json')) {
+  const asJson = (): Record<string, unknown> | null => {
     try {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>;
+      return parsed && typeof parsed === 'object'
+        ? (parsed as Record<string, unknown>)
+        : null;
     } catch {
-      // Fall through to urlencoded — a mislabelled body is still worth reading.
+      return null;
     }
+  };
+
+  if (contentType.includes('application/json')) {
+    const parsed = asJson();
+    if (parsed) return parsed;
   }
 
   const params = new URLSearchParams(raw);
@@ -448,12 +178,8 @@ function parseBody(raw: string, contentType: string): Record<string, unknown> {
 
   // A JSON body sent without the header parses as one nonsense key. Retry it.
   if (Object.keys(out).length <= 1 && raw.trim().startsWith('{')) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return parsed as Record<string, unknown>;
-    } catch {
-      // Genuinely unparseable; the caller logs the raw body.
-    }
+    const parsed = asJson();
+    if (parsed) return parsed;
   }
 
   return out;
@@ -464,16 +190,4 @@ function pick(payload: Record<string, unknown>, key: string): string | null {
   if (value === null || value === undefined) return null;
   const text = String(value).trim();
   return text === '' ? null : text;
-}
-
-/** PostgREST returns an embedded to-one as either an object or a 1-element array. */
-function one(value: unknown): unknown {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-/** `numeric` can arrive as a string; coerce once. */
-function num(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  const n = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(n) ? n : null;
 }

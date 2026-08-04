@@ -624,8 +624,10 @@
         "not_found": "Bu rezervasyon bulunamadı.",
         "gateway": "Libya ödeme sağlayıcısına ulaşamadık. Herhangi bir tahsilat yapılmadı — lütfen birazdan tekrar deneyin.",
         "lyd_unavailable": "Libya dinarıyla ödeme şu anda kullanılamıyor. Kartla ödeyebilir veya bize ulaşabilirsiniz.",
-        "tlync_cancelled": "Ödeme tamamlanmadı. Tarihleriniz birkaç dakika daha tutuluyor; geri dönüp tekrar deneyebilirsiniz."
-      }
+        "tlync_cancelled": "Ödeme tamamlanmadı. Tarihleriniz birkaç dakika daha tutuluyor; geri dönüp tekrar deneyebilirsiniz.",
+        "tlync_refund_manual": "Ödemeniz alındı, ancak bu tarihler artık size tahsis edilemedi — bu nedenle tutarın tamamını iade ediyoruz. Ekibimiz ilgileniyor."
+      },
+      "refundAssuranceLyd": "Tutarın tamamı, ödeme yaptığınız Libya kanalı üzerinden iade edilir. Ekibimiz bu iadeyi elle işler ve tamamlamak için sizinle iletişime geçer — rezervasyon numaranızı hazır bulundurun."
     }
   }
 }

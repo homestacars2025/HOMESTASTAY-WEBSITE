@@ -20,7 +20,16 @@ export const metadata: Metadata = {
 };
 
 /** Reasons where money moved and a refund is owed. */
-const MONEY_MOVED = new Set(['duplicate_payment', 'booking_canceled', 'pending']);
+const MONEY_MOVED = new Set([
+  'duplicate_payment', 'booking_canceled', 'pending', 'tlync_refund_manual',
+]);
+
+/**
+ * TLYNC refunds are issued by hand through the Libyan channel — there is no
+ * refund API. The card-refund assurance ("back to the same card in 3–10 days")
+ * would be a promise we cannot keep, so this reason gets its own.
+ */
+const MANUAL_REFUND = new Set(['tlync_refund_manual']);
 
 const KNOWN = new Set([
   'session', 'server', 'card', 'bank', 'declined', 'unknown',
@@ -28,7 +37,7 @@ const KNOWN = new Set([
   'already_paid', 'not_holdable', 'not_found',
   // TLYNC (Libya). None of these are money-moved: 'tlync_cancelled' means the
   // guest left TLYNC's page without completing, confirmed by a receipt call.
-  'gateway', 'lyd_unavailable', 'tlync_cancelled',
+  'gateway', 'lyd_unavailable', 'tlync_cancelled', 'tlync_refund_manual',
 ]);
 
 export default async function BookingFailedPage({
@@ -67,7 +76,7 @@ export default async function BookingFailedPage({
         {moneyMoved && (
           <div className="border border-rule rounded-[14px] bg-paper-warm p-5 mb-6">
             <p className="text-[13px] text-ink-soft leading-relaxed">
-              {t('refundAssurance')}
+              {MANUAL_REFUND.has(key) ? t('refundAssuranceLyd') : t('refundAssurance')}
             </p>
           </div>
         )}
