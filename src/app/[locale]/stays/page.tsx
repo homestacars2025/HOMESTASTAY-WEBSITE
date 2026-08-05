@@ -5,6 +5,7 @@ import { Header } from '@/components/home/Header';
 import { StaysGallery } from '@/components/stays/StaysGallery';
 import { StaysSkeleton } from '@/components/stays/StaysSkeleton';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
+import { CategoryChips } from '@/components/home/CategoryChips';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnits, LISTING_PAGE_SIZE, type StaysFilters } from '@/lib/queries/stays';
 import { parseStaysSearchParams, buildStaysQuery } from '@/lib/stays/search-params';
@@ -69,8 +70,14 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
           {t('title')}
         </h1>
 
-        <div className="px-4 mb-10">
+        <div className="px-4 mb-6">
           <SearchBarWrapper filters={filters} />
+        </div>
+
+        {/* The chips live here as well as on the homepage: this is where a
+            guest can see what the filter did, and switch without going back. */}
+        <div className="mb-10">
+          <CategoryChips filters={filters} />
         </div>
 
         {/* The results stream in their own boundary so the header + search bar

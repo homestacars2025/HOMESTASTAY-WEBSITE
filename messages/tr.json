@@ -31,8 +31,8 @@
     "apartments": "Apartmanlar",
     "villas": "Villalar",
     "cabins": "Kabin",
-    "hotels": "Oteller",
-    "farms": "Çiftlikler"
+    "rooms": "Odalar",
+    "label": "Türe göre gözat"
   },
   "sections": {
     "featured": "Öne çıkan konaklamalar",

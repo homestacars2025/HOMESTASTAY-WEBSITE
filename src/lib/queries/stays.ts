@@ -3,6 +3,9 @@ import { createPublicClient } from '@/lib/supabase/public';
 import { unstable_cache } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { approximateCoords } from '@/lib/geo/approximate';
+import {
+  STAY_CATEGORIES, categoryTypes, type StayCategoryKey,
+} from '@/lib/stays/categories';
 import type {
   UnitListing,
   UnitMediaItem,
@@ -437,6 +440,8 @@ function hasAdTitle(row: RawRow): boolean {
 
 /** Search filters for the /stays index. Every field is optional. */
 export interface StaysFilters {
+  /** Category chip — resolves to a set of unit_type values. See lib/stays/categories. */
+  category?: StayCategoryKey;
   /** geo_cities.name, case-insensitive (e.g. "istanbul"). */
   city?: string;
   /** Minimum sleeping capacity — matches units with max_guests >= this. */
@@ -531,7 +536,8 @@ export async function getPublicUnits(
   pageSize = LISTING_PAGE_SIZE,
 ): Promise<{ units: UnitListing[]; total: number }> {
   const unfiltered =
-    !filters.city && !filters.guests && !filters.checkIn && !filters.checkOut;
+    !filters.category && !filters.city && !filters.guests &&
+    !filters.checkIn && !filters.checkOut;
 
   if (unfiltered && page === 1 && pageSize === LISTING_PAGE_SIZE) {
     return unstable_cache(
@@ -551,7 +557,7 @@ async function queryPublicUnits(
 ): Promise<{ units: UnitListing[]; total: number }> {
   const supabase = createPublicClient();
 
-  const { city, guests, checkIn, checkOut } = filters;
+  const { category, city, guests, checkIn, checkOut } = filters;
   const wantsAvailability = !!checkIn && !!checkOut;
 
   let blocked: string[] = [];
@@ -584,6 +590,13 @@ async function queryPublicUnits(
   // disagrees with it (casing, and at least one unit filed under the wrong city).
   if (city) query = query.ilike('properties.geo_cities.name', city);
   if (guests) query = query.gte('unit_specifications.max_guests', guests);
+  // Category is one more AND on the same query — it composes with city, dates
+  // and guests rather than replacing them, and the `count` above stays exact so
+  // pagination reflects the filtered set.
+  if (category) {
+    const types = categoryTypes(category);
+    if (types.length > 0) query = query.in('unit_type', [...types]);
+  }
   if (blocked.length > 0) query = query.not('id', 'in', `(${blocked.join(',')})`);
 
   const { data, error, count } = await query
@@ -606,6 +619,72 @@ async function queryPublicUnits(
 
   const units = await mapCardRows(supabase, (data ?? []) as RawRow[], locale, checkIn, checkOut);
   return { units, total: count ?? units.length };
+}
+
+/**
+ * How many publicly visible units each category holds.
+ *
+ * Drives which chips render at all: a category with zero units is a dead
+ * filter, and offering one is how HOTELS and FARMS came to sit on the homepage
+ * pointing at nothing. Because this counts the live catalogue rather than a
+ * hardcoded list, the chip row stays correct on its own as inventory changes —
+ * the first villa added brings the Villas chip back without a deploy.
+ *
+ * Deliberately reuses the EXACT visibility filter the listing applies,
+ * including the ad_title trim. A chip that renders must lead to results, so a
+ * looser count here would put back the same bug in a subtler form.
+ *
+ * Cached and tagged 'units', so /api/revalidate drops it whenever a unit
+ * changes — the same freshness path the listing itself uses.
+ */
+export function getCategoryCounts(): Promise<Record<StayCategoryKey, number>> {
+  return unstable_cache(
+    queryCategoryCounts,
+    ['stays-category-counts'],
+    { tags: ['units'], revalidate: 600 },
+  )();
+}
+
+async function queryCategoryCounts(): Promise<Record<StayCategoryKey, number>> {
+  const empty = Object.fromEntries(
+    STAY_CATEGORIES.map((c) => [c.key, 0]),
+  ) as Record<StayCategoryKey, number>;
+
+  const supabase = createPublicClient();
+
+  // One column plus the two join predicates. The whole catalogue is a couple of
+  // hundred rows at this width, so counting in memory beats one round trip per
+  // category — and keeps the ad_title trim identical to hasAdTitle().
+  const { data, error } = await supabase
+    .from('units')
+    .select('unit_type,unit_info!inner(ad_title),properties!inner(archived_at)')
+    .eq('status', 'available')
+    .is('archived_at', null)
+    .not('unit_info.ad_title', 'is', null)
+    .is('properties.archived_at', null);
+
+  if (error) {
+    // Fail OPEN: every count zero would hide every chip. Losing the filter row
+    // is a smaller failure than a homepage that looks broken.
+    console.error('[getCategoryCounts]', { message: error.message, code: error.code });
+    return empty;
+  }
+
+  const byType = new Map<string, number>();
+  for (const row of (data ?? []) as RawRow[]) {
+    if (!hasAdTitle(row)) continue;
+    const type = String(row.unit_type ?? 'other');
+    byType.set(type, (byType.get(type) ?? 0) + 1);
+  }
+
+  const counts = { ...empty };
+  for (const { key, types } of STAY_CATEGORIES) {
+    counts[key as StayCategoryKey] = types.reduce(
+      (sum, type) => sum + (byType.get(type) ?? 0),
+      0,
+    );
+  }
+  return counts;
 }
 
 /**

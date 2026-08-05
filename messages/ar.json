@@ -31,8 +31,8 @@
     "apartments": "شقق",
     "villas": "فيلات",
     "cabins": "كابينات",
-    "hotels": "فنادق",
-    "farms": "مزارع"
+    "rooms": "غرف",
+    "label": "تصفّح حسب النوع"
   },
   "sections": {
     "featured": "إقامات مميزة",

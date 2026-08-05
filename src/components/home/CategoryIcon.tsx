@@ -30,22 +30,20 @@ const PATHS: Record<string, React.ReactNode> = {
       <rect x="13" y="20" width="6" height="7" />
     </>
   ),
-  hotels: (
+  // A bed: rooms and suites, the single-space end of the catalogue.
+  rooms: (
     <>
-      <rect x="6" y="4" width="20" height="25" />
-      <path d="M10 9h2M15 9h2M20 9h2M10 14h2M15 14h2M20 14h2M10 19h2M20 19h2" />
-      <path d="M13 29v-6h6v6" />
-    </>
-  ),
-  farms: (
-    <>
-      <path d="M3 20s4-3 6 0 5 0 7 0 4-3 7 0 6 0 6 0" />
-      <path d="M5 20v8h22v-8" />
-      <path d="M16 5c-3 2-4 6-2 9 3-1 5-4 4-7" />
-      <path d="M16 14V9" />
+      <path d="M4 24v-9a3 3 0 0 1 3-3h13a5 5 0 0 1 5 5v7" />
+      <path d="M4 20h21" />
+      <path d="M4 24v3M25 24v3" />
+      <path d="M8 12V8h7v4" />
     </>
   ),
 };
+
+// hotels and farms were removed deliberately, not lost: the catalogue holds
+// zero units of either type, and a chip is a promise that something is behind
+// it. See lib/stays/categories.
 
 interface CategoryIconProps {
   name: string;

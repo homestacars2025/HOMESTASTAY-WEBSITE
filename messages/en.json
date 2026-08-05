@@ -31,8 +31,8 @@
     "apartments": "Apartments",
     "villas": "Villas",
     "cabins": "Cabins",
-    "hotels": "Hotels",
-    "farms": "Farms"
+    "rooms": "Rooms",
+    "label": "Browse by type"
   },
   "sections": {
     "featured": "Featured stays",

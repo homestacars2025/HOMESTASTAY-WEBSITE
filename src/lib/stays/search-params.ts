@@ -1,4 +1,5 @@
 import type { StaysFilters } from '@/lib/queries/stays';
+import { isStayCategory } from '@/lib/stays/categories';
 
 /**
  * Translation between /stays URL query params and StaysFilters.
@@ -46,6 +47,11 @@ export function parseStaysSearchParams(params: RawParams): StaysFilters {
   const city = single(params.city);
   if (city) filters.city = city;
 
+  // An unknown category is dropped rather than passed through, so a hand-typed
+  // ?type=castle shows the whole catalogue instead of an empty page.
+  const category = single(params.type);
+  if (category && isStayCategory(category)) filters.category = category;
+
   const rawGuests = single(params.guests);
   if (rawGuests) {
     const n = Number.parseInt(rawGuests, 10);
@@ -66,6 +72,7 @@ export function parseStaysSearchParams(params: RawParams): StaysFilters {
 /** Build the /stays query string for a search. Omits empty values entirely. */
 export function buildStaysQuery(filters: StaysFilters): string {
   const q = new URLSearchParams();
+  if (filters.category) q.set('type', filters.category);
   if (filters.city) q.set('city', filters.city);
   if (filters.guests && filters.guests > MIN_GUESTS) q.set('guests', String(filters.guests));
   if (filters.checkIn && filters.checkOut) {

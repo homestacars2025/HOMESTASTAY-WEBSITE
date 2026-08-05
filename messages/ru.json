@@ -31,8 +31,8 @@
     "apartments": "Квартиры",
     "villas": "Виллы",
     "cabins": "Кабины",
-    "hotels": "Отели",
-    "farms": "Фермы"
+    "rooms": "Комнаты",
+    "label": "По типу жилья"
   },
   "sections": {
     "featured": "Рекомендуемое жильё",
