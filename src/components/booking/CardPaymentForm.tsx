@@ -37,6 +37,12 @@ export async function CardPaymentForm({ locale, amountLabel }: CardPaymentFormPr
       method="POST"
       action="/api/payment/start"
       autoComplete="on"
+      // Session replay must never be able to reconstruct a card. Clarity masks
+      // input values by default, but a default is a dashboard setting someone
+      // can change, not a guarantee this codebase controls — so the whole form
+      // is masked explicitly here. Belt and braces on the one surface where
+      // getting it wrong means a PAN in a replay.
+      data-clarity-mask="true"
       className="flex flex-col gap-5"
     >
       {/* The callback cannot know the guest's language, but this side can. */}

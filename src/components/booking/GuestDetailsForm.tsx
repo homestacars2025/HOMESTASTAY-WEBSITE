@@ -147,7 +147,15 @@ export function GuestDetailsForm({
     'block font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-2';
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+    // Name, email and phone are typed here. Clarity masks input values by
+    // default; masking the form explicitly means a changed dashboard setting
+    // cannot quietly start recording a guest's contact details.
+    <form
+      data-clarity-mask="true"
+      onSubmit={handleSubmit}
+      noValidate
+      className="flex flex-col gap-5"
+    >
       {/* Name — two fields, one row on anything above 375px */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>

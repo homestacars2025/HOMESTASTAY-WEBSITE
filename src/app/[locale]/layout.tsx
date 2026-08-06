@@ -11,6 +11,7 @@ import { MotionProvider } from '@/components/layout/MotionProvider';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { SiteFooter } from '@/components/home/SiteFooter';
 import { MetaPixel } from '@/components/analytics/MetaPixel';
+import { Clarity } from '@/components/analytics/Clarity';
 import '@/styles/globals.css';
 import { CANONICAL_URL } from '@/lib/config/urls';
 
@@ -67,6 +68,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             every route shares, so the pixel loads once per session rather than
             once per page. */}
         <MetaPixel />
+        <Clarity />
         <NextIntlClientProvider messages={messages}>
           <MotionProvider>
             <AuthGateProvider>
