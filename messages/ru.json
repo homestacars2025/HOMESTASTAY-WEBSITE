@@ -24,7 +24,9 @@
     "guestCount": "{count, plural, one {# гость} few {# гостя} many {# гостей} other {# гостей}}",
     "guestsDecrement": "Уменьшить количество гостей",
     "guestsIncrement": "Увеличить количество гостей",
-    "cta": "Найти жильё"
+    "cta": "Найти жильё",
+    "whereRequired": "Сначала выберите направление.",
+    "editSearch": "Изменить"
   },
   "categories": {
     "all": "Все",

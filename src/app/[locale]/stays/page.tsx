@@ -71,7 +71,7 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
         </h1>
 
         <div className="px-4 mb-6">
-          <SearchBarWrapper filters={filters} />
+          <SearchBarWrapper filters={filters} collapsible />
         </div>
 
         {/* The chips live here as well as on the homepage: this is where a

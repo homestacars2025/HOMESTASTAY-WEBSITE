@@ -205,18 +205,12 @@ export interface UnitListing {
 }
 
 // ── UI filter categories ─────────────────────────────────────────────────────
-
-/** Display filter categories for the /stays gallery. Not stored in DB. */
-export type FilterCategory = 'all' | 'apartment' | 'villa' | 'cabin' | 'hotel' | 'farm';
-
-/** Maps each display category to the unit_type_enum values it includes. */
-export const FILTER_CATEGORY_UNIT_TYPES: Record<
-  Exclude<FilterCategory, 'all'>,
-  UnitTypeEnum[]
-> = {
-  apartment: ['apartment', 'studio'],
-  villa:     ['villa'],
-  cabin:     ['cabin'],
-  hotel:     ['room', 'suite', 'bed'],
-  farm:      ['farm'],
-};
+//
+// DELETED, not moved: FilterCategory / FILTER_CATEGORY_UNIT_TYPES defined a
+// SECOND, conflicting set of categories (with 'hotel' and 'farm', which the
+// catalogue has none of) and fed the duplicate client-side pill row in
+// StaysGallery. Two sources of truth for the same concept is what put an
+// untranslated "CATEGORIES.FARMS" in front of guests.
+//
+// The single definition now lives in lib/stays/categories.ts, next to the
+// counts that decide which chips may render at all.

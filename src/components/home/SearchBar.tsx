@@ -78,6 +78,8 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
   const [dateRange, setDateRange] = useState<DateRange>(initial?.dateRange ?? { from: undefined });
   const [guests,    setGuests]    = useState(initial?.guests ?? 1);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  /** Set only after a search is attempted with no city — never on first paint. */
+  const [showWhereError, setShowWhereError] = useState(false);
   // Portal anchor: fixed coords computed from the relevant trigger element
   const [portalPos, setPortalPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const [mounted,   setMounted]   = useState(false);
@@ -89,6 +91,13 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
   // Hydration guard — portals require the DOM
   useEffect(() => { setMounted(true); }, []);
 
+  /** One path for picking a city, so the validation message always clears. */
+  const chooseCity = useCallback((id: string) => {
+    setCityId(id);
+    setShowWhereError(false);
+    setOpenPanel(null);
+  }, []);
+
   const selectedCity = cities.find((c) => c.id === cityId);
   const dateLabel    = formatRange(dateRange, locale);
 
@@ -97,12 +106,26 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
   // legible, shareable and indexable, where a uuid is none of those.
   // Dates only go if both ends are set; one date can't describe a stay.
   const runSearch = useCallback(() => {
+    // WHERE IS REQUIRED. When/Who stay optional — a guest browsing a city with
+    // no dates in mind is a real search; a search with no place is not, it is
+    // just the whole catalogue with extra steps.
+    //
+    // The button is not inertly disabled: a dead control explains nothing.
+    // Clicking without a city opens the Where panel AND states why, so the
+    // next action is obvious instead of guessable.
+    if (!selectedCity) {
+      setShowWhereError(true);
+      setOpenPanel('city');
+      return;
+    }
+
     const query = buildStaysQuery({
-      city: selectedCity?.name,
+      city: selectedCity.name,
       guests,
       checkIn: dateRange.from ? toISODate(dateRange.from) : undefined,
       checkOut: dateRange.to ? toISODate(dateRange.to) : undefined,
     });
+    setShowWhereError(false);
     setOpenPanel(null);
     router.push(`/stays${query}`);
   }, [router, selectedCity, guests, dateRange]);
@@ -183,7 +206,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
           type="button"
           role="option"
           aria-selected={city.id === cityId}
-          onClick={() => { setCityId(city.id); setOpenPanel(null); }}
+          onClick={() => chooseCity(city.id)}
           className={`w-full flex items-center px-5 py-3.5 text-sm text-start transition-colors duration-[240ms] hover:bg-paper-warm ${
             city.id === cityId ? 'bg-paper-warm text-ink font-medium' : 'text-ink-soft'
           }`}
@@ -330,7 +353,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
                   type="button"
                   role="option"
                   aria-selected={city.id === cityId}
-                  onClick={() => { setCityId(city.id); setOpenPanel(null); }}
+                  onClick={() => chooseCity(city.id)}
                   className={`w-full flex items-center px-5 py-3.5 text-sm text-start transition-colors duration-[240ms] hover:bg-paper-warm ${
                     city.id === cityId ? 'bg-paper-warm text-ink font-medium' : 'text-ink-soft'
                   }`}
@@ -417,11 +440,23 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
             <button
               type="button"
               onClick={runSearch}
-              className="w-full flex items-center justify-center gap-2 bg-stay text-white rounded-[999px] py-3 text-sm font-medium transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80"
+              // aria-disabled, not `disabled`: the control stays focusable and
+              // clickable so it can EXPLAIN the requirement. A disabled button
+              // that silently ignores taps is the version guests file support
+              // tickets about.
+              aria-disabled={!selectedCity}
+              className={`w-full flex items-center justify-center gap-2 bg-stay text-white rounded-[999px] py-3 text-sm font-medium transition-opacity duration-[240ms] ${
+                selectedCity ? 'hover:opacity-90 active:opacity-80' : 'opacity-50'
+              }`}
             >
               <Search className="w-4 h-4" />
               {t('cta')}
             </button>
+            {showWhereError && (
+              <p role="alert" className="mt-2 text-center text-xs text-stay">
+                {t('whereRequired')}
+              </p>
+            )}
           </div>
         </div>
 
@@ -471,13 +506,27 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
             <button
               type="button"
               onClick={runSearch}
-              className="flex items-center gap-2 bg-stay text-white rounded-[999px] px-5 py-3 text-sm font-medium whitespace-nowrap transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80"
+              aria-disabled={!selectedCity}
+              className={`flex items-center gap-2 bg-stay text-white rounded-[999px] px-5 py-3 text-sm font-medium whitespace-nowrap transition-opacity duration-[240ms] ${
+                selectedCity ? 'hover:opacity-90 active:opacity-80' : 'opacity-50'
+              }`}
             >
               <Search className="w-4 h-4" />
               {t('cta')}
             </button>
           </div>
         </div>
+
+        {/* Desktop validation — absolute so adding it cannot shift the bar and
+            nudge the page (Law 1: no layout shift). */}
+        {showWhereError && (
+          <p
+            role="alert"
+            className="hidden md:block absolute inset-x-0 top-full mt-2 text-center text-xs text-stay"
+          >
+            {t('whereRequired')}
+          </p>
+        )}
 
       </div>
 

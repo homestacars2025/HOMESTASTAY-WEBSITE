@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { getHostGeoData } from '@/lib/data/cities';
-import { SearchBar } from '@/components/home/SearchBar';
+import { CollapsibleSearch } from '@/components/home/CollapsibleSearch';
 import type { StaysFilters } from '@/lib/queries/stays';
 
 const CITY_KEYS = ['istanbul', 'trabzon', 'sapanca', 'antalya', 'fethiye', 'bodrum'] as const;
@@ -12,7 +12,14 @@ function fromISODate(value: string): Date {
   return new Date(y, m - 1, d, 12);
 }
 
-export async function SearchBarWrapper({ filters }: { filters?: StaysFilters }) {
+export async function SearchBarWrapper({
+  filters,
+  collapsible = false,
+}: {
+  filters?: StaysFilters;
+  /** /stays passes true: once a search has run, the bar becomes a summary. */
+  collapsible?: boolean;
+}) {
   const [tCities, geoData] = await Promise.all([
     getTranslations('cities'),
     getHostGeoData(),
@@ -32,8 +39,14 @@ export async function SearchBarWrapper({ filters }: { filters?: StaysFilters }) 
     ? cities.find((c) => c.name.toLowerCase() === filters.city!.toLowerCase())?.id
     : undefined;
 
+  // Collapse only when a search actually ran. A bare /stays (or a category-only
+  // view) has nothing to summarise, so the full bar stays — collapsing it would
+  // hide the search behind a pill that says nothing.
+  const searched = Boolean(filters?.city || filters?.checkIn || filters?.guests);
+
   return (
-    <SearchBar
+    <CollapsibleSearch
+      startCollapsed={collapsible && searched}
       cities={cities}
       initial={{
         cityId,

@@ -24,7 +24,9 @@
     "guestCount": "{count, plural, one {ضيف واحد} two {ضيفان} few {# ضيوف} many {# ضيفًا} other {# ضيف}}",
     "guestsDecrement": "تقليل الضيوف",
     "guestsIncrement": "زيادة الضيوف",
-    "cta": "ابحث عن إقامات"
+    "cta": "ابحث عن إقامات",
+    "whereRequired": "اختر وجهتك أولًا.",
+    "editSearch": "تعديل"
   },
   "categories": {
     "all": "الكل",

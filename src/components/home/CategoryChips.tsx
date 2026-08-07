@@ -44,6 +44,17 @@ export async function CategoryChips({ filters = {} }: CategoryChipsProps) {
     ({ key }) => counts[key] > 0 || key === active,
   );
 
+  /**
+   * A label that can never be a raw key.
+   *
+   * next-intl renders the key path for a missing message, which is exactly how
+   * "CATEGORIES.FARMS" reached production. Every key here exists in all four
+   * locales today; this makes that a fact the code enforces rather than one it
+   * assumes.
+   */
+  const label = (key: string, fallback: string): string =>
+    typeof t.has === 'function' && !t.has(key) ? fallback : t(key);
+
   // Nothing to choose between — one category holding everything is not a
   // filter, it is decoration. Law 2: every element earns its place.
   if (visible.length < 2) return null;
@@ -60,15 +71,15 @@ export async function CategoryChips({ filters = {} }: CategoryChipsProps) {
         <Chip
           href={`/stays${buildStaysQuery({ ...filters, category: undefined })}`}
           icon="all"
-          label={t('all')}
+          label={label('all', 'All')}
           active={!active}
         />
-        {visible.map(({ key }) => (
+        {visible.map(({ key, fallback }) => (
           <Chip
             key={key}
             href={`/stays${buildStaysQuery({ ...filters, category: key })}`}
             icon={key}
-            label={t(key)}
+            label={label(key, fallback)}
             active={active === key}
           />
         ))}

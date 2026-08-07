@@ -24,7 +24,9 @@
     "guestCount": "{count, plural, one {# guest} other {# guests}}",
     "guestsDecrement": "Fewer guests",
     "guestsIncrement": "More guests",
-    "cta": "Search stays"
+    "cta": "Search stays",
+    "whereRequired": "Choose where you’re going first.",
+    "editSearch": "Edit"
   },
   "categories": {
     "all": "All",

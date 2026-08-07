@@ -24,7 +24,9 @@
     "guestCount": "{count, plural, other {# misafir}}",
     "guestsDecrement": "Misafir azalt",
     "guestsIncrement": "Misafir artır",
-    "cta": "Konaklama ara"
+    "cta": "Konaklama ara",
+    "whereRequired": "Önce nereye gideceğinizi seçin.",
+    "editSearch": "Düzenle"
   },
   "categories": {
     "all": "Tümü",
