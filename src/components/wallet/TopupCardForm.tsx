@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { Lock } from 'lucide-react';
+import { TopupPhoneField } from './TopupPhoneField';
 
 /**
  * Card entry for a wallet top-up — a plain HTML form, deliberately.
@@ -124,16 +125,7 @@ export async function TopupCardForm({
       <fieldset className="border-t border-rule pt-5">
         <legend className={`${label} mb-3`}>{tPay('billingTitle')}</legend>
         <div className="flex flex-col gap-4">
-          <div>
-            <label htmlFor="phone" className={label}>{t('phoneLabel')}</label>
-            <input
-              id="phone" name="phone" type="tel" required
-              defaultValue={phone} dir="ltr" inputMode="tel"
-              autoComplete="tel" pattern="\+[1-9][0-9]{6,14}"
-              placeholder="+90…" className={input}
-            />
-            <p className="mt-2 text-xs leading-relaxed text-mute">{t('phoneHint')}</p>
-          </div>
+          <TopupPhoneField initialPhone={phone} />
           <div>
             <label htmlFor="billLine1" className={label}>{tPay('addressLine')}</label>
             <input

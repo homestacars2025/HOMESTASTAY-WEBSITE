@@ -36,10 +36,36 @@ const ALL_COUNTRIES: Country[] = getCountries()
   }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
+/**
+ * E.164 → country + national part, by LONGEST matching calling code.
+ *
+ * Longest wins because +1 and +1242 both match a Bahamian number, and the
+ * shorter one would show the wrong flag. Countries sharing a code (+1 is US,
+ * CA and a dozen others) resolve to whichever sorts first — the dial code
+ * shown is identical either way, which is what the field actually submits.
+ */
+function fromE164(e164: string): { country: Country; national: string } | null {
+  if (!e164.startsWith('+')) return null;
+  let best: Country | null = null;
+  for (const c of ALL_COUNTRIES) {
+    if (e164.startsWith(c.dialCode) && (!best || c.dialCode.length > best.dialCode.length)) {
+      best = c;
+    }
+  }
+  return best ? { country: best, national: e164.slice(best.dialCode.length) } : null;
+}
+
 interface PhoneInputProps {
   value: string;
   onChange: (e164: string) => void;
   defaultCountry?: CountryCode;
+  /**
+   * E.164 to prefill from, e.g. a number already on the guest's profile.
+   * Read once, for the initial state only — this stays an uncontrolled field
+   * after mount, exactly as it was before. Omitted, the component behaves
+   * identically to how it always has.
+   */
+  initialValue?: string;
   label: string;
   searchPlaceholder: string;
   errorId?: string;
@@ -71,6 +97,7 @@ export function PhoneInput({
   value: _value,
   onChange,
   defaultCountry = 'TR',
+  initialValue,
   label,
   searchPlaceholder,
   errorId,
@@ -80,8 +107,12 @@ export function PhoneInput({
   const v = VARIANTS[variant];
   const defaultC = ALL_COUNTRIES.find((c) => c.code === defaultCountry) ?? ALL_COUNTRIES[0];
 
-  const [selected,       setSelected]       = useState<Country>(defaultC);
-  const [localNumber,    setLocalNumber]    = useState('');
+  // A prefill that does not parse falls back to defaultCountry and an empty
+  // field — a stored number we cannot read is not worth refusing to render for.
+  const seed = initialValue ? fromE164(initialValue) : null;
+
+  const [selected,       setSelected]       = useState<Country>(seed?.country ?? defaultC);
+  const [localNumber,    setLocalNumber]    = useState(seed?.national ?? '');
   const [dropdownOpen,   setDropdownOpen]   = useState(false);
   const [search,         setSearch]         = useState('');
 

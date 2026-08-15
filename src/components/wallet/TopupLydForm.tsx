@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { ExternalLink } from 'lucide-react';
 import { AmountPanel } from './TopupCardForm';
+import { TopupPhoneField } from './TopupPhoneField';
 
 /**
  * The TLYNC (Libya, LYD) step of a wallet top-up.
@@ -31,13 +32,6 @@ export async function TopupLydForm({
   const t = await getTranslations({ locale, namespace: 'wallet.topup' });
   const tPay = await getTranslations({ locale, namespace: 'booking.payment' });
 
-  const input =
-    'w-full rounded-[14px] border border-rule bg-paper px-4 py-3 text-[15px] ' +
-    'text-ink placeholder:text-mute transition-colors duration-[240ms] ' +
-    'focus:outline-none focus:border-ink';
-  const label =
-    'block font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-2';
-
   return (
     <form
       method="POST"
@@ -55,16 +49,10 @@ export async function TopupLydForm({
         note={t('rateNote', { rate: rateLabel })}
       />
 
-      <div>
-        <label htmlFor="phone" className={label}>{t('phoneLabel')}</label>
-        <input
-          id="phone" name="phone" type="tel" required
-          defaultValue={phone} dir="ltr" inputMode="tel"
-          autoComplete="tel" pattern="\+[1-9][0-9]{6,14}"
-          placeholder="+218…" className={input}
-        />
-        <p className="mt-2 text-xs leading-relaxed text-mute">{t('phoneHint')}</p>
-      </div>
+      {/* defaultCountry stays TR inside the field: a Libyan guest changes it in
+          one tap, and guessing LY from the gateway would be wrong for the many
+          who pay a Libyan method on a foreign number. */}
+      <TopupPhoneField initialPhone={phone} />
 
       <p className="text-[13px] leading-relaxed text-ink-soft">
         {tPay('lydRedirectNote')}
