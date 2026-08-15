@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
+import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
+import { isWalletOrder } from '@/lib/wallet/topup';
 
 /**
  * TLYNC's server-to-server callback (backend_url).
@@ -110,6 +112,33 @@ export async function POST(request: NextRequest) {
       contentType, payloadKeys: Object.keys(payload), body: raw.slice(0, 1000),
     });
     return NextResponse.json({ ok: false, error: 'no_ref' }, { status: 400 });
+  }
+
+  // ── Booking or wallet top-up? ─────────────────────────────────────────────
+  // The same 'WT-' prefix that routes the bank callback routes this one. Both
+  // settle functions ask TLYNC's receipt endpoint before writing anything —
+  // the doorbell rule holds identically on both sides of this branch.
+  if (isWalletOrder(customRef)) {
+    const walletOutcome = await settleWalletTopup(createAdminClient(), {
+      customRef, transactionRef, trigger: 'callback',
+    });
+
+    console.log('[tlync/callback] wallet outcome', { customRef, ...walletOutcome });
+
+    switch (walletOutcome.status) {
+      case 'paid':
+      case 'already_paid':
+      case 'not_completed':
+        return NextResponse.json({ ok: true, status: walletOutcome.status });
+      case 'receipt_unavailable':
+        return NextResponse.json({ ok: false, error: walletOutcome.status }, { status: 502 });
+      case 'unknown_ref':
+        return NextResponse.json({ ok: false, error: walletOutcome.status }, { status: 404 });
+      case 'write_failed':
+        return NextResponse.json({ ok: false, error: walletOutcome.status }, { status: 500 });
+      default:
+        return NextResponse.json({ ok: false, error: walletOutcome.status }, { status: 409 });
+    }
   }
 
   const outcome = await settleTlyncPayment(createAdminClient(), {

@@ -7,6 +7,8 @@ import {
 } from '@/lib/payment/kuveyt-turk';
 import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
 import { performRefund } from '@/lib/payment/refund-service';
+import { isWalletOrder, loadTopupIntentByOrder } from '@/lib/wallet/topup';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * The 3D Secure callback.
@@ -109,6 +111,18 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
+
+  // ── Booking or wallet top-up? ─────────────────────────────────────────────
+  // Both come back HERE, because OkUrl/FailUrl are hashed into HashData and a
+  // separate URL for wallet payments would be a second hash to get wrong. The
+  // 'WT-' prefix on the order id is the discriminator, and this is the first
+  // decision made after the id is in hand — before any booking table is read,
+  // so a top-up never touches the booking path at all.
+  if (isWalletOrder(merchantOrderId)) {
+    return handleWalletTopup({
+      request, supabase, merchantOrderId, md, responseCode, responseMessage,
+    });
+  }
 
   // 3DS itself failed (wrong code, cancelled, issuer refused). No money has
   // moved, so this is a clean failure — record it and stop.
@@ -298,5 +312,169 @@ export async function POST(request: NextRequest) {
         merchantOrderId, status: completed?.status,
       });
       return fail('pending');
+  }
+}
+
+/**
+ * The 'WT-' branch: a wallet top-up coming back from 3D Secure.
+ *
+ * Structurally the same three steps as the booking path above — 3DS verdict,
+ * ProvisionGate, then the paid transition — against wallet_topup_intents
+ * instead of booking_payments, and ending at complete_wallet_topup.
+ *
+ * NO LOCALE IS KNOWABLE HERE. A cross-site POST carries no cookies, so the
+ * redirects omit the locale prefix and let the intl middleware resolve it from
+ * Accept-Language, exactly as the booking branch does.
+ */
+async function handleWalletTopup({
+  request, supabase, merchantOrderId, md, responseCode, responseMessage,
+}: {
+  request: NextRequest;
+  supabase: SupabaseClient;
+  merchantOrderId: string;
+  md: string;
+  responseCode: string;
+  responseMessage: string;
+}): Promise<NextResponse> {
+  const back = (query: string) =>
+    NextResponse.redirect(new URL(`/wallet?${query}`, request.url), { status: 303 });
+
+  const failIntent = async (reason: string) => {
+    const { error } = await supabase.rpc('fail_wallet_topup', {
+      p_merchant_order_id: merchantOrderId,
+      p_reason: reason,
+    });
+    if (error) {
+      console.error('[wallet/callback] fail_wallet_topup did not record the failure', {
+        merchantOrderId, reason, message: error.message, code: error.code,
+      });
+    }
+  };
+
+  // ── 3DS itself failed ─────────────────────────────────────────────────────
+  // No money has moved, so this is a clean failure: record it and stop.
+  if (!md || (responseCode && responseCode !== '00')) {
+    console.warn('[wallet/callback] 3DS declined', {
+      merchantOrderId, responseCode, responseMessage,
+    });
+    await failIntent(`3ds_${responseCode || 'declined'}`);
+    return back('topup=failed&reason=declined');
+  }
+
+  const intent = await loadTopupIntentByOrder(supabase, merchantOrderId);
+  if (!intent) {
+    console.error('[wallet/callback] unknown merchant order id', { merchantOrderId });
+    return back('topup=failed&reason=unknown');
+  }
+
+  // Callback replay on an already-credited intent. complete_wallet_topup would
+  // answer 'already_paid' anyway; short-circuiting saves a pointless second
+  // ProvisionGate call on a transaction the bank has already settled.
+  if (intent.status === 'paid') {
+    return back('topup=success');
+  }
+
+  if (intent.amountMinor === null || intent.amountMinor <= 0) {
+    console.error('[wallet/callback] intent has no TRY amount to provision', {
+      merchantOrderId,
+    });
+    return back('topup=pending&reason=server');
+  }
+
+  // Request 2's Amount must equal Request 1's EXACTLY — same source figure,
+  // same decimal-digit derivation, never through a double.
+  const amountMinor = toMinorUnits(intent.amountMinor.toFixed(2));
+
+  let provision;
+  try {
+    const cfg = kuveytConfig();
+    const xml = buildProvisionXml({ cfg, merchantOrderId, amountMinor, md });
+    provision = parseProvisionResponse(await postToBank(provisionGateUrl(cfg), xml));
+  } catch (err) {
+    // ⚠️ DELIBERATELY NOT FAILED. We genuinely do not know whether the money
+    // moved, and marking the intent failed here would tell a guest who HAS
+    // been charged that nothing happened. Left for reconciliation.
+    console.error('[wallet/callback] PROVISION UNKNOWN — reconcile manually', {
+      merchantOrderId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return back('topup=pending');
+  }
+
+  if (!isApproved(provision)) {
+    console.warn('[wallet/callback] provision declined', {
+      merchantOrderId,
+      responseCode: provision.responseCode,
+      responseMessage: provision.responseMessage,
+    });
+    await failIntent(`provision_${provision.responseCode}`);
+    return back('topup=failed&reason=declined');
+  }
+
+  // ── Approved but missing refund references ────────────────────────────────
+  // The booking path REFUSES to record a payment it cannot give back. A
+  // top-up is the opposite case and must not copy that rule: the money has
+  // arrived and the guest's remedy is their own balance, which they can spend
+  // — withholding the credit would take their money and give them nothing.
+  // So it is credited, and the gap is logged loudly instead.
+  if (!hasRefundReferences(provision)) {
+    console.error('[wallet/callback] APPROVED WITHOUT REFUND REFERENCES — crediting anyway', {
+      merchantOrderId,
+      orderId: provision.orderId,
+      provisionNumber: provision.provisionNumber,
+      rrn: provision.rrn,
+      stan: provision.stan,
+    });
+  }
+
+  // The bank references, logged unconditionally: complete_wallet_topup takes
+  // only the order id, so this line is the record that ties a credited wallet
+  // to a bank transaction if one ever has to be traced or reversed by hand.
+  console.log('[wallet/callback] provision approved', {
+    merchantOrderId,
+    orderId: provision.orderId,
+    provisionNumber: provision.provisionNumber,
+    rrn: provision.rrn,
+    stan: provision.stan,
+  });
+
+  const { data, error } = await supabase.rpc('complete_wallet_topup', {
+    p_merchant_order_id: merchantOrderId,
+  });
+
+  if (error) {
+    console.error('[wallet/callback] complete_wallet_topup errored — MONEY MOVED', {
+      merchantOrderId, message: error.message, code: error.code,
+    });
+    return back('topup=pending');
+  }
+
+  const payload = (Array.isArray(data) ? data[0] : data) as
+    | { status?: string; new_balance_usd?: unknown; entry_number?: string | null }
+    | null;
+
+  switch (payload?.status) {
+    case 'paid':
+      console.log('[wallet/callback] wallet credited', {
+        merchantOrderId, entryNumber: payload.entry_number,
+      });
+      return back('topup=success');
+
+    case 'already_paid':
+      return back('topup=success');
+
+    case 'unknown_order':
+    case 'failed':
+    case 'expired':
+    case 'canceled':
+    default:
+      // The bank approved and the intent will not take the credit. The guest
+      // has been charged for a top-up they did not receive — the loudest line
+      // in this file, and the one that needs a human.
+      console.error('[wallet/callback] CHARGED BUT NOT CREDITED — needs manual resolution', {
+        merchantOrderId, status: payload?.status,
+        orderId: provision.orderId, rrn: provision.rrn, stan: provision.stan,
+      });
+      return back('topup=pending');
   }
 }

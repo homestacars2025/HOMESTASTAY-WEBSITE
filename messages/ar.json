@@ -446,6 +446,7 @@
     "userMenu": {
       "signOut": "تسجيل الخروج",
       "myBookings": "حجوزاتي",
+      "wallet": "محفظتي",
       "account": "الحساب"
     },
     "authGate": {
@@ -460,6 +461,84 @@
     "emptyTitle": "لا توجد حجوزات بعد",
     "emptySubtitle": "عند إجراء حجز، سيظهر هنا.",
     "browseStays": "تصفح الإقامات"
+  },
+  "wallet": {
+    "title": "محفظتي",
+    "subtitle": "رصيدك في هوميستا ستاي وكل حركة عليه.",
+    "balanceLabel": "الرصيد المتاح",
+    "accountCode": "الحساب",
+    "statusClosed": "هذه المحفظة مغلقة. تواصل معنا إن كنت ترى أن هذا غير صحيح.",
+    "noAccountTitle": "لا توجد محفظة بعد",
+    "noAccountSubtitle": "تُفتح محفظتك مع أول عملية شحن أو مكافأة.",
+    "historyTitle": "الحركات",
+    "emptyTitle": "لا توجد حركات بعد",
+    "emptySubtitle": "ستظهر هنا عمليات الشحن والمكافآت ومدفوعات الحجوزات.",
+    "browseStays": "تصفح الإقامات",
+    "topUpCta": "شحن المحفظة",
+    "runningBalance": "الرصيد {amount}",
+    "truncated": "نعرض آخر {count} حركة.",
+    "errorTitle": "تعذّر تحميل المحفظة",
+    "errorSubtitle": "يرجى المحاولة بعد قليل.",
+    "entryType": {
+      "topup": "شحن",
+      "booking_charge": "خصم حجز",
+      "cashback": "مكافأة",
+      "penalty": "غرامة",
+      "adjustment": "تسوية",
+      "withdrawal": "سحب",
+      "payout": "تحويل",
+      "commission_credit": "عمولة",
+      "refund_out": "استرداد",
+      "other": "حركة"
+    },
+    "status": {
+      "pending": "قيد التنفيذ",
+      "reversed": "معكوسة"
+    },
+    "notice": {
+      "success": {
+        "title": "تم شحن المحفظة",
+        "body": "رصيدك أدناه محدَّث."
+      },
+      "pending": {
+        "title": "نؤكّد عملية الدفع",
+        "body": "عادةً لا يستغرق هذا سوى لحظات. من فضلك لا تدفع مرة أخرى — إن كان المبلغ قد خُصم، فسيصل إلى محفظتك."
+      },
+      "failed": {
+        "title": "لم تتم عملية الشحن",
+        "body": "لم يُخصم أي مبلغ. يمكنك المحاولة مرة أخرى في أي وقت."
+      }
+    },
+    "topup": {
+      "title": "اشحن محفظتك",
+      "subtitle": "أضف رصيداً الآن، واستخدمه في أي إقامة لاحقاً.",
+      "payTitle": "أكمل عملية الشحن",
+      "backToWallet": "العودة إلى المحفظة",
+      "changeAmount": "تغيير المبلغ",
+      "amountLabel": "المبلغ بالدولار الأمريكي",
+      "usdOnlyHint": "أرصدة المحافظ محفوظة بالدولار الأمريكي.",
+      "gatewayLabel": "ادفع بواسطة",
+      "gatewayCard": "بطاقة",
+      "gatewayCardHint": "فيزا أو ماستركارد، يُخصم بالليرة التركية",
+      "gatewayLyd": "ليبيا",
+      "gatewayLydHint": "تداول وموبي كاش وغيرها، يُخصم بالدينار",
+      "continue": "المتابعة إلى الدفع",
+      "continuePending": "لحظة من فضلك…",
+      "chargedTryLabel": "سيُخصم منك",
+      "chargedLydLabel": "سيُخصم منك",
+      "rateNote": "بسعر تحويل {rate} لكل دولار، ثابت لهذه العملية.",
+      "phoneLabel": "رقم الجوال",
+      "phoneHint": "يطلبه البنك لتأكيد عملية الدفع.",
+      "paySubmit": "ادفع {amount}",
+      "notPayableTitle": "لا يمكن دفع هذه العملية",
+      "notPayableSubtitle": "إمّا أنها استُخدمت بالفعل أو انتهت صلاحيتها. ابدأ عملية جديدة من محفظتك.",
+      "error": {
+        "amount": "أدخل المبلغ المراد إضافته.",
+        "rateUnavailable": "لا يمكننا تسعير هذه العملية حالياً. يرجى المحاولة بعد قليل.",
+        "unauthorized": "يرجى تسجيل الدخول مرة أخرى للمتابعة.",
+        "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      }
+    }
   },
   "whyHomesta": {
     "title": "لماذا هوميستا",

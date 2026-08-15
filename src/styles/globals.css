@@ -23,6 +23,16 @@
   --color-mute: #8C8881;
   --color-hairline-dark: #25252A;
 
+  /* Ledger direction — ACCOUNTING SEMANTICS, NOT BRAND ACCENT.
+     Money in / money out on the wallet. Deliberately NOT --stay: red in this
+     brand means "a CTA, a price, a confirmation" (§7), and on a statement red
+     already means "left your balance". Reusing --stay for a debit would
+     collide two unrelated meanings on the one screen where the reader is
+     scanning for exactly that distinction. --color-debit is a darker, browner
+     red so the two are never mistaken for each other side by side. */
+  --color-credit: #0E7C57;
+  --color-debit: #B4232C;
+
   /* Typography — Geist loaded via next/font, injected as CSS variables */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "Courier New", monospace;

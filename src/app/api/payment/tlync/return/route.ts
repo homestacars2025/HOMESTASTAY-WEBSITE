@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
+import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
+import { isWalletOrder } from '@/lib/wallet/topup';
 import { routing } from '@/i18n/routing';
 
 /**
@@ -50,6 +52,43 @@ async function handle(request: NextRequest) {
     NextResponse.redirect(new URL(path, request.url), { status: 303 });
 
   if (!customRef) return to(`/${locale}/booking-failed?reason=session`);
+
+  // ── A wallet top-up lands here too ────────────────────────────────────────
+  // Same 'WT-' prefix, same rule as everywhere else: the return is a browser
+  // navigation, not a verdict — settleWalletTopup re-confirms with TLYNC's
+  // receipt endpoint before a single unit is credited. Unlike the booking
+  // branch, this one has a locale (it rides in the query string we built), so
+  // the guest lands on their own wallet in their own language.
+  if (isWalletOrder(customRef)) {
+    const walletOutcome = await settleWalletTopup(createAdminClient(), {
+      customRef, trigger: 'return',
+    });
+
+    console.log('[tlync/return] wallet outcome', { customRef, ...walletOutcome });
+
+    switch (walletOutcome.status) {
+      case 'paid':
+      case 'already_paid':
+        return to(`/${locale}/wallet?topup=success`);
+
+      case 'not_completed':
+        // The guest backed out, confirmed by receipt. Nothing was charged.
+        return to(`/${locale}/wallet?topup=failed&reason=cancelled`);
+
+      case 'receipt_unavailable':
+      case 'write_failed':
+      case 'amount_mismatch':
+        // We do not know, or we know and could not write it. Never tell the
+        // guest they failed and never tell them they succeeded — 'pending'
+        // says we are checking and asks them not to pay again, which is
+        // exactly true. The reconcile sweep settles it.
+        return to(`/${locale}/wallet?topup=pending`);
+
+      case 'unknown_ref':
+      default:
+        return to(`/${locale}/wallet?topup=failed&reason=unknown`);
+    }
+  }
 
   const outcome = await settleTlyncPayment(createAdminClient(), {
     customRef, trigger: 'return',

@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut, ChevronDown, BookOpen } from 'lucide-react';
+import { LogOut, ChevronDown, BookOpen, Wallet } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface UserMenuProps {
@@ -81,6 +81,14 @@ export function UserMenu({ user }: UserMenuProps) {
           >
             <BookOpen className="w-4 h-4 text-mute shrink-0" />
             {t('myBookings')}
+          </Link>
+          <Link
+            href="/wallet"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-paper-warm transition-colors duration-[240ms]"
+          >
+            <Wallet className="w-4 h-4 text-mute shrink-0" />
+            {t('wallet')}
           </Link>
           <button
             type="button"

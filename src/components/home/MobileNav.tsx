@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Menu, X, LogOut } from 'lucide-react';
+import { Menu, X, LogOut, Wallet, BookOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Wordmark } from '@/components/brand/Wordmark';
 import { NavLinks } from '@/components/home/NavLinks';
@@ -28,6 +28,9 @@ function getDisplayName(user: NonNullable<ReturnType<typeof useAuthUser>>): stri
 
 export function MobileNav() {
   const t      = useTranslations('nav');
+  // The account links share their labels with the desktop UserMenu — one
+  // string, one namespace, so the drawer and the menu can never disagree.
+  const tMenu  = useTranslations('auth.userMenu');
   const router = useRouter();
   const user   = useAuthUser();
 
@@ -116,6 +119,28 @@ export function MobileNav() {
                       {getDisplayName(user)}
                     </span>
                   </div>
+                  {/* Law 5: our guests are on phones. An account surface
+                      reachable only from the desktop user menu does not exist
+                      for most of the people who own one — so this drawer
+                      carries the SAME links as UserMenu, in the same order.
+                      Divergence here is how a feature quietly goes missing on
+                      the device it was built for. */}
+                  <Link
+                    href="/my-bookings"
+                    onClick={close}
+                    className="w-full flex items-center justify-center gap-2 rounded-[999px] border border-rule text-sm font-medium text-ink py-3 hover:bg-paper-warm transition-colors duration-[240ms]"
+                  >
+                    <BookOpen className="w-4 h-4 text-mute shrink-0" />
+                    {tMenu('myBookings')}
+                  </Link>
+                  <Link
+                    href="/wallet"
+                    onClick={close}
+                    className="w-full flex items-center justify-center gap-2 rounded-[999px] border border-rule text-sm font-medium text-ink py-3 hover:bg-paper-warm transition-colors duration-[240ms]"
+                  >
+                    <Wallet className="w-4 h-4 text-mute shrink-0" />
+                    {tMenu('wallet')}
+                  </Link>
                   <button
                     type="button"
                     onClick={async () => {

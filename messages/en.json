@@ -446,6 +446,7 @@
     "userMenu": {
       "signOut": "Sign out",
       "myBookings": "My bookings",
+      "wallet": "My wallet",
       "account": "Account"
     },
     "authGate": {
@@ -460,6 +461,84 @@
     "emptyTitle": "No bookings yet",
     "emptySubtitle": "When you make a booking, it will appear here.",
     "browseStays": "Browse stays"
+  },
+  "wallet": {
+    "title": "My wallet",
+    "subtitle": "Your Homesta Stay balance and every movement on it.",
+    "balanceLabel": "Available balance",
+    "accountCode": "Account",
+    "statusClosed": "This wallet is closed. Contact us if you think that is wrong.",
+    "noAccountTitle": "No wallet yet",
+    "noAccountSubtitle": "Your wallet opens with your first top-up or reward.",
+    "historyTitle": "Activity",
+    "emptyTitle": "No activity yet",
+    "emptySubtitle": "Top-ups, rewards and booking payments will appear here.",
+    "browseStays": "Browse stays",
+    "topUpCta": "Top up wallet",
+    "runningBalance": "Balance {amount}",
+    "truncated": "Showing your {count} most recent movements.",
+    "errorTitle": "We couldn't load your wallet",
+    "errorSubtitle": "Please try again in a moment.",
+    "entryType": {
+      "topup": "Top-up",
+      "booking_charge": "Booking payment",
+      "cashback": "Reward",
+      "penalty": "Penalty",
+      "adjustment": "Adjustment",
+      "withdrawal": "Withdrawal",
+      "payout": "Payout",
+      "commission_credit": "Commission",
+      "refund_out": "Refund",
+      "other": "Movement"
+    },
+    "status": {
+      "pending": "Pending",
+      "reversed": "Reversed"
+    },
+    "notice": {
+      "success": {
+        "title": "Wallet topped up",
+        "body": "Your balance below is up to date."
+      },
+      "pending": {
+        "title": "We're confirming your payment",
+        "body": "This usually takes a moment. Please don't pay again — if the money left your account, it will land in your wallet."
+      },
+      "failed": {
+        "title": "Top-up didn't go through",
+        "body": "Nothing was charged. You can try again whenever you like."
+      }
+    },
+    "topup": {
+      "title": "Top up your wallet",
+      "subtitle": "Add credit now, spend it on any stay later.",
+      "payTitle": "Complete your top-up",
+      "backToWallet": "Back to wallet",
+      "changeAmount": "Change amount",
+      "amountLabel": "Amount in USD",
+      "usdOnlyHint": "Wallet balances are held in USD.",
+      "gatewayLabel": "Pay with",
+      "gatewayCard": "Card",
+      "gatewayCardHint": "Visa or Mastercard, charged in Turkish lira",
+      "gatewayLyd": "Libya",
+      "gatewayLydHint": "Tadawul, MobiCash and more, charged in dinar",
+      "continue": "Continue to payment",
+      "continuePending": "One moment…",
+      "chargedTryLabel": "You will be charged",
+      "chargedLydLabel": "You will be charged",
+      "rateNote": "Converted at {rate} per USD, fixed for this payment.",
+      "phoneLabel": "Mobile number",
+      "phoneHint": "Required by your bank to confirm the payment.",
+      "paySubmit": "Pay {amount}",
+      "notPayableTitle": "This top-up can't be paid",
+      "notPayableSubtitle": "It has already been used, or it expired. Start a new one from your wallet.",
+      "error": {
+        "amount": "Enter an amount to add.",
+        "rateUnavailable": "We can't price this payment right now. Please try again shortly.",
+        "unauthorized": "Please sign in again to continue.",
+        "generic": "Something went wrong. Please try again."
+      }
+    }
   },
   "whyHomesta": {
     "title": "Why Homesta",

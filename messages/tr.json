@@ -446,6 +446,7 @@
     "userMenu": {
       "signOut": "Çıkış yap",
       "myBookings": "Rezervasyonlarım",
+      "wallet": "Cüzdanım",
       "account": "Hesap"
     },
     "authGate": {
@@ -460,6 +461,84 @@
     "emptyTitle": "Henüz rezervasyonunuz yok",
     "emptySubtitle": "Bir rezervasyon yaptığınızda burada görünecektir.",
     "browseStays": "Konaklamalara göz at"
+  },
+  "wallet": {
+    "title": "Cüzdanım",
+    "subtitle": "Homesta Stay bakiyeniz ve üzerindeki tüm hareketler.",
+    "balanceLabel": "Kullanılabilir bakiye",
+    "accountCode": "Hesap",
+    "statusClosed": "Bu cüzdan kapalı. Bunun bir hata olduğunu düşünüyorsanız bize yazın.",
+    "noAccountTitle": "Henüz cüzdanınız yok",
+    "noAccountSubtitle": "Cüzdanınız ilk yükleme veya ödülünüzle açılır.",
+    "historyTitle": "Hareketler",
+    "emptyTitle": "Henüz hareket yok",
+    "emptySubtitle": "Yüklemeler, ödüller ve rezervasyon ödemeleri burada görünecek.",
+    "browseStays": "Konaklamalara göz at",
+    "topUpCta": "Cüzdana yükle",
+    "runningBalance": "Bakiye {amount}",
+    "truncated": "Son {count} hareket gösteriliyor.",
+    "errorTitle": "Cüzdanınız yüklenemedi",
+    "errorSubtitle": "Lütfen birazdan tekrar deneyin.",
+    "entryType": {
+      "topup": "Yükleme",
+      "booking_charge": "Rezervasyon ödemesi",
+      "cashback": "Ödül",
+      "penalty": "Ceza",
+      "adjustment": "Düzeltme",
+      "withdrawal": "Para çekme",
+      "payout": "Ödeme",
+      "commission_credit": "Komisyon",
+      "refund_out": "İade",
+      "other": "Hareket"
+    },
+    "status": {
+      "pending": "Beklemede",
+      "reversed": "Geri alındı"
+    },
+    "notice": {
+      "success": {
+        "title": "Cüzdanınıza yüklendi",
+        "body": "Aşağıdaki bakiyeniz güncel."
+      },
+      "pending": {
+        "title": "Ödemenizi doğruluyoruz",
+        "body": "Bu genellikle kısa sürer. Lütfen tekrar ödeme yapmayın — tutar hesabınızdan çıktıysa cüzdanınıza geçecektir."
+      },
+      "failed": {
+        "title": "Yükleme tamamlanmadı",
+        "body": "Hiçbir tutar tahsil edilmedi. Dilediğiniz zaman tekrar deneyebilirsiniz."
+      }
+    },
+    "topup": {
+      "title": "Cüzdanınıza yükleyin",
+      "subtitle": "Şimdi bakiye ekleyin, dilediğiniz konaklamada kullanın.",
+      "payTitle": "Yüklemenizi tamamlayın",
+      "backToWallet": "Cüzdana dön",
+      "changeAmount": "Tutarı değiştir",
+      "amountLabel": "ABD doları tutarı",
+      "usdOnlyHint": "Cüzdan bakiyeleri ABD doları olarak tutulur.",
+      "gatewayLabel": "Ödeme yöntemi",
+      "gatewayCard": "Kart",
+      "gatewayCardHint": "Visa veya Mastercard, Türk lirası olarak tahsil edilir",
+      "gatewayLyd": "Libya",
+      "gatewayLydHint": "Tadawul, MobiCash ve diğerleri, dinar olarak tahsil edilir",
+      "continue": "Ödemeye devam et",
+      "continuePending": "Bir saniye…",
+      "chargedTryLabel": "Tahsil edilecek tutar",
+      "chargedLydLabel": "Tahsil edilecek tutar",
+      "rateNote": "USD başına {rate} kurundan, bu ödeme için sabit.",
+      "phoneLabel": "Cep telefonu",
+      "phoneHint": "Bankanız ödemeyi onaylamak için istiyor.",
+      "paySubmit": "{amount} öde",
+      "notPayableTitle": "Bu yükleme ödenemiyor",
+      "notPayableSubtitle": "Ya kullanıldı ya da süresi doldu. Cüzdanınızdan yenisini başlatın.",
+      "error": {
+        "amount": "Eklemek istediğiniz tutarı girin.",
+        "rateUnavailable": "Bu ödemeyi şu anda fiyatlandıramıyoruz. Lütfen birazdan tekrar deneyin.",
+        "unauthorized": "Devam etmek için lütfen tekrar giriş yapın.",
+        "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+      }
+    }
   },
   "whyHomesta": {
     "title": "Neden Homesta",

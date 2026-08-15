@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
+import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
 
 /**
  * The TLYNC reconciliation sweep — the safety net under both other paths.
@@ -92,10 +93,70 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // ── The same sweep, for wallet top-ups ────────────────────────────────────
+  // A second query rather than a branch inside the first: top-up intents live
+  // in their own table, so there is nothing to share but the loop. The guest
+  // who pays for a top-up and closes the tab is the exact case this catches —
+  // their money is collected at TLYNC and their wallet is empty until this
+  // runs.
+  const wallet = await sweepWalletTopups(supabase, since, MAX_BATCH - refs.length);
+
   return NextResponse.json({
     ok: true,
     swept: refs.length,
     settled: settled.length,
     outcomes: results,
+    wallet,
   });
+}
+
+async function sweepWalletTopups(
+  supabase: ReturnType<typeof createAdminClient>,
+  since: string,
+  budget: number,
+): Promise<{ swept: number; settled: number; outcomes: Record<string, number> }> {
+  const empty = { swept: 0, settled: 0, outcomes: {} };
+
+  // The booking sweep has first claim on the rate-limit budget: an unsettled
+  // booking loses the guest their dates, an unsettled top-up loses them
+  // nothing but time. Zero left is a valid answer — the next run picks it up.
+  if (budget <= 0) return empty;
+
+  const { data, error } = await supabase
+    .from('wallet_topup_intents')
+    .select('merchant_order_id, created_at')
+    .eq('gateway', 'tlync')
+    .eq('status', 'processing')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(budget);
+
+  if (error) {
+    console.error('[tlync/reconcile] could not list unresolved top-ups', {
+      message: error.message, code: error.code,
+    });
+    return empty;
+  }
+
+  const refs = (data ?? [])
+    .map((row) => row.merchant_order_id as string | null)
+    .filter((ref): ref is string => Boolean(ref));
+
+  const outcomes: Record<string, number> = {};
+  let settled = 0;
+
+  // Sequential, for the same reason as above: the rate limit is per endpoint.
+  for (const customRef of refs) {
+    const outcome = await settleWalletTopup(supabase, { customRef, trigger: 'reconcile' });
+    outcomes[outcome.status] = (outcomes[outcome.status] ?? 0) + 1;
+    if (outcome.status === 'paid') settled += 1;
+  }
+
+  if (settled > 0) {
+    console.warn('[tlync/reconcile] credited top-ups the guest never came back for', {
+      count: settled,
+    });
+  }
+
+  return { swept: refs.length, settled, outcomes };
 }
