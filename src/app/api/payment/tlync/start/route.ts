@@ -6,6 +6,7 @@ import {
 } from '@/lib/payment/tlync';
 import { usdToLydRate, convertUsdToLyd } from '@/lib/payment/lyd-fx';
 import { tlyncBackendUrl, tlyncFrontendUrl } from '@/lib/payment/urls';
+import { isLibyaEligible } from '@/lib/payment/libya';
 
 /**
  * Starts a TLYNC (Libya, LYD) payment.
@@ -95,17 +96,32 @@ export async function POST(request: NextRequest) {
   // ── Guest contact — TLYNC requires both ───────────────────────────────────
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, customers(email, phone)')
+    .select('id, customers(email, phone, nationality)')
     .eq('id', bookingId)
     .maybeSingle();
 
   const customer = one(booking?.customers) as
-    | { email: string | null; phone: string | null }
+    | { email: string | null; phone: string | null; nationality: string | null }
     | undefined;
 
   if (!customer?.email || !customer.phone) {
     await markFailed(supabase, attempt.merchant_order_id, 'tlync_no_contact');
     return fail('server');
+  }
+
+  // ── The dinar option is for Libyan guests ────────────────────────────────
+  // The result page already hides it from everyone else, but hiding is not
+  // closing: this route is reachable by a direct POST. Re-run the same rule
+  // here, where it is a boundary rather than a rendering decision.
+  if (!isLibyaEligible({
+    nationality: customer.nationality,
+    phone:       customer.phone,
+  })) {
+    console.warn('[tlync/start] refused — booking guest is not Libya-eligible', {
+      bookingId, merchantOrderId: attempt.merchant_order_id,
+    });
+    await markFailed(supabase, attempt.merchant_order_id, 'tlync_not_eligible');
+    return fail('gateway');
   }
 
   // ── Claim the attempt for TLYNC ───────────────────────────────────────────

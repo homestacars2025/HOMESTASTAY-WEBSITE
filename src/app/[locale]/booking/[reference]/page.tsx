@@ -14,6 +14,7 @@ import { WalletPaymentForm } from '@/components/booking/WalletPaymentForm';
 import { PaymentMethodChoice } from '@/components/booking/PaymentMethodChoice';
 import { isTlyncConfigured, parseAmountNote } from '@/lib/payment/tlync';
 import { usdToLydRate, convertUsdToLyd } from '@/lib/payment/lyd-fx';
+import { isLibyaEligible } from '@/lib/payment/libya';
 
 /**
  * Booking result.
@@ -58,7 +59,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // time, so they are already present before this page can ever be reached.
     // customers(email) rides along for the wallet offer below — the same
     // identity pay_booking_from_wallet checks, asked once, in this query.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, customers(email)')
+    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -89,7 +90,23 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
       ? await usdToLydRate(supabase)
       : null;
 
-  const lydAvailable = lydFx !== null;
+  // ── Who sees the dinar option ────────────────────────────────────────────
+  // Read from the booking's OWN customer row — the details this guest entered
+  // minutes ago, not the account they happen to be signed into. A booking is
+  // paid by whoever made it, and that row is the most authoritative statement
+  // of where they are.
+  const customer = one(booking?.customers) as
+    | { email?: string; nationality?: string | null; phone?: string | null }
+    | undefined;
+
+  const libyaEligible = isLibyaEligible({
+    nationality: customer?.nationality ?? null,
+    phone:       customer?.phone ?? null,
+  });
+
+  // Both conditions, and both are real: a rate we can quote, AND a guest who
+  // could actually complete a Libyan payment.
+  const lydAvailable = lydFx !== null && libyaEligible;
   const amountLyd =
     lydFx && totalUsdForLyd !== null ? convertUsdToLyd(totalUsdForLyd, lydFx.rate) : null;
 
@@ -102,7 +119,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   const walletOffer = !isPaid ? await resolveWalletOffer() : null;
 
   async function resolveWalletOffer() {
-    const customerEmail = (one(booking?.customers) as { email?: string } | undefined)?.email;
+    const customerEmail = customer?.email;
     if (!customerEmail || totalUsdForLyd === null) return null;
 
     const session = await createSessionClient();

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { usdRate, convertUsd } from '@/lib/payment/fx';
 import { isTlyncConfigured } from '@/lib/payment/tlync';
+import { getBookingAccount } from '@/lib/booking/account';
+import { isAccountLibyaEligible } from '@/lib/payment/libya-account';
 
 /**
  * Opens a wallet top-up intent.
@@ -89,6 +91,20 @@ export async function createTopupIntentAction(
   // getUser() revalidates the token with the auth server rather than trusting
   // whatever the cookie claims.
   if (!user) return { ok: false, status: 'unauthorized' };
+
+  // ── The dinar rail is for Libyan guests ──────────────────────────────────
+  // The page already hides the option from everyone else. This is the same
+  // rule as a BOUNDARY: a Server Action is callable directly, so a hidden
+  // radio button closes nothing on its own.
+  if (gateway === 'tlync') {
+    const account = await getBookingAccount();
+    if (!account || !(await isAccountLibyaEligible(account))) {
+      console.warn('[wallet/topup] tlync refused — account is not Libya-eligible', {
+        profileId: user.id,
+      });
+      return { ok: false, status: 'invalid', fields: ['gateway'] };
+    }
+  }
 
   // ── The rate, locked now and handed to the RPC ──────────────────────────
   // Read with the SERVICE-ROLE client: currencies and app_settings are

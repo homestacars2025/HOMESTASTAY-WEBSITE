@@ -6,6 +6,8 @@ import { Link } from '@/i18n/navigation';
 import { requireConfirmedUser } from '@/lib/auth/require-user';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isTlyncConfigured } from '@/lib/payment/tlync';
+import { getBookingAccount } from '@/lib/booking/account';
+import { isAccountLibyaEligible } from '@/lib/payment/libya-account';
 import { usdToLydRate } from '@/lib/payment/lyd-fx';
 import { TopupAmountForm } from '@/components/wallet/TopupAmountForm';
 
@@ -43,13 +45,22 @@ export default async function TopupPage({ params }: PageProps) {
 
   const t = await getTranslations({ locale, namespace: 'wallet.topup' });
 
+  // ── Who sees the dinar option ────────────────────────────────────────────
+  // A top-up has no booking, so there is no freshly-typed nationality to read.
+  // The account is the source instead: profiles.phone, plus the nationality on
+  // any customers row this guest has already created by booking. Without that
+  // second lookup a Libyan national on a foreign number would never be offered
+  // the only gateway they can actually use.
+  const account = await getBookingAccount();
+  const libyaEligible = account !== null && (await isAccountLibyaEligible(account));
+
   // Service-role for reference data only (public.currencies). Not the caller's
   // rows, no user input reaches the read, and nothing from it reaches the
   // client except whether the Libya option renders.
   //
   // The Libya option is offered only when it can actually be priced — offering
   // a payment we cannot quote is worse than offering one fewer.
-  const lydRate = isTlyncConfigured()
+  const lydRate = isTlyncConfigured() && libyaEligible
     ? await usdToLydRate(createAdminClient())
     : null;
 
