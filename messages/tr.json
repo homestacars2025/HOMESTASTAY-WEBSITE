@@ -424,7 +424,8 @@
         "passwordMismatch": "Şifreler eşleşmiyor.",
         "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
         "emailAlreadyRegistered": "Bu e-posta adresi zaten kayıtlı.",
-        "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+        "generic": "Bir hata oluştu. Lütfen tekrar deneyin.",
+        "phoneTaken": "Bu telefon numarası başka bir hesapta kayıtlı. Farklı bir numara kullanın veya o hesapla giriş yapın."
       }
     },
     "verifyEmail": {
@@ -611,6 +612,8 @@
       "emailFromAccount": "Hesabınızdan alındı. Farklı bir adresle rezervasyon için çıkış yapın.",
       "phone": "Telefon",
       "phoneHint": "Ülke kodunu + ile birlikte girin",
+      "phoneFromAccount": "Hesabınızdan alındı. Hesap başına tek numara.",
+      "phoneWillBeSaved": "Bu numarayı sonraki rezervasyonlarınız için hesabınıza kaydedeceğiz.",
       "nationality": "Uyruk",
       "optional": "(isteğe bağlı)",
       "guests": "Misafir",
@@ -632,7 +635,8 @@
       "notBookable": "Bu yer şu anda rezervasyon kabul etmiyor.",
       "rateUnavailable": "Bugünkü kuru doğrulayamadık; yanlış tutarı tahsil etmektense işlemi durdurduk. Lütfen kısa süre sonra tekrar deneyin.",
       "generic": "Tarafımızda bir sorun oluştu. Hiçbir ücret alınmadı — lütfen tekrar deneyin.",
-      "minNights": "Bu yerde en az {count, plural, one {# gece} other {# gece}} konaklama şartı var. Lütfen daha uzun bir aralık seçin."
+      "minNights": "Bu yerde en az {count, plural, one {# gece} other {# gece}} konaklama şartı var. Lütfen daha uzun bir aralık seçin.",
+      "phoneTaken": "Bu telefon numarası başka bir hesapta kayıtlı. Farklı bir numara kullanın veya o hesapla giriş yapın."
     },
     "result": {
       "referenceLabel": "Rezervasyon numarası",

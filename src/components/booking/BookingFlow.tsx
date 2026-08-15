@@ -3,6 +3,7 @@
 import { useRouter } from '@/i18n/navigation';
 import { GuestDetailsForm } from '@/components/booking/GuestDetailsForm';
 import type { HoldResult } from '@/app/[locale]/book/[slug]/actions';
+import type { BookingAccount } from '@/lib/booking/account';
 
 /**
  * Thin client shell around the details form.
@@ -18,6 +19,8 @@ import type { HoldResult } from '@/app/[locale]/book/[slug]/actions';
  */
 
 interface BookingFlowProps {
+  /** null for an anonymous visitor. */
+  account:       BookingAccount | null;
   unitId:        string;
   checkIn:       string;
   checkOut:      string;
@@ -27,6 +30,7 @@ interface BookingFlowProps {
 }
 
 export function BookingFlow({
+  account,
   unitId,
   checkIn,
   checkOut,
@@ -45,6 +49,7 @@ export function BookingFlow({
 
   return (
     <GuestDetailsForm
+      account={account}
       unitId={unitId}
       checkIn={checkIn}
       checkOut={checkOut}

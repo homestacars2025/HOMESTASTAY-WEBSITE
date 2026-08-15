@@ -424,7 +424,8 @@
         "passwordMismatch": "Passwords do not match.",
         "phoneInvalid": "Please enter a valid phone number.",
         "emailAlreadyRegistered": "This email is already registered.",
-        "generic": "Something went wrong. Please try again."
+        "generic": "Something went wrong. Please try again.",
+        "phoneTaken": "This phone number is already on another account. Use a different one, or sign in to that account."
       }
     },
     "verifyEmail": {
@@ -611,6 +612,8 @@
       "emailFromAccount": "Taken from your account. Sign out to book under a different address.",
       "phone": "Phone",
       "phoneHint": "Include your country code, starting with +",
+      "phoneFromAccount": "Taken from your account. One number per account.",
+      "phoneWillBeSaved": "We'll save this number to your account for future bookings.",
       "nationality": "Nationality",
       "optional": "(optional)",
       "guests": "Guests",
@@ -632,7 +635,8 @@
       "notBookable": "This place isn’t accepting bookings right now.",
       "rateUnavailable": "We couldn’t confirm today’s exchange rate, so we stopped rather than charge you the wrong amount. Please try again shortly.",
       "generic": "Something went wrong on our side. Nothing has been charged — please try again.",
-      "minNights": "This place has a minimum stay of {count, plural, one {# night} other {# nights}}. Please pick a longer range."
+      "minNights": "This place has a minimum stay of {count, plural, one {# night} other {# nights}}. Please pick a longer range.",
+      "phoneTaken": "This phone number is already on another account. Use a different one, or sign in to that account."
     },
     "result": {
       "referenceLabel": "Booking reference",

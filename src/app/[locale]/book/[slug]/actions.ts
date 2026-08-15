@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createSessionClient } from '@/lib/supabase/server';
+import { getBookingAccount } from '@/lib/booking/account';
 import { setBookingCookie } from '@/lib/booking/cookie';
 import {
   DOCUMENT_VERSION,
@@ -60,6 +60,8 @@ export type HoldResult =
   | { ok: false; status: 'invalid'; fields: HoldFieldError[] }
   /** We refused to sell rather than mis-charge. See below. */
   | { ok: false; status: 'rate_unavailable' }
+  /** profiles.phone is UNIQUE and this number is on another account. */
+  | { ok: false; status: 'phone_taken' }
   | { ok: false; status: 'error' };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -81,37 +83,36 @@ function isRealDate(value: string): boolean {
 // ── Action ────────────────────────────────────────────────────────────────────
 
 export async function createHoldAction(data: HoldFormData): Promise<HoldResult> {
-  const firstName   = data.firstName.trim();
-  const lastName    = data.lastName.trim();
-  const phone       = data.phone.trim();
   const nationality = data.nationality.trim();
 
-  // ── The email is the ACCOUNT's when there is one ─────────────────────────
-  // A signed-in guest books as themselves, full stop. The form field is a
+  // ── Identity comes from the ACCOUNT when there is one ────────────────────
+  // A signed-in guest books as themselves, full stop. The form fields are a
   // convenience for anonymous booking (which stays supported — CLAUDE.md §4);
-  // it is not a way for a signed-in guest to file a booking under someone
-  // else's address, deliberately or by leaving a stale value in the box.
+  // they are not a way for a signed-in guest to file a booking under someone
+  // else's details, deliberately or by leaving a stale value in a box.
   //
-  // This also feeds the wallet: /booking/[reference] offers "pay from balance"
-  // only when the session's email matches the booking customer's, so an email
-  // that disagrees with the session makes a guest's own wallet invisible to
-  // them on their own booking.
+  // This is also what makes the wallet reachable: /booking/[reference] offers
+  // "pay from balance" only when the session's email matches the booking
+  // customer's, so details that disagree with the session make a guest's own
+  // wallet invisible on their own booking.
   //
-  // auth.users.email, not profiles.email: it is the address the session is
-  // actually authenticated as, and it is the exact value the wallet gate
-  // compares against. profiles.email is a copy that could drift.
-  const session = await createSessionClient();
-  const { data: { user } } = await session.auth.getUser();
+  // Read through the SAME function the checkout page prefills from, so the
+  // page and this action can never disagree about who is booking.
+  const account = await getBookingAccount();
 
-  const sessionEmail = user?.email?.trim().toLowerCase() ?? null;
-  const email = sessionEmail ?? data.email.trim().toLowerCase();
+  const firstName = account?.firstName ?? data.firstName.trim();
+  const lastName  = account?.lastName  ?? data.lastName.trim();
+  const email     = account?.email     ?? data.email.trim().toLowerCase();
+  // The one field an account may legitimately be missing. When it is, the form
+  // asked for it and it is saved to the profile below.
+  const phone     = account?.phone     ?? data.phone.trim();
 
-  if (sessionEmail && data.email.trim().toLowerCase() !== sessionEmail) {
-    // Not an error — the form may simply have been left blank or prefilled
-    // from a previous guest. Logged because a mismatch is the single symptom
-    // of "my wallet option never appears".
+  if (account && data.email.trim().toLowerCase() !== account.email) {
+    // Not an error — the box may simply have been left blank. Logged because
+    // a mismatch used to be the single silent symptom of "my wallet option
+    // never appears".
     console.warn('[createHold] form email ignored in favour of the session', {
-      profileId: user?.id,
+      profileId: account.profileId,
     });
   }
 
@@ -132,6 +133,16 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
 
   const supabase = createAdminClient();
 
+  // ── A first phone number is saved to the account BEFORE the hold ─────────
+  // Before, not after: profiles.phone is UNIQUE, and the failure mode worth
+  // catching is "this number already belongs to another account". Discovering
+  // that after a booking exists would leave a hold attached to a profile whose
+  // number we then could not store — better to stop while nothing is held.
+  if (account && account.phone === null) {
+    const saved = await savePhoneToProfile(supabase, account.profileId, phone);
+    if (saved === 'duplicate') return { ok: false, status: 'phone_taken' };
+  }
+
   const { data: rows, error } = await supabase.rpc('create_booking_hold', {
     p_unit_id:     data.unitId,
     p_check_in:    data.checkIn,
@@ -143,6 +154,12 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
     p_phone:       phone,
     p_nationality: nationality || null,
     p_source_type: 'website',
+    // The last argument, and the one that ends the phone-matching problem:
+    // given a profile id the RPC binds the booking to that account and uses
+    // the email and phone passed here, instead of matching an existing
+    // customers row by phone and keeping ITS email
+    // (COALESCE(c.email, v_email) — see the migration).
+    p_profile_id:  account?.profileId ?? null,
   });
 
   if (error) {
@@ -272,4 +289,39 @@ function num(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   const n = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Store a first phone number on the guest's profile.
+ *
+ * profiles.phone carries a UNIQUE constraint — one number per account — so the
+ * interesting outcome is 23505: the number already belongs to somebody else.
+ * That is a real answer for the guest ("this number is on another account"),
+ * not an internal error, so it is returned rather than logged and swallowed.
+ *
+ * Any OTHER failure is deliberately non-fatal. The booking itself carries the
+ * number to create_booking_hold regardless; a profile that did not get updated
+ * is a smaller loss than a guest who cannot book.
+ */
+async function savePhoneToProfile(
+  supabase: SupabaseClient,
+  profileId: string,
+  phone: string,
+): Promise<'ok' | 'duplicate' | 'failed'> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ phone, updated_at: new Date().toISOString() })
+    .eq('id', profileId);
+
+  if (!error) return 'ok';
+
+  if (error.code === '23505') {
+    console.warn('[createHold] phone already on another profile', { profileId });
+    return 'duplicate';
+  }
+
+  console.error('[createHold] could not save phone to profile', {
+    profileId, message: error.message, code: error.code,
+  });
+  return 'failed';
 }

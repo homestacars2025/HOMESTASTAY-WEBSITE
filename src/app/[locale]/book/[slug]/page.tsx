@@ -8,6 +8,7 @@ import { BookingFlow } from '@/components/booking/BookingFlow';
 import { getPublicUnitBySlug } from '@/lib/queries/stays';
 import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { isRealDate } from '@/lib/stays/search-params';
+import { getBookingAccount } from '@/lib/booking/account';
 
 /**
  * Checkout — details form, then payment.
@@ -40,6 +41,11 @@ export default async function BookPage({ params, searchParams }: PageProps) {
 
   const unit = await getPublicUnitBySlug(slug, locale);
   if (!unit) notFound();
+
+  // Null for an anonymous visitor — booking without an account stays supported
+  // (CLAUDE.md §4). When there IS one, these details are the booking's
+  // identity and the form renders them locked rather than editable.
+  const account = await getBookingAccount();
 
   // Dates arrive in the URL so the page is shareable, resumable and
   // back-button-safe. They are re-validated here because a URL is user input:
@@ -95,6 +101,7 @@ export default async function BookPage({ params, searchParams }: PageProps) {
           {/* Details form */}
           <div className="order-2 lg:order-1">
             <BookingFlow
+              account={account}
               unitId={unit.id}
               checkIn={checkIn}
               checkOut={checkOut}

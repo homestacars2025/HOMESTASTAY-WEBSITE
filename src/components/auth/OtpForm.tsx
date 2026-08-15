@@ -153,7 +153,23 @@ export function OtpForm({ email, returnUrl }: OtpFormProps) {
 
       if (Object.keys(patch).length > 0) {
         patch.updated_at = new Date().toISOString();
-        await supabase.from('profiles').update(patch).eq('id', data.user.id);
+        const { error: patchError } = await supabase
+          .from('profiles').update(patch).eq('id', data.user.id);
+
+        // profiles.phone is UNIQUE. 23505 means the number is on another
+        // account — so retry WITHOUT it: the verification succeeded, the
+        // session is valid, and refusing to save a first name because a phone
+        // clashed would be the wrong thing to lose. Checkout asks for a number
+        // again and reports the clash there, where there is a field to fix.
+        if (patchError?.code === '23505' && 'phone' in patch) {
+          console.warn('[otp] phone already on another profile — saving the rest', {
+            profileId: data.user.id,
+          });
+          delete patch.phone;
+          if (Object.keys(patch).length > 1) {
+            await supabase.from('profiles').update(patch).eq('id', data.user.id);
+          }
+        }
       }
 
       sessionStorage.removeItem('pending_profile');

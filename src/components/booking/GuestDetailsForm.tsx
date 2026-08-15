@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { AlertCircle } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
@@ -10,6 +9,7 @@ import { PhoneInput } from '@/components/auth/PhoneInput';
 import { CountrySelect } from '@/components/booking/CountrySelect';
 import { createHoldAction } from '@/app/[locale]/book/[slug]/actions';
 import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/actions';
+import type { BookingAccount } from '@/lib/booking/account';
 
 /**
  * Lead guest only. Accompanying guests are captured at check-in, so asking for
@@ -22,6 +22,8 @@ import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/acti
  */
 
 interface GuestDetailsFormProps {
+  /** null for an anonymous visitor — booking without an account is supported. */
+  account:     BookingAccount | null;
   unitId:      string;
   checkIn:     string;
   checkOut:    string;
@@ -43,6 +45,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const E164_RE  = /^\+[1-9][0-9]{6,14}$/;
 
 export function GuestDetailsForm({
+  account,
   unitId,
   checkIn,
   checkOut,
@@ -56,22 +59,28 @@ export function GuestDetailsForm({
   const nights = nightsBetween(checkIn, checkOut);
   const belowMin = nights < minNights;
 
-  const [firstName,   setFirstName]   = useState('');
-  const [lastName,    setLastName]    = useState('');
-  const [email,       setEmail]       = useState('');
-  const [phone,       setPhone]       = useState('');
+  // ── Identity: the account's, when there is one ───────────────────────────
+  // A signed-in guest books as themselves. The Server Action re-reads all of
+  // this from the session and ignores whatever the form sends, so these fields
+  // are rendered locked: an editable box whose value is silently discarded is
+  // how a guest types one address and gets a booking filed under another.
+  //
+  // The one exception is a phone the account does not have yet. That field
+  // stays editable, and what they enter is saved to their profile — locking an
+  // empty box would leave them unable to book at all.
+  const locked = {
+    name:  account !== null && Boolean(account.firstName && account.lastName),
+    email: account !== null,
+    phone: account !== null && account.phone !== null,
+  };
+
+  const [firstName,   setFirstName]   = useState(account?.firstName ?? '');
+  const [lastName,    setLastName]    = useState(account?.lastName ?? '');
+  const [email,       setEmail]       = useState(account?.email ?? '');
+  const [phone,       setPhone]       = useState(account?.phone ?? '');
   const [nationality, setNationality] = useState('');
   const [guests,      setGuests]      = useState(initialGuests);
   const [accepted,    setAccepted]    = useState(false);
-
-  // A signed-in guest books as themselves: the Server Action takes the email
-  // from the session and ignores this field entirely. Showing an editable box
-  // whose value is silently discarded is how a guest ends up typing one
-  // address and getting a booking under another — so when there is a session,
-  // the field shows the account's address and is read-only.
-  const authUser = useAuthUser();
-  const sessionEmail = authUser?.email ?? null;
-  const emailValue = sessionEmail ?? email;
 
   const [fieldErrors, setFieldErrors] = useState<Set<HoldFieldError>>(new Set());
   const [pageError,   setPageError]   = useState<string | null>(null);
@@ -97,10 +106,7 @@ export function GuestDetailsForm({
     const local = new Set<HoldFieldError>();
     if (!firstName.trim())        local.add('firstName');
     if (!lastName.trim())         local.add('lastName');
-    // emailValue, not email: for a signed-in guest the typed state is empty by
-    // design and the account's address is what will be used. Validating the raw
-    // state would fail every signed-in booking on a field they cannot edit.
-    if (!EMAIL_RE.test(emailValue.trim())) local.add('email');
+    if (!EMAIL_RE.test(email.trim())) local.add('email');
     if (!E164_RE.test(phone.trim())) local.add('phone');
     if (guests < 1)               local.add('guests');
     if (!accepted)                local.add('documents');
@@ -111,7 +117,7 @@ export function GuestDetailsForm({
     startTransition(async () => {
       const result = await createHoldAction({
         unitId, checkIn, checkOut, guests,
-        firstName, lastName, email: emailValue, phone, nationality,
+        firstName, lastName, email, phone, nationality,
         documentsAccepted: accepted,
       });
 
@@ -141,6 +147,12 @@ export function GuestDetailsForm({
         case 'rate_unavailable':
           // We refused to sell rather than charge an unverifiable rate.
           setPageError(t('errors.rateUnavailable'));
+          break;
+        case 'phone_taken':
+          // profiles.phone is UNIQUE. Field-level, not page-level: there is
+          // exactly one box to change, and nothing was booked.
+          setFieldErrors(new Set<HoldFieldError>(['phone']));
+          setPageError(t('errors.phoneTaken'));
           break;
         default:
           setPageError(t('errors.generic'));
@@ -176,7 +188,9 @@ export function GuestDetailsForm({
           <input
             id="firstName" name="firstName" type="text" autoComplete="given-name"
             value={firstName} onChange={(e) => setFirstName(e.target.value)}
-            aria-invalid={invalid('firstName')} className={inputClass('firstName')}
+            readOnly={locked.name} aria-readonly={locked.name}
+            aria-invalid={invalid('firstName')}
+            className={`${inputClass('firstName')}${locked.name ? ' bg-paper-warm text-ink-soft' : ''}`}
           />
         </div>
         <div>
@@ -184,7 +198,9 @@ export function GuestDetailsForm({
           <input
             id="lastName" name="lastName" type="text" autoComplete="family-name"
             value={lastName} onChange={(e) => setLastName(e.target.value)}
-            aria-invalid={invalid('lastName')} className={inputClass('lastName')}
+            readOnly={locked.name} aria-readonly={locked.name}
+            aria-invalid={invalid('lastName')}
+            className={`${inputClass('lastName')}${locked.name ? ' bg-paper-warm text-ink-soft' : ''}`}
           />
         </div>
       </div>
@@ -194,14 +210,13 @@ export function GuestDetailsForm({
         <input
           id="email" name="email" type="email" inputMode="email" autoComplete="email"
           dir="ltr"
-          value={emailValue}
+          value={email}
           onChange={(e) => setEmail(e.target.value)}
-          readOnly={sessionEmail !== null}
-          aria-readonly={sessionEmail !== null}
+          readOnly={locked.email} aria-readonly={locked.email}
           aria-invalid={invalid('email')}
-          className={`${inputClass('email')}${sessionEmail ? ' bg-paper-warm text-ink-soft' : ''}`}
+          className={`${inputClass('email')}${locked.email ? ' bg-paper-warm text-ink-soft' : ''}`}
         />
-        {sessionEmail && (
+        {locked.email && (
           <p className="mt-2 text-xs text-mute leading-relaxed">
             {t('fields.emailFromAccount')}
           </p>
@@ -210,20 +225,44 @@ export function GuestDetailsForm({
       </div>
 
       <div>
-        {/* Reuses the shared PhoneInput (also on sign-up + host). Emits E.164,
-            which is exactly what the RPC validates. 'booking' variant matches
-            this form's radius and micro-label. */}
-        <PhoneInput
-          variant="booking"
-          defaultCountry="TR"
-          value={phone}
-          onChange={setPhone}
-          label={t('fields.phone')}
-          searchPlaceholder={t('fields.searchCountries')}
-          invalid={invalid('phone')}
-          errorId="phone-error"
-        />
-        <p className="mt-2 text-xs text-mute">{t('fields.phoneHint')}</p>
+        {locked.phone ? (
+          /* Already on the account. Shown as a plain read-only field rather
+             than a locked country picker: a dropdown that cannot be opened is
+             worse than no dropdown, and the number is E.164 so it reads
+             correctly with dir="ltr" in every locale. */
+          <>
+            <label htmlFor="phone" className={labelClass}>{t('fields.phone')}</label>
+            <input
+              id="phone" name="phone" type="tel" dir="ltr"
+              value={phone} readOnly aria-readonly
+              className={`${inputClass('phone')} bg-paper-warm text-ink-soft`}
+            />
+            <p className="mt-2 text-xs text-mute leading-relaxed">
+              {t('fields.phoneFromAccount')}
+            </p>
+          </>
+        ) : (
+          <>
+            {/* Reuses the shared PhoneInput (also on sign-up + host). Emits
+                E.164, which is exactly what the RPC validates. 'booking'
+                variant matches this form's radius and micro-label. */}
+            <PhoneInput
+              variant="booking"
+              defaultCountry="TR"
+              value={phone}
+              onChange={setPhone}
+              label={t('fields.phone')}
+              searchPlaceholder={t('fields.searchCountries')}
+              invalid={invalid('phone')}
+              errorId="phone-error"
+            />
+            <p className="mt-2 text-xs text-mute">
+              {/* An account with no number yet: this one is saved to the
+                  profile, so it is the number every future booking uses. */}
+              {account ? t('fields.phoneWillBeSaved') : t('fields.phoneHint')}
+            </p>
+          </>
+        )}
         {invalid('phone') && <FieldNote id="phone-error">{t('errors.phone')}</FieldNote>}
       </div>
 

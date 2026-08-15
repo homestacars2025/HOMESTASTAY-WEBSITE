@@ -81,7 +81,7 @@ export function SignUpForm({ returnUrl }: SignUpFormProps) {
 
     if (data.session && data.user) {
       // Auto-confirm is on — create profile immediately and go home
-      await supabase.from('profiles').upsert(
+      const { error: profileError } = await supabase.from('profiles').upsert(
         {
           id:         data.user.id,
           email:      data.user.email ?? email,
@@ -93,6 +93,24 @@ export function SignUpForm({ returnUrl }: SignUpFormProps) {
         },
         { onConflict: 'id', ignoreDuplicates: false }
       );
+
+      // profiles.phone is UNIQUE — one number per account. 23505 here means
+      // the number belongs to somebody else, and the account still exists
+      // WITHOUT a phone. Said plainly and the flow stops: sending them on
+      // would hide it until checkout asked for the number again.
+      if (profileError?.code === '23505') {
+        setError(t('error.phoneTaken'));
+        setLoading(false);
+        return;
+      }
+      if (profileError) {
+        // The account is real and they are signed in; the profile row is the
+        // trigger's job anyway. Loud, but not a dead end for the guest.
+        console.error('[signUp] profile upsert failed', {
+          message: profileError.message, code: profileError.code,
+        });
+      }
+
       sessionStorage.removeItem('pending_profile');
       router.push(returnUrl || '/');
       router.refresh();
