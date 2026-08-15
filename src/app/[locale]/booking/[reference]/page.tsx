@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Clock, ShieldCheck } from 'lucide-react';
+import { Clock, ShieldCheck, Wallet } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { Link } from '@/i18n/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createSessionClient } from '@/lib/supabase/server';
 import { readBookingCookie } from '@/lib/booking/cookie';
+import { getWalletBalanceUsd } from '@/lib/queries/wallet';
 import { CardPaymentForm } from '@/components/booking/CardPaymentForm';
 import { LydPaymentForm } from '@/components/booking/LydPaymentForm';
+import { WalletPaymentForm } from '@/components/booking/WalletPaymentForm';
 import { PaymentMethodChoice } from '@/components/booking/PaymentMethodChoice';
 import { isTlyncConfigured, parseAmountNote } from '@/lib/payment/tlync';
 import { usdToLydRate, convertUsdToLyd } from '@/lib/payment/lyd-fx';
@@ -53,7 +56,9 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     .from('bookings')
     // amount_charged_try / fx_rate_used are written by lock_booking_fx at hold
     // time, so they are already present before this page can ever be reached.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at')
+    // customers(email) rides along for the wallet offer below — the same
+    // identity pay_booking_from_wallet checks, asked once, in this query.
+    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, customers(email)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -88,12 +93,46 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   const amountLyd =
     lydFx && totalUsdForLyd !== null ? convertUsdToLyd(totalUsdForLyd, lydFx.rate) : null;
 
-  const selectedMethod: 'card' | 'lyd' = pay === 'lyd' && lydAvailable ? 'lyd' : 'card';
+  // ── The wallet option ─────────────────────────────────────────────────────
+  // Offered ONLY to the signed-in account whose email matches this booking's
+  // guest — the same test pay_booking_from_wallet makes before it will debit
+  // anything. The signed cookie proves the visitor started this booking; it
+  // does NOT prove whose wallet is on screen, and a booking made anonymously
+  // must never be payable from whichever wallet happens to be signed in.
+  const walletOffer = !isPaid ? await resolveWalletOffer() : null;
+
+  async function resolveWalletOffer() {
+    const customerEmail = (one(booking?.customers) as { email?: string } | undefined)?.email;
+    if (!customerEmail || totalUsdForLyd === null) return null;
+
+    const session = await createSessionClient();
+    const { data: { user } } = await session.auth.getUser();
+    if (!user?.email) return null;
+
+    if (user.email.trim().toLowerCase() !== customerEmail.trim().toLowerCase()) return null;
+
+    const balanceUsd = await getWalletBalanceUsd(user.id);
+    if (balanceUsd === null) return null;
+
+    return { balanceUsd, totalUsd: totalUsdForLyd };
+  }
+
+  const walletSufficient =
+    walletOffer !== null && walletOffer.balanceUsd >= walletOffer.totalUsd;
+
+  const selectedMethod: 'card' | 'lyd' | 'wallet' =
+    pay === 'lyd' && lydAvailable ? 'lyd'
+    : pay === 'wallet' && walletSufficient ? 'wallet'
+    : 'card';
 
   // What a paid TLYNC booking was actually charged. amount_lyd is the source
   // of truth; the note is parsed only for attempts started before that column
   // existed, and that fallback can go once none are live.
-  const paidViaTlync = payment?.payment_gateway === 'tlync';
+  const paidViaTlync  = payment?.payment_gateway === 'tlync';
+  // A wallet payment has no TRY and no LYD figure — it was settled in USD from
+  // a balance, so the charged block below shows the USD total instead of a
+  // currency that never moved.
+  const paidViaWallet = payment?.payment_gateway === 'wallet';
   const paidLyd = paidViaTlync
     ? num(payment?.amount_lyd) ??
       parseAmountNote(payment?.response_message as string | null)?.lyd ??
@@ -153,7 +192,23 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                 A guest who paid in dinar must never be shown a lira figure —
                 the lira amount is the booking's internal reference, not
                 anything that left their account. */}
-            {(paidLyd !== null || amountTry !== null) && (
+            {paidViaWallet && totalUsd !== null ? (
+              <div className="border border-rule rounded-[14px] p-5 mb-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3">
+                  {t('chargedLabel')}
+                </p>
+                <p className="text-[1.5rem] font-semibold text-ink tabular-nums leading-none">
+                  {usd.format(totalUsd)}
+                </p>
+                {/* Where it came from matters here in a way it does not for a
+                    card: a guest looking for this charge on a bank statement
+                    will never find it. */}
+                <p className="mt-2 flex items-center gap-1.5 text-[13px] text-mute">
+                  <Wallet className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                  {t('paidFromWallet')}
+                </p>
+              </div>
+            ) : (paidLyd !== null || amountTry !== null) && (
               <div className="border border-rule rounded-[14px] p-5 mb-4">
                 <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3">
                   {t('chargedLabel')}
@@ -248,12 +303,25 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               reference={booking.booking_reference as string}
               selected={selectedMethod}
               lydAvailable={lydAvailable}
+              wallet={
+                walletOffer && {
+                  balanceLabel: usd.format(walletOffer.balanceUsd),
+                  totalLabel:   usd.format(walletOffer.totalUsd),
+                  sufficient:   walletSufficient,
+                }
+              }
             />
 
-            {/* Neither form carries an amount. What is charged is read
-                server-side from the booking, so nothing here can move it —
-                these labels are display only. */}
-            {selectedMethod === 'lyd' && amountLyd !== null && lydFx ? (
+            {/* No form carries an amount. What is charged is read server-side
+                from the booking, so nothing here can move it — these labels
+                are display only. */}
+            {selectedMethod === 'wallet' && walletOffer ? (
+              <WalletPaymentForm
+                amountLabel={usd.format(walletOffer.totalUsd)}
+                balanceLabel={usd.format(walletOffer.balanceUsd)}
+                remainingLabel={usd.format(walletOffer.balanceUsd - walletOffer.totalUsd)}
+              />
+            ) : selectedMethod === 'lyd' && amountLyd !== null && lydFx ? (
               <LydPaymentForm
                 locale={locale}
                 amountLabel={lydFmt.format(amountLyd)}
@@ -280,6 +348,11 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
       </main>
     </div>
   );
+}
+
+/** PostgREST returns an embedded to-one as either an object or a 1-element array. */
+function one(value: unknown): unknown {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 /** PostgREST can hand `numeric` back as a string; coerce once, here. */

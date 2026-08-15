@@ -647,7 +647,8 @@
       "lockedRate": "Rate locked at {rate} TRY per USD.",
       "refundBodyLyd": "You receive a full refund through the same Libyan payment channel. Our team issues it by hand and will contact you to complete it.",
       "confirmingTitle": "Confirming your payment",
-      "confirmingBody": "You’ve returned from TLYNC and we’re confirming the payment with them now. This usually takes under a minute — refresh this page shortly. Please don’t pay again."
+      "confirmingBody": "You’ve returned from TLYNC and we’re confirming the payment with them now. This usually takes under a minute — refresh this page shortly. Please don’t pay again.",
+      "paidFromWallet": "Paid from your wallet balance"
     },
     "legal": {
       "versionLabel": "Document version",
@@ -678,11 +679,34 @@
       "methodCardHint": "Visa or Mastercard, via 3D Secure. Charged in Turkish lira.",
       "methodLyd": "Pay in Libya (LYD)",
       "methodLydHint": "Tadawul, MobiCash and other Libyan methods. Charged in Libyan dinar.",
+      "methodWallet": "Wallet balance",
+      "methodWalletHint": "Pay instantly from your {balance} balance",
+      "methodWalletShort": "You have {balance}; this booking is {total}",
+      "methodWalletTopUp": "Top up the difference",
       "lydAmountLabel": "Amount to pay",
       "lydRateNote": "Converted at {rate} LYD per US dollar, fixed the moment you pay.",
       "lydRedirectNote": "You’ll continue on TLYNC’s secure page, where you choose your Libyan payment method.",
       "lydSubmit": "Continue to payment",
-      "lydSecureNote": "You’ll be taken to TLYNC to complete the payment."
+      "lydSecureNote": "You’ll be taken to TLYNC to complete the payment.",
+      "wallet": {
+        "amountLabel": "To pay from your wallet",
+        "balanceNow": "Wallet balance",
+        "balanceAfter": "Balance after payment",
+        "submit": "Pay {amount} from wallet",
+        "confirmBody": "{amount} will be taken from your wallet now. This is immediate and cannot be undone from this page — unlike a card payment, there is nothing to cancel at a bank.",
+        "confirmSubmit": "Yes, pay now",
+        "cancel": "Cancel",
+        "paying": "Paying…",
+        "instantNote": "No card needed. Your booking is paid the moment you confirm.",
+        "topUpLink": "Top up your wallet",
+        "error": {
+          "insufficient": "Your balance no longer covers this booking.",
+          "notHoldable": "This booking can no longer be paid — the hold may have expired. Please start a new booking.",
+          "unauthorized": "Please sign in with the account that made this booking.",
+          "unknownBooking": "We couldn't find this booking.",
+          "generic": "Something went wrong and nothing was taken from your wallet. Please try again."
+        }
+      }
     },
     "failed": {
       "title": "Payment couldn’t be completed",

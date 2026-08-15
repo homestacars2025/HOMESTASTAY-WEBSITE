@@ -647,7 +647,8 @@
       "lockedRate": "Kur {rate} TRY/USD olarak sabitlendi.",
       "refundBodyLyd": "Ödemenizin tamamı, ödeme yaptığınız Libya kanalı üzerinden iade edilir. Ekibimiz iadeyi elle işler ve tamamlamak için sizinle iletişime geçer.",
       "confirmingTitle": "Ödemeniz doğrulanıyor",
-      "confirmingBody": "TLYNC’ten döndünüz; ödemeyi şimdi onlarla doğruluyoruz. Bu genellikle bir dakikadan kısa sürer — birazdan sayfayı yenileyin. Lütfen tekrar ödeme yapmayın."
+      "confirmingBody": "TLYNC’ten döndünüz; ödemeyi şimdi onlarla doğruluyoruz. Bu genellikle bir dakikadan kısa sürer — birazdan sayfayı yenileyin. Lütfen tekrar ödeme yapmayın.",
+      "paidFromWallet": "Cüzdan bakiyenizden ödendi"
     },
     "legal": {
       "versionLabel": "Belge sürümü",
@@ -678,11 +679,34 @@
       "methodCardHint": "Visa veya Mastercard, 3D Secure ile. Türk lirası olarak tahsil edilir.",
       "methodLyd": "Libya’da ödeyin (LYD)",
       "methodLydHint": "Tadawul, MobiCash ve diğer Libya yöntemleri. Libya dinarı olarak tahsil edilir.",
+      "methodWallet": "Cüzdan bakiyesi",
+      "methodWalletHint": "{balance} bakiyenizden anında ödeyin",
+      "methodWalletShort": "Bakiyeniz {balance}, bu rezervasyon {total}",
+      "methodWalletTopUp": "Farkı yükleyin",
       "lydAmountLabel": "Ödenecek tutar",
       "lydRateNote": "1 ABD doları = {rate} Libya dinarı kuruyla çevrildi; ödeme anında sabitlenir.",
       "lydRedirectNote": "Ödemeyi TLYNC’in güvenli sayfasında tamamlayacaksınız; Libya ödeme yönteminizi orada seçersiniz.",
       "lydSubmit": "Ödemeye devam et",
-      "lydSecureNote": "Ödemeyi tamamlamak için TLYNC’e yönlendirileceksiniz."
+      "lydSecureNote": "Ödemeyi tamamlamak için TLYNC’e yönlendirileceksiniz.",
+      "wallet": {
+        "amountLabel": "Cüzdanınızdan ödenecek",
+        "balanceNow": "Cüzdan bakiyesi",
+        "balanceAfter": "Ödeme sonrası bakiye",
+        "submit": "Cüzdandan {amount} öde",
+        "confirmBody": "{amount} şimdi cüzdanınızdan alınacak. Bu işlem anındadır ve bu sayfadan geri alınamaz — kart ödemesinin aksine, bankada iptal edilecek bir şey yoktur.",
+        "confirmSubmit": "Evet, şimdi öde",
+        "cancel": "Vazgeç",
+        "paying": "Ödeniyor…",
+        "instantNote": "Karta gerek yok. Onayladığınız anda rezervasyonunuz ödenir.",
+        "topUpLink": "Cüzdanınıza yükleyin",
+        "error": {
+          "insufficient": "Bakiyeniz artık bu rezervasyonu karşılamıyor.",
+          "notHoldable": "Bu rezervasyon artık ödenemiyor — rezerve süresi dolmuş olabilir. Lütfen yeni bir rezervasyon başlatın.",
+          "unauthorized": "Lütfen bu rezervasyonu yapan hesapla giriş yapın.",
+          "unknownBooking": "Bu rezervasyonu bulamadık.",
+          "generic": "Bir şeyler ters gitti ve cüzdanınızdan hiçbir tutar alınmadı. Lütfen tekrar deneyin."
+        }
+      }
     },
     "failed": {
       "title": "Ödeme tamamlanamadı",

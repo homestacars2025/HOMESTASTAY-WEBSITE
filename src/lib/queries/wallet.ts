@@ -149,6 +149,40 @@ function logReadFailure(
 // ── The read ──────────────────────────────────────────────────────────────────
 
 /**
+ * Just the balance — for surfaces that need to know whether a wallet can cover
+ * something, not what it has been doing.
+ *
+ * The booking page calls this on every render of an unpaid booking, so it
+ * deliberately does not touch ledger_entries: a statement nobody is going to
+ * display is a second query for nothing.
+ *
+ * Returns null for "no wallet, or we could not read one" — both mean the same
+ * thing to the caller, which is: do not offer to pay from it. A wallet that
+ * exists with a zero balance returns 0, and that is a different answer.
+ */
+export async function getWalletBalanceUsd(profileId: string): Promise<number | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('ledger_accounts')
+    .select('balance_usd, status')
+    .eq('profile_id', profileId)
+    .eq('party_type', 'customer_wallet')
+    .maybeSingle();
+
+  if (error) {
+    logReadFailure('balance', error, { profileId });
+    return null;
+  }
+
+  // A closed wallet cannot pay. Offering its balance would be showing money
+  // that is not spendable.
+  if (!data || data.status !== 'active') return null;
+
+  return coerceAmount(data.balance_usd);
+}
+
+/**
  * The whole page in one call: the wallet and its statement.
  *
  * Two round trips rather than one embedded select, on purpose: the entries
