@@ -646,6 +646,7 @@
       "browseMore": "Browse more stays",
       "lockedRate": "Rate locked at {rate} TRY per USD.",
       "refundBodyLyd": "You receive a full refund through the same Libyan payment channel. Our team issues it by hand and will contact you to complete it.",
+      "refundBodyWallet": "The amount returns to your wallet balance, ready to use on another stay.",
       "confirmingTitle": "Confirming your payment",
       "confirmingBody": "You’ve returned from TLYNC and we’re confirming the payment with them now. This usually takes under a minute — refresh this page shortly. Please don’t pay again.",
       "paidFromWallet": "Paid from your wallet balance"

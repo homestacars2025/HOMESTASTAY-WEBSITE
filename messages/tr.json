@@ -646,6 +646,7 @@
       "browseMore": "Diğer konaklamalara göz at",
       "lockedRate": "Kur {rate} TRY/USD olarak sabitlendi.",
       "refundBodyLyd": "Ödemenizin tamamı, ödeme yaptığınız Libya kanalı üzerinden iade edilir. Ekibimiz iadeyi elle işler ve tamamlamak için sizinle iletişime geçer.",
+      "refundBodyWallet": "Tutar cüzdan bakiyenize geri döner ve başka bir konaklamada kullanıma hazır olur.",
       "confirmingTitle": "Ödemeniz doğrulanıyor",
       "confirmingBody": "TLYNC’ten döndünüz; ödemeyi şimdi onlarla doğruluyoruz. Bu genellikle bir dakikadan kısa sürer — birazdan sayfayı yenileyin. Lütfen tekrar ödeme yapmayın.",
       "paidFromWallet": "Cüzdan bakiyenizden ödendi"

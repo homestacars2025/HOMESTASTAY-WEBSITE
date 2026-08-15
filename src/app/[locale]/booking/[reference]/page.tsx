@@ -71,7 +71,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // never recomputed from the USD total (a refund must replay it exactly).
   const { data: payment } = await supabase
     .from('booking_payments')
-    .select('amount_try, fx_rate_used, paid_at, payment_gateway, amount_lyd, response_message')
+    .select('amount_try, amount_usd, fx_rate_used, paid_at, payment_gateway, amount_lyd, response_message')
     .eq('booking_id', booking.id)
     .eq('status', 'paid')
     .maybeSingle();
@@ -128,11 +128,21 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // What a paid TLYNC booking was actually charged. amount_lyd is the source
   // of truth; the note is parsed only for attempts started before that column
   // existed, and that fallback can go once none are live.
+  // payment_gateway is the discriminator across the whole codebase —
+  // payment_method exists but is never written and is empty on every row.
   const paidViaTlync  = payment?.payment_gateway === 'tlync';
-  // A wallet payment has no TRY and no LYD figure — it was settled in USD from
-  // a balance, so the charged block below shows the USD total instead of a
-  // currency that never moved.
   const paidViaWallet = payment?.payment_gateway === 'wallet';
+
+  // ⚠️ A WALLET PAYMENT'S amount_try IS A PLACEHOLDER, NOT A LIRA FIGURE.
+  // The function writes amount_try = amount_usd and fx_rate_used = 1 to satisfy
+  // columns the booking path requires; the real accounting entry lives in
+  // ledger_entries. So a wallet row carries a DOLLAR number in a column every
+  // other reader formats as lira — render it and a guest who paid $1.00 is
+  // shown ₺1.00. It is neutralised here, at the read, rather than guarded at
+  // each of the three places that format it.
+  const walletPaidUsd = paidViaWallet
+    ? num(payment?.amount_usd) ?? num(booking.total_amount_usd)
+    : null;
   const paidLyd = paidViaTlync
     ? num(payment?.amount_lyd) ??
       parseAmountNote(payment?.response_message as string | null)?.lyd ??
@@ -155,7 +165,10 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // figure on the attempt that actually settled — a refund must replay that
   // exact number, so the attempt wins once one exists.
   const lockedTry  = num(booking.amount_charged_try);
-  const amountTry  = num(payment?.amount_try) ?? lockedTry;
+  // null on a wallet payment, deliberately — see walletPaidUsd above. There is
+  // no lira figure for this booking and inventing one from a placeholder would
+  // be worse than showing nothing.
+  const amountTry  = paidViaWallet ? null : num(payment?.amount_try) ?? lockedTry;
 
   return (
     <div className="min-h-screen bg-paper">
@@ -192,13 +205,17 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                 A guest who paid in dinar must never be shown a lira figure —
                 the lira amount is the booking's internal reference, not
                 anything that left their account. */}
-            {paidViaWallet && totalUsd !== null ? (
+            {walletPaidUsd !== null ? (
               <div className="border border-rule rounded-[14px] p-5 mb-4">
                 <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3">
                   {t('chargedLabel')}
                 </p>
+                {/* The payment row's own amount_usd — what was actually taken
+                    from the balance — not the booking total it was derived
+                    from. On this path they agree; if they ever diverge, the
+                    figure the guest was charged is the true one. */}
                 <p className="text-[1.5rem] font-semibold text-ink tabular-nums leading-none">
-                  {usd.format(totalUsd)}
+                  {usd.format(walletPaidUsd)}
                 </p>
                 {/* Where it came from matters here in a way it does not for a
                     card: a guest looking for this charge on a bank statement
@@ -234,11 +251,21 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                   <p className="text-[15px] font-medium text-ink mb-1">
                     {t('refundTitle')}
                   </p>
-                  {/* TLYNC has no refund API: a dinar refund is issued by hand
-                      through the same Libyan channel. Promising a card refund
-                      in 3–10 days would be a promise we cannot keep. */}
+                  {/* Each path gets the sentence that is true for it. TLYNC has
+                      no refund API, so a dinar refund is issued by hand through
+                      the same Libyan channel. A wallet payment touched no card,
+                      no lira and no bank statement — the default copy promises
+                      all three, and would be false in every clause.
+
+                      ⚠️ THE WALLET SENTENCE STATES NO TIMEFRAME, on purpose.
+                      "Returns to your balance" is the only outcome that makes
+                      sense, but the owner-reject path's wallet behaviour is not
+                      something this codebase can see. A number of days here
+                      would be a promise made on an assumption. */}
                   <p className="text-[13px] text-ink-soft leading-relaxed">
-                    {paidViaTlync ? t('refundBodyLyd') : t('refundBody')}
+                    {paidViaWallet ? t('refundBodyWallet')
+                      : paidViaTlync ? t('refundBodyLyd')
+                      : t('refundBody')}
                   </p>
                 </div>
               </div>
