@@ -11,6 +11,11 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+# `vercel env pull <name>` writes wherever it is told, and a name like
+# preview.env matches none of the patterns above. Catch every .env file,
+# whatever it is called.
+*.env
+.env
 
 # Misc
 .DS_Store
