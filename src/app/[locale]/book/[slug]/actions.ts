@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createSessionClient } from '@/lib/supabase/server';
 import { setBookingCookie } from '@/lib/booking/cookie';
 import {
   DOCUMENT_VERSION,
@@ -82,9 +83,37 @@ function isRealDate(value: string): boolean {
 export async function createHoldAction(data: HoldFormData): Promise<HoldResult> {
   const firstName   = data.firstName.trim();
   const lastName    = data.lastName.trim();
-  const email       = data.email.trim().toLowerCase();
   const phone       = data.phone.trim();
   const nationality = data.nationality.trim();
+
+  // ── The email is the ACCOUNT's when there is one ─────────────────────────
+  // A signed-in guest books as themselves, full stop. The form field is a
+  // convenience for anonymous booking (which stays supported — CLAUDE.md §4);
+  // it is not a way for a signed-in guest to file a booking under someone
+  // else's address, deliberately or by leaving a stale value in the box.
+  //
+  // This also feeds the wallet: /booking/[reference] offers "pay from balance"
+  // only when the session's email matches the booking customer's, so an email
+  // that disagrees with the session makes a guest's own wallet invisible to
+  // them on their own booking.
+  //
+  // auth.users.email, not profiles.email: it is the address the session is
+  // actually authenticated as, and it is the exact value the wallet gate
+  // compares against. profiles.email is a copy that could drift.
+  const session = await createSessionClient();
+  const { data: { user } } = await session.auth.getUser();
+
+  const sessionEmail = user?.email?.trim().toLowerCase() ?? null;
+  const email = sessionEmail ?? data.email.trim().toLowerCase();
+
+  if (sessionEmail && data.email.trim().toLowerCase() !== sessionEmail) {
+    // Not an error — the form may simply have been left blank or prefilled
+    // from a previous guest. Logged because a mismatch is the single symptom
+    // of "my wallet option never appears".
+    console.warn('[createHold] form email ignored in favour of the session', {
+      profileId: user?.id,
+    });
+  }
 
   const fields: HoldFieldError[] = [];
   if (!firstName)              fields.push('firstName');

@@ -608,6 +608,7 @@
       "firstName": "First name",
       "lastName": "Last name",
       "email": "Email",
+      "emailFromAccount": "Taken from your account. Sign out to book under a different address.",
       "phone": "Phone",
       "phoneHint": "Include your country code, starting with +",
       "nationality": "Nationality",

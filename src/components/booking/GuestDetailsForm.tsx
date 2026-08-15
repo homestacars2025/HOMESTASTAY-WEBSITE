@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { AlertCircle } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
@@ -63,6 +64,15 @@ export function GuestDetailsForm({
   const [guests,      setGuests]      = useState(initialGuests);
   const [accepted,    setAccepted]    = useState(false);
 
+  // A signed-in guest books as themselves: the Server Action takes the email
+  // from the session and ignores this field entirely. Showing an editable box
+  // whose value is silently discarded is how a guest ends up typing one
+  // address and getting a booking under another — so when there is a session,
+  // the field shows the account's address and is read-only.
+  const authUser = useAuthUser();
+  const sessionEmail = authUser?.email ?? null;
+  const emailValue = sessionEmail ?? email;
+
   const [fieldErrors, setFieldErrors] = useState<Set<HoldFieldError>>(new Set());
   const [pageError,   setPageError]   = useState<string | null>(null);
   const [ownHold,     setOwnHold]     = useState<{ reference: string } | null>(null);
@@ -87,7 +97,10 @@ export function GuestDetailsForm({
     const local = new Set<HoldFieldError>();
     if (!firstName.trim())        local.add('firstName');
     if (!lastName.trim())         local.add('lastName');
-    if (!EMAIL_RE.test(email.trim())) local.add('email');
+    // emailValue, not email: for a signed-in guest the typed state is empty by
+    // design and the account's address is what will be used. Validating the raw
+    // state would fail every signed-in booking on a field they cannot edit.
+    if (!EMAIL_RE.test(emailValue.trim())) local.add('email');
     if (!E164_RE.test(phone.trim())) local.add('phone');
     if (guests < 1)               local.add('guests');
     if (!accepted)                local.add('documents');
@@ -98,7 +111,7 @@ export function GuestDetailsForm({
     startTransition(async () => {
       const result = await createHoldAction({
         unitId, checkIn, checkOut, guests,
-        firstName, lastName, email, phone, nationality,
+        firstName, lastName, email: emailValue, phone, nationality,
         documentsAccepted: accepted,
       });
 
@@ -181,9 +194,18 @@ export function GuestDetailsForm({
         <input
           id="email" name="email" type="email" inputMode="email" autoComplete="email"
           dir="ltr"
-          value={email} onChange={(e) => setEmail(e.target.value)}
-          aria-invalid={invalid('email')} className={inputClass('email')}
+          value={emailValue}
+          onChange={(e) => setEmail(e.target.value)}
+          readOnly={sessionEmail !== null}
+          aria-readonly={sessionEmail !== null}
+          aria-invalid={invalid('email')}
+          className={`${inputClass('email')}${sessionEmail ? ' bg-paper-warm text-ink-soft' : ''}`}
         />
+        {sessionEmail && (
+          <p className="mt-2 text-xs text-mute leading-relaxed">
+            {t('fields.emailFromAccount')}
+          </p>
+        )}
         {invalid('email') && <FieldNote>{t('errors.email')}</FieldNote>}
       </div>
 

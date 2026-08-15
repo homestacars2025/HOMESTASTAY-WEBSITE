@@ -608,6 +608,7 @@
       "firstName": "Ad",
       "lastName": "Soyad",
       "email": "E-posta",
+      "emailFromAccount": "Hesabınızdan alındı. Farklı bir adresle rezervasyon için çıkış yapın.",
       "phone": "Telefon",
       "phoneHint": "Ülke kodunu + ile birlikte girin",
       "nationality": "Uyruk",
