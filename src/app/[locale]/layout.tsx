@@ -41,6 +41,11 @@ export const metadata: Metadata = {
   title: 'Homesta Stay',
   description: 'Short-term and touristic rentals in Istanbul',
   manifest: '/manifest.webmanifest',
+  // Google Search Console ownership proof. Lives in the root locale layout so
+  // the tag is present on every route, not just the homepage.
+  verification: {
+    google: 'BiHtZhbTpa2xyrYRxaIDmwPXAqC_T8Isvs473Lb2q_Q',
+  },
 };
 
 type Props = {
