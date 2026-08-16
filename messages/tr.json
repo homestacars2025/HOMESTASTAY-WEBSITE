@@ -58,7 +58,13 @@
     "unsave": "Kaydedilenlerden kaldır"
   },
   "pages": {
+    "home": {
+      "metaTitle": "Homesta Stay — Türkiye'de Tatil Kiralamaları: Villa, Daire ve Bungalov",
+      "metaDescription": "Türkiye genelinde doğrulanmış villa, daire ve bungalovları rezerve edin — İstanbul, Antalya, Sapanca, Trabzon, Fethiye ve daha fazlası. Şeffaf USD fiyatlandırma, anında onay, Arapça, İngilizce, Türkçe ve Rusça destek."
+    },
     "stays": {
+      "metaTitle": "Türkiye'deki Tüm Konaklamalar — Villa, Daire ve Bungalov | Homesta Stay",
+      "metaDescription": "Homesta Stay'deki tüm doğrulanmış konaklamaları inceleyin. Şehre, tarihe, misafir sayısına ve mülk tipine göre filtreleyin. Şeffaf USD fiyatlar, gizli ücret yok, anında onay.",
       "title": "Konaklamalar",
       "comingSoon": "Tam listeleme görünümünü hazırlıyoruz. Yakında burada.",
       "noResults": "Bu filtreye uyan konaklama yok.",
@@ -80,7 +86,25 @@
         "status": "Sayfa {current} / {total}"
       }
     },
+    "destinations": {
+      "metaTitleFallback": "{city} konaklamaları — Homesta Stay",
+      "metaDescriptionFallback": "{city} bölgesinde doğrulanmış villa, daire ve bungalovları inceleyin. Şeffaf USD fiyatlandırma, anında onay ve çok dilli destek.",
+      "headingFallback": "{city} tatil kiralamaları",
+      "breadcrumbLabel": "Sayfa yolu",
+      "breadcrumbHome": "Ana sayfa",
+      "breadcrumbStays": "Konaklamalar",
+      "unitsAvailable": "{count, plural, other {# konaklama mevcut}}",
+      "fromPerNight": "gecelik <price>{amount}</price> başlangıç",
+      "faqHeading": "{city} hakkında sıkça sorulan sorular",
+      "unitsHeading": "{city} konaklamaları",
+      "viewAll": "{city} bölgesindeki {count} konaklamanın tümünü gör",
+      "noUnits": "Şu anda {city} bölgesinde müsait konaklama bulunmuyor. Düzenli olarak yeni mülkler ekliyoruz — kısa süre sonra tekrar bakın.",
+      "exploreHeading": "Destinasyonları keşfet",
+      "exploreAll": "Tüm destinasyonlar"
+    },
     "blog": {
+      "metaTitle": "Blog — Türkiye Seyahat Rehberleri | Homesta Stay",
+      "metaDescription": "Homesta Stay ekibinden Türkiye'de seyahat ve konaklama için rehberler, semt analizleri ve pratik ipuçları.",
       "title": "Blog",
       "comingSoon": "Hikayeler, rehberler ve yerel ipuçları — yakında."
     },
@@ -136,6 +160,8 @@
       "companyEmailLabel": "E-posta"
     },
     "host": {
+      "metaTitle": "Mülkünüzü Listeleyin — Homesta Stay ile Kazanın",
+      "metaDescription": "Dairenizi, villanızı veya bungalovunuzu Homesta Stay'de listeleyin. Listeleme ücreti yok, Arapça, Türkçe, İngilizce ve Rusça kitlelere çok dilli erişim ve misafirlere hızlı yanıt veren gerçek bir ekip.",
       "title": "Mülkünüzü listeleyin",
       "comingSoon": "Mülkünüzü listelemek için bizimle iş birliği yapın. Ev sahibi kaydı yakında açılıyor.",
       "headline": "Mülkünüzü Homesta Stay ile listeleyin",

@@ -58,7 +58,13 @@
     "unsave": "Remove from saved"
   },
   "pages": {
+    "home": {
+      "metaTitle": "Homesta Stay — Holiday Rentals in Türkiye: Villas, Apartments & Cabins",
+      "metaDescription": "Book verified villas, apartments and cabins across Türkiye — Istanbul, Antalya, Sapanca, Trabzon, Fethiye and more. Transparent USD pricing, instant confirmation, support in Arabic, English, Turkish and Russian."
+    },
     "stays": {
+      "metaTitle": "All Stays in Türkiye — Villas, Apartments & Cabins | Homesta Stay",
+      "metaDescription": "Browse every verified stay on Homesta Stay. Filter by city, dates, guests and property type. Clear USD pricing, no hidden fees, instant confirmation.",
       "title": "Stays",
       "comingSoon": "We're putting together the full listing view. Check back soon.",
       "noResults": "No stays match this filter.",
@@ -80,7 +86,25 @@
         "status": "Page {current} of {total}"
       }
     },
+    "destinations": {
+      "metaTitleFallback": "Stays in {city} — Homesta Stay",
+      "metaDescriptionFallback": "Browse verified villas, apartments and cabins to rent in {city}, Türkiye. Clear USD pricing, instant confirmation and multilingual support.",
+      "headingFallback": "Holiday rentals in {city}",
+      "breadcrumbLabel": "Breadcrumb",
+      "breadcrumbHome": "Home",
+      "breadcrumbStays": "Stays",
+      "unitsAvailable": "{count, plural, =1 {# stay available} other {# stays available}}",
+      "fromPerNight": "from <price>{amount}</price> / night",
+      "faqHeading": "Frequently asked questions about {city}",
+      "unitsHeading": "Stays in {city}",
+      "viewAll": "View all {count} stays in {city}",
+      "noUnits": "There are no stays available in {city} at the moment. New properties are added regularly — check back soon.",
+      "exploreHeading": "Explore destinations",
+      "exploreAll": "All destinations"
+    },
     "blog": {
+      "metaTitle": "Blog — Travel Guides for Türkiye | Homesta Stay",
+      "metaDescription": "Guides, neighbourhood breakdowns and practical tips for travelling and staying in Türkiye, from the Homesta Stay team.",
       "title": "Blog",
       "comingSoon": "Stories, guides, and local tips — coming soon."
     },
@@ -136,6 +160,8 @@
       "companyEmailLabel": "Email"
     },
     "host": {
+      "metaTitle": "List Your Property — Earn With Homesta Stay",
+      "metaDescription": "List your apartment, villa or cabin with Homesta Stay. No listing fee, multilingual reach across Arabic, Turkish, English and Russian audiences, and a real team answering guests fast.",
       "title": "List your property",
       "comingSoon": "Partner with us to list your property. Host onboarding is coming soon.",
       "headline": "List your property with Homesta Stay",

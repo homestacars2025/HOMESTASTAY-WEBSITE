@@ -6,8 +6,11 @@ import { Link } from '@/i18n/navigation';
 import { cityCardHover, cardImageHover } from '@/lib/motion';
 import type { CityData } from '@/lib/data/cities';
 
+/** A city plus the destination slug resolved server-side in CitiesRow. */
+export type LinkedCity = CityData & { slug: string };
+
 interface CitiesScrollerProps {
-  cities: CityData[];
+  cities: LinkedCity[];
 }
 
 // Renders the city card scroll strip with hover lift + image zoom.
@@ -28,7 +31,10 @@ export function CitiesScroller({ cities }: CitiesScrollerProps) {
           className="shrink-0 w-36 md:w-44"
           style={{ scrollSnapAlign: 'start' }}
         >
-          <Link href={`/stays?city=${city.name.toLowerCase()}` as '/stays'} className="block">
+          {/* Was /stays?city=… — a filtered view of the index, which
+              canonicalises straight back to /stays and so could never be
+              indexed as a city page. Now points at the real destination page. */}
+          <Link href={`/destinations/${city.slug}`} className="block">
             <div className="relative w-full aspect-[3/4] rounded-[14px] overflow-hidden">
               {city.imageUrl ? (
                 <motion.div variants={cardImageHover} className="absolute inset-0">
