@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
   // explicitly or they are absent in the deployed function and the render fails.
   outputFileTracingIncludes: {
     '/api/payment/callback': ['./src/lib/pdf/fonts/*.ttf'],
+    // Same reason, same fonts: the default social card renders the wordmark in
+    // Geist via ImageResponse, reading the TTFs with a runtime path.join that
+    // the tracer cannot follow. Without this the deployed route throws and every
+    // og:image on the brand pages 500s.
+    '/opengraph-image/route': ['./src/lib/pdf/fonts/*.ttf'],
   },
   images: {
     // Route optimization through Supabase Storage's render/image endpoint

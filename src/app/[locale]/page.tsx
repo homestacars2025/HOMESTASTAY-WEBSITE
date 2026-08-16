@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { canonical, hreflangAlternates } from '@/lib/config/urls';
+import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/config/seo';
 import { Header } from '@/components/home/Header';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
 import { CategoryChips } from '@/components/home/CategoryChips';
@@ -14,6 +17,57 @@ import { getRandomFeaturedUnits } from '@/lib/queries/stays';
 // Random real listings are picked per request — keep it dynamic so the rails
 // refresh for each visitor instead of freezing at build time.
 export const dynamic = 'force-dynamic';
+
+/**
+ * The homepage had NO generateMetadata at all, so all four locales inherited
+ * the layout's hardcoded English `title: 'Homesta Stay'` and its one-line
+ * description. Verified against production: /ar served
+ * <title>Homesta Stay</title>. The single most important URL on the site was
+ * competing for Arabic, Turkish and Russian queries with an English title and
+ * no canonical.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'pages.home' });
+
+  const canonicalUrl = canonical(locale, '');
+  const title = t('metaTitle');
+  const description = t('metaDescription');
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+      // x-default goes to English: it is the routing default and the language a
+      // visitor with an unmatched Accept-Language already lands in.
+      languages: hreflangAlternates('', 'en'),
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: 'website',
+      siteName: SITE_NAME,
+      locale: ogLocale(locale),
+      alternateLocale: ogAlternateLocales(locale),
+      images: defaultOgImages(),
+    },
+    // The generated brand card from app/opengraph-image.tsx — see the note on
+    // defaultOgImages for why it is named here rather than left to Next's file
+    // convention. Unit and destination pages set a real photograph instead.
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: defaultOgImages().map((i) => i.url),
+    },
+  };
+}
 
 export default async function HomePage() {
   const [tHero, tSections, locale] = await Promise.all([

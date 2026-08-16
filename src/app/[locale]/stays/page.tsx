@@ -1,11 +1,15 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { canonical, hreflangAlternates } from '@/lib/config/urls';
+import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/config/seo';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { StaysGallery } from '@/components/stays/StaysGallery';
 import { StaysSkeleton } from '@/components/stays/StaysSkeleton';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
 import { CategoryChips } from '@/components/home/CategoryChips';
+import { DestinationsRail } from '@/components/destinations/DestinationsRail';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnits, LISTING_PAGE_SIZE, type StaysFilters } from '@/lib/queries/stays';
 import { parseStaysSearchParams, buildStaysQuery } from '@/lib/stays/search-params';
@@ -15,15 +19,57 @@ export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+/**
+ * THE CANONICAL BUG THIS FIXES
+ *   The canonical was the bare string '/stays'. Next resolves a relative
+ *   canonical against metadataBase, producing
+ *   https://www.homestastay.com/stays — a URL that does not serve this page.
+ *   localePrefix is 'always', so /stays 307-redirects to /en/stays. Every
+ *   locale of this page was therefore declaring a REDIRECT as its canonical,
+ *   and the Arabic, Turkish and Russian listings were all pointing at the same
+ *   English-redirecting URL — telling Google those three pages are duplicates
+ *   of an English one. canonical() from lib/config/urls builds the prefixed,
+ *   absolute form and cannot express the broken one.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'pages.stays' });
+
+  const canonicalUrl = canonical(locale, '/stays');
+  const title = t('metaTitle');
+  const description = t('metaDescription');
+
   return {
-    title: t('title'),
-    // A filtered listing is a slice of the index, not its own page. Letting each
-    // city/date/guest permutation be indexed would spray near-duplicates across
-    // the crawl budget, so point them all at the canonical /stays.
-    alternates: { canonical: '/stays' },
+    title,
+    description,
+    alternates: {
+      // A filtered listing is a slice of the index, not its own page. Letting
+      // each city/date/guest permutation be indexed would spray near-duplicates
+      // across the crawl budget, so every permutation still points here — but
+      // at THIS locale's index, not at a redirect.
+      canonical: canonicalUrl,
+      languages: hreflangAlternates('/stays', 'en'),
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: 'website',
+      siteName: SITE_NAME,
+      locale: ogLocale(locale),
+      alternateLocale: ogAlternateLocales(locale),
+      images: defaultOgImages(),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: defaultOgImages().map((i) => i.url),
+    },
   };
 }
 
@@ -76,8 +122,15 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
 
         {/* The chips live here as well as on the homepage: this is where a
             guest can see what the filter did, and switch without going back. */}
-        <div className="mb-10">
+        <div className="mb-8">
           <CategoryChips filters={filters} />
+        </div>
+
+        {/* Crawlable links into the city landing pages. Without a link path
+            from an indexed page, /destinations/* exists only in the sitemap —
+            which Google treats as a hint, not an endorsement. */}
+        <div className="mb-10">
+          <DestinationsRail locale={locale} />
         </div>
 
         {/* The results stream in their own boundary so the header + search bar

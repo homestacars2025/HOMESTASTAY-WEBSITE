@@ -1,14 +1,49 @@
+import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Tag, Users, Zap } from 'lucide-react';
+import { canonical, hreflangAlternates } from '@/lib/config/urls';
+import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/config/seo';
 import { Header } from '@/components/home/Header';
 import { FadeUp } from '@/components/motion/FadeUp';
 import { HostForm } from '@/components/host/HostForm';
 import { getHostGeoData } from '@/lib/data/cities';
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+// Listed in sitemap.xml but had no canonical and no hreflang. This is also the
+// page owners search for ("list my property Istanbul"), so it is worth ranking
+// on its own rather than as an untitled sibling of the homepage.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'pages.host' });
-  return { title: t('title') };
+
+  const canonicalUrl = canonical(locale, '/host');
+  const title = t('metaTitle');
+  const description = t('metaDescription');
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: hreflangAlternates('/host', 'en'),
+    },
+    openGraph: {
+      title, description, url: canonicalUrl, type: 'website',
+      siteName: SITE_NAME,
+      locale: ogLocale(locale),
+      alternateLocale: ogAlternateLocales(locale),
+      images: defaultOgImages(),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: defaultOgImages().map((i) => i.url),
+    },
+  };
 }
 
 const TRUST_POINTS = [

@@ -1,11 +1,45 @@
+import type { Metadata } from 'next';
 import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { Header } from '@/components/home/Header';
+import { canonical, hreflangAlternates } from '@/lib/config/urls';
+import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/config/seo';
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+// Listed in sitemap.xml but had no canonical and no hreflang — the same defect
+// as the homepage, on a page the sitemap is actively pushing at Google.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'pages.blog' });
-  return { title: t('title') };
+
+  const canonicalUrl = canonical(locale, '/blog');
+  const title = t('metaTitle');
+  const description = t('metaDescription');
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: hreflangAlternates('/blog', 'en'),
+    },
+    openGraph: {
+      title, description, url: canonicalUrl, type: 'website',
+      siteName: SITE_NAME,
+      locale: ogLocale(locale),
+      alternateLocale: ogAlternateLocales(locale),
+      images: defaultOgImages(),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: defaultOgImages().map((i) => i.url),
+    },
+  };
 }
 
 export default function BlogPage() {
