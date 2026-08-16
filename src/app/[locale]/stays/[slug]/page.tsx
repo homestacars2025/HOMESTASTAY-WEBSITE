@@ -1,5 +1,13 @@
+import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { canonical, hreflangAlternates } from '@/lib/config/urls';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { graph, vacationRentalSchema, breadcrumbSchema } from '@/lib/seo/schema';
+import {
+  SITE_NAME, ogLocale, ogAlternateLocales, ogImage,
+  OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT,
+} from '@/lib/config/seo';
 import { ChevronLeft, Languages } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
@@ -20,19 +28,86 @@ import type { UnitTypeEnum } from '@/lib/types/unit';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Unit pages carried a title and a description and nothing else — no canonical,
+ * no hreflang, no social card. They are 159 of the ~180 indexable URLs on the
+ * site, so that gap was most of the site's SEO surface.
+ *
+ * The full four-locale hreflang set is correct here (unlike on a destination
+ * page): a unit page renders in every locale, with unit_translations resolving
+ * title and description per language and falling back to the Turkish source.
+ * That matches what sitemap.xml already advertises for these URLs, so the two
+ * signals agree.
+ */
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string; slug: string }>;
-}) {
+}): Promise<Metadata> {
   const { locale, slug } = await params;
   const unit = await getPublicUnitBySlug(slug, locale);
+
+  // A missing unit renders notFound() below. Emitting no canonical here keeps
+  // us from declaring a 404 page canonical — Next serves the 404 with its own
+  // noindex regardless, but a self-canonical on it is still a wrong signal.
   if (!unit) return { title: 'Not found — Homesta Stay' };
+
   const t = await getTranslations({ locale, namespace: 'unit' });
+
+  const path = `/stays/${slug}`;
+  const canonicalUrl = canonical(locale, path);
+  const title = `${unit.ad_title ?? unit.unit_name} — Homesta Stay`;
+
+  // ad_description is the full listing copy and runs to several paragraphs.
+  // Search engines truncate a meta description near 160 characters, so it is
+  // clipped on a word boundary rather than mid-syllable.
+  const description = truncate(unit.ad_description ?? t('notFoundSub'), 160);
+
+  // resolveMedia() already falls back to properties.cover_photo_url when a unit
+  // has no media rows, so this is the same image the listing card shows.
+  const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
+  const image = ogImage(cover?.public_url);
+
   return {
-    title: `${unit.ad_title ?? unit.unit_name} — Homesta Stay`,
-    description: unit.ad_description ?? t('notFoundSub'),
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: hreflangAlternates(path, 'en'),
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      // 'website', not 'product': og:type=product commits to price/availability
+      // properties that a nightly rate resolved per stay length cannot honestly
+      // fill. The structured pricing goes in JSON-LD instead (phase 4).
+      type: 'website',
+      siteName: SITE_NAME,
+      locale: ogLocale(locale),
+      alternateLocale: ogAlternateLocales(locale),
+      ...(image
+        ? { images: [{ url: image, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, alt: title }] }
+        : {}),
+    },
+    twitter: {
+      // A listing is a photograph first. The large card is the whole point here,
+      // and unlike the homepage this page always has a real image to put in it.
+      card: image ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
   };
+}
+
+/** Clip to `max` characters on a word boundary, with an ellipsis. */
+function truncate(text: string, max: number): string {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
 export default async function UnitDetailPage({
@@ -43,7 +118,13 @@ export default async function UnitDetailPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale, slug } = await params;
-  const t = await getTranslations({ locale, namespace: 'unit' });
+  const [t, tDest] = await Promise.all([
+    getTranslations({ locale, namespace: 'unit' }),
+    // Breadcrumb labels ("Home", "Stays") already exist in the destinations
+    // namespace, translated in all four locales. Duplicating them would be two
+    // sets of strings to keep in step.
+    getTranslations({ locale, namespace: 'pages.destinations' }),
+  ]);
 
   // Applies the same strict public-visibility filter as the index; a link to a
   // non-public or non-existent unit resolves to a real 404 (correct for SEO).
@@ -82,9 +163,50 @@ export default async function UnitDetailPage({
     unit.city,
   ].filter(Boolean);
 
+  // ── Structured data ───────────────────────────────────────────────────────
+  // The amenity labels are the SAME object UnitAmenitiesSection renders below,
+  // so the amenityFeature list in the markup can never name something the page
+  // does not show — which is the rule Google enforces on structured data.
+  const amenityLabels = {
+    tv:               t('amenities.tv'),
+    wifi:             t('amenities.wifi'),
+    air_conditioning: t('amenities.air_conditioning'),
+    heating:          t('amenities.heating'),
+    kitchen:          t('amenities.kitchen'),
+    dishwasher:       t('amenities.dishwasher'),
+    washing_machine:  t('amenities.washing_machine'),
+    hot_water:        t('amenities.hot_water'),
+    hair_dryer:       t('amenities.hair_dryer'),
+    iron:             t('amenities.iron'),
+    extra_bed:        t('amenities.extra_bed'),
+    parking:          t('amenities.parking'),
+    elevator:         t('amenities.elevator'),
+    pool:             t('amenities.pool'),
+    gym:              t('amenities.gym'),
+    self_check_in:    t('amenities.self_check_in'),
+  };
+
+  const unitUrl = canonical(locale, `/stays/${slug}`);
+
+  const jsonLd = graph(
+    vacationRentalSchema({
+      unit,
+      url: unitUrl,
+      locale,
+      amenityLabels,
+      unitTypeLabel: unitTypeLabel[unit.unit_type],
+    }),
+    breadcrumbSchema([
+      { name: tDest('breadcrumbHome'), url: canonical(locale, '') },
+      { name: tDest('breadcrumbStays'), url: canonical(locale, '/stays') },
+      { name: title, url: unitUrl },
+    ]),
+  );
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-paper">
+      <JsonLd data={jsonLd} />
       <Header />
 
       {/* pb-32 on mobile leaves room above the fixed bottom booking bar */}

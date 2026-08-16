@@ -10,6 +10,8 @@ import { AuthGateProvider } from '@/contexts/AuthGateContext';
 import { MotionProvider } from '@/components/layout/MotionProvider';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { SiteFooter } from '@/components/home/SiteFooter';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { graph, organizationSchema, websiteSchema } from '@/lib/seo/schema';
 import { MetaPixel } from '@/components/analytics/MetaPixel';
 import { Clarity } from '@/components/analytics/Clarity';
 import '@/styles/globals.css';
@@ -64,6 +66,17 @@ export default async function LocaleLayout({ children, params }: Props) {
       className={`${GeistSans.variable} ${GeistMono.variable}${isArabic ? ` ${tajawal.variable} ${cairo.variable}` : ''}`}
     >
       <body>
+        {/* Organization + WebSite, on every page for the same reason the pixel
+            is here: they describe the SITE, not the route. Emitting them once
+            from the shared layout means a crawler landing on any URL — a unit
+            page reached from a search, a city page from an AI answer — can
+            resolve the publisher entity without a second fetch.
+
+            Page-level nodes (VacationRental, FAQPage, BreadcrumbList) reference
+            this Organization by its @id rather than restating it, which is what
+            lets Google merge them into one entity across the site. */}
+        <JsonLd data={graph(organizationSchema(locale), websiteSchema(locale))} />
+
         {/* Mounted here and ONLY here: the root layout is the one component
             every route shares, so the pixel loads once per session rather than
             once per page. */}
