@@ -8,9 +8,15 @@ import { useAuthGate } from '@/contexts/AuthGateContext';
 
 interface SaveButtonProps {
   unitId: string;
+  /**
+   * Whether the button positions itself over the photo (the listing-card case)
+   * or lays out in normal flow. False when a parent groups it with the share
+   * button in one row — two absolutely positioned siblings would stack.
+   */
+  floating?: boolean;
 }
 
-export function SaveButton({ unitId }: SaveButtonProps) {
+export function SaveButton({ unitId, floating = true }: SaveButtonProps) {
   const [saved, setSaved] = useState(false);
   const t              = useTranslations('card');
   const user           = useAuthUser();
@@ -47,7 +53,7 @@ export function SaveButton({ unitId }: SaveButtonProps) {
     <button
       onClick={handleClick}
       aria-label={saved ? t('unsave') : t('save')}
-      className="absolute top-3 end-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-transform duration-[240ms] hover:scale-110 active:scale-95"
+      className={`${floating ? 'absolute top-3 end-3 ' : ''}w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-transform duration-[240ms] hover:scale-110 active:scale-95`}
     >
       <Heart
         className={`w-4 h-4 transition-colors duration-[240ms] ${

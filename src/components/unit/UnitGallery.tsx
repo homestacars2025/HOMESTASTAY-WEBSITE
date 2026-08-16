@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Images } from 'lucide-react';
 import { SaveButton } from '@/components/home/SaveButton';
+import { ShareButton } from '@/components/unit/ShareButton';
 import { SmartImage } from '@/components/media/SmartImage';
 import { Lightbox } from '@/components/unit/Lightbox';
 import type { UnitMediaItem } from '@/lib/types/unit';
@@ -12,9 +13,13 @@ interface UnitGalleryProps {
   media: UnitMediaItem[];
   title: string;
   unitId: string;
+  /** Absolute canonical URL of this listing, for the share targets. */
+  shareUrl: string;
+  /** City · price · type — the same line the social card carries. */
+  shareText: string;
 }
 
-export function UnitGallery({ media, title, unitId }: UnitGalleryProps) {
+export function UnitGallery({ media, title, unitId, shareUrl, shareText }: UnitGalleryProps) {
   const t = useTranslations('unit');
 
   // Cover first, then sort_order ascending — mirrors DB sort
@@ -78,13 +83,19 @@ export function UnitGallery({ media, title, unitId }: UnitGalleryProps) {
 
         {/* Photo counter */}
         {hasPhotos && (
-          <div className="absolute top-3 end-3 bg-black/50 backdrop-blur-sm text-white font-mono text-[11px] px-2.5 py-1 rounded-full pointer-events-none select-none">
+          // Start-anchored: the end corner now holds two buttons, and the
+          // counter used to sit underneath the save heart.
+          <div className="absolute top-3 start-3 bg-black/50 backdrop-blur-sm text-white font-mono text-[11px] px-2.5 py-1 rounded-full pointer-events-none select-none">
             {activeIdx + 1} / {sorted.length}
           </div>
         )}
 
-        {/* Save button — SaveButton has its own absolute top-3 end-3 positioning */}
-        <SaveButton unitId={unitId} />
+        {/* Share + save, grouped so the two sit side by side over the photo.
+            The counter above is start-anchored on mobile to stay clear of them. */}
+        <div className="absolute top-3 end-3 flex items-center gap-2">
+          <ShareButton url={shareUrl} title={title} text={shareText} />
+          <SaveButton unitId={unitId} floating={false} />
+        </div>
 
         {/* Dot indicators */}
         {sorted.length > 1 && (
@@ -123,9 +134,12 @@ export function UnitGallery({ media, title, unitId }: UnitGalleryProps) {
                 priority
               />
             </button>
-            {/* Save button over cover — sibling of the image button, not nested */}
-            <div className="absolute top-4 end-4">
-              <SaveButton unitId={unitId} />
+            {/* Share + save over the cover — siblings of the image button, not
+                nested inside it (a button inside a button is invalid markup and
+                swallows the inner click). */}
+            <div className="absolute top-4 end-4 flex items-center gap-2">
+              <ShareButton url={shareUrl} title={title} text={shareText} />
+              <SaveButton unitId={unitId} floating={false} />
             </div>
           </div>
         )}

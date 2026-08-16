@@ -410,6 +410,20 @@
     },
     "social": {
       "perNight": "{price}/ليلة"
+    },
+    "share": {
+      "action": "مشاركة",
+      "title": "شارك هذا المكان",
+      "close": "إغلاق",
+      "copyLink": "نسخ الرابط",
+      "copied": "تم نسخ الرابط ✓",
+      "copyManual": "انسخ هذا الرابط:",
+      "whatsapp": "واتساب",
+      "messenger": "ماسنجر",
+      "facebook": "فيسبوك",
+      "twitter": "إكس (تويتر)",
+      "telegram": "تيليجرام",
+      "email": "البريد الإلكتروني"
     }
   },
   "auth": {

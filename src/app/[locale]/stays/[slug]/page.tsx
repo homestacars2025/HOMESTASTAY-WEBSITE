@@ -220,6 +220,16 @@ export default async function UnitDetailPage({
 
   const unitUrl = canonical(locale, `/stays/${slug}`);
 
+  // The share sheet quotes the listing with the SAME line the social card and
+  // og:description carry — one guest forwarding the link in WhatsApp and
+  // another seeing the auto-preview should read the same sentence.
+  const shareNightly = formatCardPrice(unit.pricing.nightly_usd);
+  const shareText = socialCardDescription({
+    place: cardPlace(unit.region ?? unit.municipality, unit.city),
+    price: shareNightly ? t('social.perNight', { price: shareNightly }) : null,
+    unitTypeLabel: unitTypeLabel[unit.unit_type],
+  });
+
   const jsonLd = graph(
     vacationRentalSchema({
       unit,
@@ -256,7 +266,13 @@ export default async function UnitDetailPage({
         </nav>
 
         {/* Gallery */}
-        <UnitGallery media={unit.media} title={title} unitId={unit.id} />
+        <UnitGallery
+          media={unit.media}
+          title={title}
+          unitId={unit.id}
+          shareUrl={unitUrl}
+          shareText={shareText}
+        />
 
         {/* 2-column layout: content left + sticky booking card right (desktop) */}
         <div className="mt-8 lg:grid lg:grid-cols-[1fr_360px] lg:gap-16 lg:items-start">

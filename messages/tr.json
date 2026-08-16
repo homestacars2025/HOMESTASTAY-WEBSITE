@@ -410,6 +410,20 @@
     },
     "social": {
       "perNight": "{price}/gece"
+    },
+    "share": {
+      "action": "Paylaş",
+      "title": "Bu konaklamayı paylaş",
+      "close": "Kapat",
+      "copyLink": "Bağlantıyı kopyala",
+      "copied": "Bağlantı kopyalandı ✓",
+      "copyManual": "Bu bağlantıyı kopyalayın:",
+      "whatsapp": "WhatsApp",
+      "messenger": "Messenger",
+      "facebook": "Facebook",
+      "twitter": "X (Twitter)",
+      "telegram": "Telegram",
+      "email": "E-posta"
     }
   },
   "auth": {

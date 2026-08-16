@@ -410,6 +410,20 @@
     },
     "social": {
       "perNight": "{price}/ночь"
+    },
+    "share": {
+      "action": "Поделиться",
+      "title": "Поделиться жильём",
+      "close": "Закрыть",
+      "copyLink": "Скопировать ссылку",
+      "copied": "Ссылка скопирована ✓",
+      "copyManual": "Скопируйте эту ссылку:",
+      "whatsapp": "WhatsApp",
+      "messenger": "Messenger",
+      "facebook": "Facebook",
+      "twitter": "X (Twitter)",
+      "telegram": "Telegram",
+      "email": "Эл. почта"
     }
   },
   "auth": {

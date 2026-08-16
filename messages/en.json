@@ -410,6 +410,20 @@
     },
     "social": {
       "perNight": "{price}/night"
+    },
+    "share": {
+      "action": "Share",
+      "title": "Share this stay",
+      "close": "Close",
+      "copyLink": "Copy link",
+      "copied": "Link copied ✓",
+      "copyManual": "Copy this link:",
+      "whatsapp": "WhatsApp",
+      "messenger": "Messenger",
+      "facebook": "Facebook",
+      "twitter": "X (Twitter)",
+      "telegram": "Telegram",
+      "email": "Email"
     }
   },
   "auth": {

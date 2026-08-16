@@ -232,7 +232,8 @@ export async function GET(
             padding: '16px 30px',
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* next/image does not exist inside an ImageResponse; satori draws
+              its own <img>. */}
           <img
             src={lockup}
             alt="Homesta Stay"
