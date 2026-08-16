@@ -9,7 +9,8 @@ import {
   OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT,
 } from '@/lib/config/seo';
 import {
-  socialCardDescription, formatCardPrice, cardPlace, unitTypeLabelFor, unitOgImageUrl,
+  socialCardDescription, socialCardTitle, formatCardPrice, cardPlace, unitTypeLabelFor,
+  unitOgImageUrl,
 } from '@/lib/seo/social-card';
 import { ChevronLeft, Languages } from 'lucide-react';
 import { Header } from '@/components/home/Header';
@@ -75,13 +76,16 @@ export async function generateMetadata({
   // The price is the same unit.pricing.nightly_usd the booking card renders,
   // formatted the same way, so the WhatsApp preview can never quote a figure
   // the page then contradicts.
+  const nightly = formatCardPrice(unit.pricing.nightly_usd);
   const cardDescription = socialCardDescription({
     place: cardPlace(unit.region ?? unit.municipality, unit.city),
-    price: formatCardPrice(unit.pricing.nightly_usd)
-      ? t('social.fromPerNight', { price: formatCardPrice(unit.pricing.nightly_usd)! })
-      : null,
+    price: nightly ? t('social.perNight', { price: nightly }) : null,
     unitTypeLabel: unitTypeLabelFor(t, unit.unit_type),
   });
+
+  // og:title, unlike <title>, isolates the unit's own name from the brand
+  // suffix so an Arabic name and the Latin "Homesta Stay" cannot interleave.
+  const socialTitle = socialCardTitle(unit.ad_title ?? unit.unit_name ?? '', SITE_NAME);
 
   // The composited card (cover photo + title + place + price + mark), not the
   // bare photograph: see the route for why. It renders a branded card even for
@@ -97,7 +101,7 @@ export async function generateMetadata({
       languages: hreflangAlternates(path, 'en'),
     },
     openGraph: {
-      title,
+      title: socialTitle,
       description: cardDescription || description,
       url: canonicalUrl,
       // 'website', not 'product': og:type=product commits to price/availability
@@ -122,7 +126,7 @@ export async function generateMetadata({
     twitter: {
       // A listing is a photograph first, and the card always has one now.
       card: 'summary_large_image',
-      title,
+      title: socialTitle,
       description: cardDescription || description,
       images: [image],
     },

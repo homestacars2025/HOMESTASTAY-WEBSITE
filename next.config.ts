@@ -70,8 +70,13 @@ const nextConfig: NextConfig = {
     // og:image on the brand pages 500s.
     '/opengraph-image/route': ['./src/lib/pdf/fonts/*.ttf'],
     // And again for the per-unit share card, which composites the title and
-    // price onto the cover photo in the same typeface.
-    '/opengraph-image/stays/[slug]/route': ['./src/lib/pdf/fonts/*.ttf'],
+    // price onto the cover photo in the same typeface — plus the brand lockup
+    // it stamps on top. Nothing under public/ is guaranteed to be readable from
+    // a deployed function's filesystem unless it is traced in by name.
+    '/opengraph-image/stays/[slug]/route': [
+      './src/lib/pdf/fonts/*.ttf',
+      './public/brand/stay-lockup-compact.svg',
+    ],
   },
   images: {
     // Route optimization through Supabase Storage's render/image endpoint

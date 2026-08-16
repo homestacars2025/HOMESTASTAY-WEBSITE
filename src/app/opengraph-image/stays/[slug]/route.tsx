@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
 import { routing, type Locale } from '@/i18n/routing';
 import { getPublicUnitBySlug } from '@/lib/queries/stays';
-import { geistFont } from '@/lib/seo/og-fonts';
+import { geistFont, brandLockupDark, LOCKUP_RATIO } from '@/lib/seo/og-fonts';
 import { OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT, ogImage } from '@/lib/config/seo';
 import { cardPlace, formatCardPrice, unitTypeLabelFor } from '@/lib/seo/social-card';
 
@@ -154,8 +154,9 @@ export async function GET(
     (locale === 'en' ? null : await captionFor(slug, 'en'));
 
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
-  const [photo, regular, medium, semibold] = await Promise.all([
+  const [photo, lockup, regular, medium, semibold] = await Promise.all([
     coverBytes(ogImage(cover?.public_url)),
+    brandLockupDark(),
     geistFont('Regular'),
     geistFont('Medium'),
     geistFont('SemiBold'),
@@ -186,9 +187,13 @@ export async function GET(
           />
         )}
 
-        {/* Scrim: without it, white text over a bright balcony shot is
-            unreadable. Bottom-weighted so the top two-thirds of the photograph
-            stay untouched. */}
+        {/* Scrim.
+            The bottom half carries white type over whatever the photographer
+            pointed at, and the worst case is not a dark room — it is a white
+            kitchen or a noon balcony, where a light gradient leaves the title
+            legible only on the darker half of the frame. So the bottom is taken
+            close to opaque and the ramp starts higher; the middle of the
+            photograph, which no text crosses, is left alone. */}
         <div
           style={{
             position: 'absolute',
@@ -198,44 +203,45 @@ export async function GET(
             height: '100%',
             display: 'flex',
             backgroundImage: photo
-              ? 'linear-gradient(180deg, rgba(14,14,16,0.45) 0%, rgba(14,14,16,0.02) 20%, rgba(14,14,16,0.10) 45%, rgba(14,14,16,0.52) 72%, rgba(14,14,16,0.94) 100%)'
+              ? 'linear-gradient(180deg, rgba(14,14,16,0.34) 0%, rgba(14,14,16,0.04) 22%, rgba(14,14,16,0.24) 44%, rgba(14,14,16,0.62) 62%, rgba(14,14,16,0.88) 80%, rgba(14,14,16,0.97) 100%)'
               : 'linear-gradient(180deg, rgba(14,14,16,1) 0%, rgba(14,14,16,1) 100%)',
           }}
         />
 
-        {/* Wordmark, top-left — always lowercase, weight 500, tracking -0.045em. */}
+        {/* The lockup, on its own plate.
+            The top gradient alone cannot guarantee contrast: the mark and the
+            "stay" accent are mid-tone red, and over a bright sky the red reads
+            as a smudge. A translucent ink plate under the artwork fixes the
+            contrast at a known value no matter what the photograph does, and it
+            is the same move the site makes with its dark surfaces. */}
         <div
           style={{
             position: 'absolute',
-            top: 48,
-            left: 56,
+            top: 40,
+            left: 44,
             display: 'flex',
             alignItems: 'center',
-            gap: 16,
+            // 0.85, measured rather than eyeballed. The accent is the one
+            // element here that cannot be made lighter or heavier to cope: at
+            // 0.58 the "stay" mark scored 1.9:1 against a bright sky, versus
+            // the 4.3:1 it gets on the site's own ink surface. This holds the
+            // plate near-opaque so the accent reads the same on a noon balcony
+            // and a night exterior.
+            background: 'rgba(14,14,16,0.85)',
+            borderRadius: 999,
+            padding: '16px 30px',
           }}
         >
-          <svg width="40" height="40" viewBox="0 0 120 120" fill="none">
-            <path
-              d="M22 100 L 22 60 A 38 38 0 0 1 98 60 L 98 100"
-              stroke={STAY}
-              strokeWidth="14"
-              strokeLinecap="round"
-            />
-          </svg>
-          <div
-            style={{
-              display: 'flex',
-              fontSize: 30,
-              fontWeight: 500,
-              letterSpacing: '-0.045em',
-              color: PAPER,
-              lineHeight: 1,
-            }}
-          >
-            homesta
-            <span style={{ color: 'rgba(255,255,255,0.55)', padding: '0 10px' }}>—</span>
-            <span style={{ color: STAY }}>stay</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lockup}
+            alt="Homesta Stay"
+            // 54px, not the site header's 28: the lockup sets "stay" much
+            // smaller than "homesta", and a card is read as a thumbnail in a
+            // chat list. At header size the sub-brand is a smudge.
+            width={Math.round(54 * LOCKUP_RATIO)}
+            height={54}
+          />
         </div>
 
         {caption && (

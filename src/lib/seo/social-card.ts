@@ -12,7 +12,30 @@ import type { UnitTypeEnum } from '@/lib/types/unit';
  */
 
 /**
- * "Beşiktaş, Istanbul · from $85/night · Apartment"
+ * Unicode bidi isolates (FSI … PDI).
+ *
+ * WHY EVERY SEGMENT GETS ONE
+ *   An Arabic card reads "Antalya · $837.76/ليلة · فيلا" — Latin, digits and
+ *   Arabic in one line. Without isolation the bidi algorithm resolves the whole
+ *   string as one paragraph, and the neutral "·" separators attach to whichever
+ *   run happens to be adjacent: the segments visually reorder, so the city can
+ *   land where the guest expects the property type. Isolating each segment
+ *   fixes the reading order as city → price → type in all four locales while
+ *   each segment keeps its own internal direction.
+ *
+ * These are invisible formatting characters (Unicode 6.3, 2013), understood by
+ * the text engines on iOS, Android and every desktop platform that renders a
+ * chat preview.
+ */
+const FSI = '⁨';
+const PDI = '⁩';
+
+function isolate(text: string): string {
+  return `${FSI}${text}${PDI}`;
+}
+
+/**
+ * "Beşiktaş, Istanbul · $85/night · Apartment"
  *
  * WHY THIS AND NOT THE LISTING DESCRIPTION
  *   A social card is read in half a second in a chat thread. The three facts
@@ -26,11 +49,26 @@ import type { UnitTypeEnum } from '@/lib/types/unit';
  */
 export function socialCardDescription(parts: {
   place: string | null;
-  /** Already localised, e.g. "from $85/night" — see unit.social.fromPerNight. */
+  /** Already localised, e.g. "$85/night" — see unit.social.perNight. */
   price: string | null;
   unitTypeLabel: string | null;
 }): string {
-  return [parts.place, parts.price, parts.unitTypeLabel].filter(Boolean).join(' · ');
+  return [parts.place, parts.price, parts.unitTypeLabel]
+    .filter((part): part is string => Boolean(part))
+    .map(isolate)
+    .join(' · ');
+}
+
+/**
+ * "‪Bosphorus View Studio‬ — Homesta Stay"
+ *
+ * The unit's own name is isolated so an Arabic title cannot swallow the Latin
+ * brand suffix into its run and print it on the wrong side of the dash. The
+ * plain <title> deliberately does NOT get this treatment — that string goes to
+ * search engines, and there is no mixed-direction problem in a result listing.
+ */
+export function socialCardTitle(name: string, siteName: string): string {
+  return `${isolate(name)} — ${siteName}`;
 }
 
 /**

@@ -409,7 +409,7 @@
       "next": "Sonraki fotoğraf"
     },
     "social": {
-      "fromPerNight": "gecelik {price}’dan"
+      "perNight": "{price}/gece"
     }
   },
   "auth": {

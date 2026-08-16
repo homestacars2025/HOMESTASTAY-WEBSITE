@@ -409,7 +409,7 @@
       "next": "Next photo"
     },
     "social": {
-      "fromPerNight": "from {price}/night"
+      "perNight": "{price}/night"
     }
   },
   "auth": {

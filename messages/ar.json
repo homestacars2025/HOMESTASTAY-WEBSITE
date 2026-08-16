@@ -409,7 +409,7 @@
       "next": "الصورة التالية"
     },
     "social": {
-      "fromPerNight": "ابتداءً من {price} لليلة"
+      "perNight": "{price}/ليلة"
     }
   },
   "auth": {

@@ -409,7 +409,7 @@
       "next": "Следующее фото"
     },
     "social": {
-      "fromPerNight": "от {price} за ночь"
+      "perNight": "{price}/ночь"
     }
   },
   "auth": {
