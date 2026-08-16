@@ -407,6 +407,9 @@
       "close": "Kapat",
       "previous": "Önceki fotoğraf",
       "next": "Sonraki fotoğraf"
+    },
+    "social": {
+      "fromPerNight": "gecelik {price}’dan"
     }
   },
   "auth": {

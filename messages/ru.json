@@ -407,6 +407,9 @@
       "close": "Закрыть",
       "previous": "Предыдущее фото",
       "next": "Следующее фото"
+    },
+    "social": {
+      "fromPerNight": "от {price} за ночь"
     }
   },
   "auth": {

@@ -407,6 +407,9 @@
       "close": "إغلاق",
       "previous": "الصورة السابقة",
       "next": "الصورة التالية"
+    },
+    "social": {
+      "fromPerNight": "ابتداءً من {price} لليلة"
     }
   },
   "auth": {

@@ -32,6 +32,19 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
  *   site trying to be cited by ChatGPT, Perplexity and Claude cannot afford to
  *   serve them a page whose canonical and social metadata are unreachable.
  *
+ *   The third line is the chat apps the default misses. Verified by request,
+ *   not assumed: Facebook, WhatsApp, Twitter, Telegram (its UA carries
+ *   "TwitterBot") and Discord all already got <head> metadata; Snapchat got it
+ *   in <body>, which means a listing shared into a Snap renders as a bare link.
+ *   Unit pages now carry a generated share card, so these matter.
+ *
+ *   Instagram, LINE and Viber are deliberately NOT here even though they show
+ *   link previews: their UA strings belong overwhelmingly to in-app BROWSERS
+ *   carrying real users, which do execute JavaScript. Matching them would trade
+ *   a blocking render for thousands of humans to fix a preview for a handful of
+ *   fetches. "Snapchat" has the same ambiguity but was named as a target
+ *   channel, and a broken card costs more there than the milliseconds do.
+ *
  * Googlebot is deliberately NOT here. Next classifies it as a JS-executing bot
  * and streams to it on purpose; forcing a blocking render would slow the crawl
  * we most want to be fast, for no gain.
@@ -40,7 +53,7 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
  * A default that grows there will not reach us while this override is set.
  */
 const HTML_LIMITED_BOTS =
-  /[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|GPTBot|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|ClaudeBot|Claude-User|Claude-SearchBot|anthropic-ai|Amazonbot|Bytespider|CCBot|cohere-ai|Diffbot|meta-externalagent|Applebot-Extended/i;
+  /[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|GPTBot|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|ClaudeBot|Claude-User|Claude-SearchBot|anthropic-ai|Amazonbot|Bytespider|CCBot|cohere-ai|Diffbot|meta-externalagent|Applebot-Extended|Snapchat|Pinterest|Iframely|Embedly/i;
 
 const nextConfig: NextConfig = {
   // Resolve the workspace-root warning from the parent-dir package-lock.json
@@ -56,6 +69,9 @@ const nextConfig: NextConfig = {
     // the tracer cannot follow. Without this the deployed route throws and every
     // og:image on the brand pages 500s.
     '/opengraph-image/route': ['./src/lib/pdf/fonts/*.ttf'],
+    // And again for the per-unit share card, which composites the title and
+    // price onto the cover photo in the same typeface.
+    '/opengraph-image/stays/[slug]/route': ['./src/lib/pdf/fonts/*.ttf'],
   },
   images: {
     // Route optimization through Supabase Storage's render/image endpoint

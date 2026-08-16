@@ -5,9 +5,12 @@ import { canonical, hreflangAlternates } from '@/lib/config/urls';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { graph, vacationRentalSchema, breadcrumbSchema } from '@/lib/seo/schema';
 import {
-  SITE_NAME, ogLocale, ogAlternateLocales, ogImage,
+  SITE_NAME, ogLocale, ogAlternateLocales,
   OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT,
 } from '@/lib/config/seo';
+import {
+  socialCardDescription, formatCardPrice, cardPlace, unitTypeLabelFor, unitOgImageUrl,
+} from '@/lib/seo/social-card';
 import { ChevronLeft, Languages } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
@@ -63,10 +66,28 @@ export async function generateMetadata({
   // clipped on a word boundary rather than mid-syllable.
   const description = truncate(unit.ad_description ?? t('notFoundSub'), 160);
 
-  // resolveMedia() already falls back to properties.cover_photo_url when a unit
-  // has no media rows, so this is the same image the listing card shows.
-  const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
-  const image = ogImage(cover?.public_url);
+  // ── The social card ───────────────────────────────────────────────────────
+  // og:description is NOT the meta description above. In a chat thread the card
+  // is read in half a second, so it carries the three facts that decide a tap —
+  // where, how much, what kind of place — while the owner's prose stays in
+  // <meta description> where search engines want it.
+  //
+  // The price is the same unit.pricing.nightly_usd the booking card renders,
+  // formatted the same way, so the WhatsApp preview can never quote a figure
+  // the page then contradicts.
+  const cardDescription = socialCardDescription({
+    place: cardPlace(unit.region ?? unit.municipality, unit.city),
+    price: formatCardPrice(unit.pricing.nightly_usd)
+      ? t('social.fromPerNight', { price: formatCardPrice(unit.pricing.nightly_usd)! })
+      : null,
+    unitTypeLabel: unitTypeLabelFor(t, unit.unit_type),
+  });
+
+  // The composited card (cover photo + title + place + price + mark), not the
+  // bare photograph: see the route for why. It renders a branded card even for
+  // a unit with no photo, so unlike before there is always an og:image and the
+  // Twitter card is always the large one.
+  const image = unitOgImageUrl(slug, locale);
 
   return {
     title,
@@ -77,7 +98,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title,
-      description,
+      description: cardDescription || description,
       url: canonicalUrl,
       // 'website', not 'product': og:type=product commits to price/availability
       // properties that a nightly rate resolved per stay length cannot honestly
@@ -86,17 +107,24 @@ export async function generateMetadata({
       siteName: SITE_NAME,
       locale: ogLocale(locale),
       alternateLocale: ogAlternateLocales(locale),
-      ...(image
-        ? { images: [{ url: image, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, alt: title }] }
-        : {}),
+      images: [
+        {
+          url: image,
+          width: OG_IMAGE_WIDTH,
+          height: OG_IMAGE_HEIGHT,
+          alt: title,
+          // JPEG, not PNG: the route re-encodes next/og's PNG so the card stays
+          // under WhatsApp's ~600 KB preview ceiling. See the route.
+          type: 'image/jpeg',
+        },
+      ],
     },
     twitter: {
-      // A listing is a photograph first. The large card is the whole point here,
-      // and unlike the homepage this page always has a real image to put in it.
-      card: image ? 'summary_large_image' : 'summary',
+      // A listing is a photograph first, and the card always has one now.
+      card: 'summary_large_image',
       title,
-      description,
-      ...(image ? { images: [image] } : {}),
+      description: cardDescription || description,
+      images: [image],
     },
   };
 }

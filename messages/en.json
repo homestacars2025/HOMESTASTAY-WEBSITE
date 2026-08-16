@@ -407,6 +407,9 @@
       "close": "Close",
       "previous": "Previous photo",
       "next": "Next photo"
+    },
+    "social": {
+      "fromPerNight": "from {price}/night"
     }
   },
   "auth": {
