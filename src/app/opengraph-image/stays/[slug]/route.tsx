@@ -187,13 +187,21 @@ export async function GET(
           />
         )}
 
-        {/* Scrim.
+        {/* Scrim, both ends of the frame.
             The bottom half carries white type over whatever the photographer
             pointed at, and the worst case is not a dark room — it is a white
             kitchen or a noon balcony, where a light gradient leaves the title
             legible only on the darker half of the frame. So the bottom is taken
-            close to opaque and the ramp starts higher; the middle of the
-            photograph, which no text crosses, is left alone. */}
+            close to opaque and the ramp starts higher.
+
+            The top now ramps too, for the lockup. It is deliberately a gentle
+            one (0.62 fading out by 26%) because it is NOT what carries the
+            logo's contrast — the shadow baked into the artwork does that. A
+            gradient heavy enough to protect the mid-tone accent on its own would
+            have to reach ~0.86, which turns the top quarter of every
+            photograph into a grey band.
+
+            The middle, which no element crosses, is left alone in both cases. */}
         <div
           style={{
             position: 'absolute',
@@ -203,33 +211,24 @@ export async function GET(
             height: '100%',
             display: 'flex',
             backgroundImage: photo
-              ? 'linear-gradient(180deg, rgba(14,14,16,0.34) 0%, rgba(14,14,16,0.04) 22%, rgba(14,14,16,0.24) 44%, rgba(14,14,16,0.62) 62%, rgba(14,14,16,0.88) 80%, rgba(14,14,16,0.97) 100%)'
+              ? 'linear-gradient(180deg, rgba(14,14,16,0.80) 0%, rgba(14,14,16,0.46) 14%, rgba(14,14,16,0.08) 30%, rgba(14,14,16,0.24) 44%, rgba(14,14,16,0.62) 62%, rgba(14,14,16,0.88) 80%, rgba(14,14,16,0.97) 100%)'
               : 'linear-gradient(180deg, rgba(14,14,16,1) 0%, rgba(14,14,16,1) 100%)',
           }}
         />
 
-        {/* The lockup, on its own plate.
-            The top gradient alone cannot guarantee contrast: the mark and the
-            "stay" accent are mid-tone red, and over a bright sky the red reads
-            as a smudge. A translucent ink plate under the artwork fixes the
-            contrast at a known value no matter what the photograph does, and it
-            is the same move the site makes with its dark surfaces. */}
+        {/* The lockup, unplated.
+            It used to sit on a near-opaque ink pill, which held the contrast
+            but read as a black rectangle pasted onto the photograph. The
+            protection is now the vignette above plus the artwork itself:
+            brandLockupDark() bakes ink drop shadows into the SVG, so every
+            glyph also carries its own halo and the corner stays visible. */}
         <div
           style={{
             position: 'absolute',
-            top: 40,
-            left: 44,
+            top: 44,
+            left: 52,
             display: 'flex',
             alignItems: 'center',
-            // 0.85, measured rather than eyeballed. The accent is the one
-            // element here that cannot be made lighter or heavier to cope: at
-            // 0.58 the "stay" mark scored 1.9:1 against a bright sky, versus
-            // the 4.3:1 it gets on the site's own ink surface. This holds the
-            // plate near-opaque so the accent reads the same on a noon balcony
-            // and a night exterior.
-            background: 'rgba(14,14,16,0.85)',
-            borderRadius: 999,
-            padding: '16px 30px',
           }}
         >
           {/* next/image does not exist inside an ImageResponse; satori draws

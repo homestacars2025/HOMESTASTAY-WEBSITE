@@ -43,7 +43,39 @@ export async function brandLockupDark(): Promise<string> {
     'utf8',
   );
   const light = svg.replaceAll('#0E0E10', '#FFFFFF');
-  return `data:image/svg+xml;base64,${Buffer.from(light).toString('base64')}`;
+
+  // The shadow is baked into the artwork rather than applied in the card's CSS
+  // because satori implements no `filter` property — the only place a drop
+  // shadow can exist here is inside the SVG the rasteriser handles itself.
+  //
+  // Two passes: a tight, near-opaque one that darkens the pixels immediately
+  // around each glyph (this is what carries the contrast), and a wider, softer
+  // one that lifts the whole lockup off a busy photograph. Both in --ink, so
+  // the halo reads as the brand's own dark surface rather than as grey murk.
+  const filter =
+    '<filter id="lockup-shadow" x="-30%" y="-30%" width="160%" height="160%">' +
+    // Chained, not parallel: each pass takes the previous result as its input,
+    // so the tight opaque halo is itself shadowed by the wider ones and the
+    // darkness compounds close to the glyph edge, which is where legibility is
+    // decided. The "stay" accent is small and mid-tone — one soft pass left it
+    // at 1.3:1 over a noon sky.
+    '<feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#0E0E10" flood-opacity="1"/>' +
+    '<feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0E0E10" flood-opacity="1"/>' +
+    '<feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#0E0E10" flood-opacity="1"/>' +
+    '<feDropShadow dx="0" dy="0" stdDeviation="9" flood-color="#0E0E10" flood-opacity="0.95"/>' +
+    '<feDropShadow dx="0" dy="2" stdDeviation="15" flood-color="#0E0E10" flood-opacity="0.85"/>' +
+    '<feDropShadow dx="0" dy="4" stdDeviation="26" flood-color="#0E0E10" flood-opacity="0.6"/>' +
+    '</filter>';
+
+  const open = light.indexOf('>') + 1;
+  const shadowed =
+    light.slice(0, open) +
+    filter +
+    '<g filter="url(#lockup-shadow)">' +
+    light.slice(open).replace('</svg>', '') +
+    '</g></svg>';
+
+  return `data:image/svg+xml;base64,${Buffer.from(shadowed).toString('base64')}`;
 }
 
 /** Intrinsic viewBox of the lockup — 793x250, ratio ≈ 3.172:1. */
