@@ -23,6 +23,27 @@ interface LightboxProps {
  * tap. Rendered via a portal to escape the page's stacking/overflow, and only
  * mounted while open (so document.body always exists — no SSR render).
  */
+/**
+ * How many images either side of the visible one are kept loaded.
+ *
+ * Two, not one: a guest tapping through a gallery moves faster than a single
+ * image of lead time covers. Five images of a compressed unit photo at ~370 KB
+ * is well under a megabyte in flight, and only ever for a gallery the guest has
+ * already chosen to open.
+ */
+const NEIGHBOUR_WINDOW = 2;
+
+/**
+ * Distance from `index` to `i`, counted the short way round.
+ *
+ * The arrows wrap (go() is modular), so from the last image the NEXT one is
+ * index 0 — and that is precisely the one worth having ready.
+ */
+function windowDistance(i: number, index: number, count: number): number {
+  const direct = Math.abs(i - index);
+  return Math.min(direct, count - direct);
+}
+
 export function Lightbox({ media, title, startIndex, onClose }: LightboxProps) {
   const t = useTranslations('unit');
   const [index, setIndex] = useState(startIndex);
@@ -99,15 +120,43 @@ export function Lightbox({ media, title, startIndex, onClose }: LightboxProps) {
           <div className="absolute inset-0 flex items-center justify-center p-4 md:p-12">
             {/* Stop close on the image itself; the padded area around it closes. */}
             <div className="relative w-full h-full" onClick={(e) => e.stopPropagation()}>
-              <SmartImage
-                key={current.id}
-                src={current.public_url}
-                alt={`${title} — ${index + 1}`}
-                fill
-                sizes="100vw"
-                className="object-contain select-none"
-                priority
-              />
+              {/* THE NEIGHBOURS ARE MOUNTED, NOT JUST THE CURRENT IMAGE.
+                  Rendering only `current` meant every arrow press started a
+                  fresh download at full-screen size, which is the delay the
+                  gallery was reported for. A window of ±2 stays in the tree, so
+                  by the time the guest presses next, the next photograph is
+                  already fetched and decoded and the swap is instant.
+
+                  They are laid out at the SAME size as the visible one and hidden
+                  with opacity, deliberately: the browser then resolves the same
+                  srcset candidate it will need later. Building a preload URL by
+                  hand instead would mean predicting which candidate the browser
+                  picks for this viewport and DPR — get it wrong and the "preload"
+                  is a second download that warms nothing. */}
+              {media.map((item, i) => {
+                const distance = windowDistance(i, index, count);
+                if (distance > NEIGHBOUR_WINDOW) return null;
+                const isCurrent = i === index;
+
+                return (
+                  <SmartImage
+                    key={item.id}
+                    src={item.public_url}
+                    alt={isCurrent ? `${title} — ${i + 1}` : ''}
+                    fill
+                    sizes="100vw"
+                    className={`object-contain select-none ${isCurrent ? '' : 'opacity-0'}`}
+                    // The one on screen gets the high-priority hint; the ones
+                    // being warmed must not compete with it for bandwidth, but
+                    // must still load while off screen — which `lazy` would
+                    // prevent, since they are never scrolled into view.
+                    {...(isCurrent
+                      ? { priority: true }
+                      : { loading: 'eager' as const, fetchPriority: 'low' as const })}
+                    aria-hidden={!isCurrent}
+                  />
+                );
+              })}
             </div>
           </div>
 

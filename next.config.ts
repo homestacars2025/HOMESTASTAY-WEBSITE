@@ -84,6 +84,16 @@ const nextConfig: NextConfig = {
     // bypassed entirely — it was returning 402 (Hobby-plan quota exhausted).
     loader: 'custom',
     loaderFile: './src/lib/image-loader.ts',
+    // Capped at 1600. Next's default list runs to 3840, and every one of those
+    // entries is a real width Supabase will render and a phone might pick: the
+    // srcset on a listing page offered 2048w and 3840w although the LARGEST
+    // image box the site has is the 740px CSS unit cover (≈1480px at DPR 2).
+    // Nothing here should ever request more than that.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1600],
+    // Same reasoning at the small end: these serve the 176px city rail and the
+    // 270px gallery thumbnails. The 16–96px defaults exist for icons, which
+    // this site renders as SVG.
+    imageSizes: [128, 256, 384],
     // With a custom loader Next no longer uses its built-in optimizer, so
     // remotePatterns is not strictly enforced; kept as documentation of the
     // hosts we serve images from.

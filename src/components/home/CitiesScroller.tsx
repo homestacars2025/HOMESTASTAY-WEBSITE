@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { SmartImage } from '@/components/media/SmartImage';
 import { motion } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
 import { cityCardHover, cardImageHover } from '@/lib/motion';
@@ -38,7 +38,7 @@ export function CitiesScroller({ cities }: CitiesScrollerProps) {
             <div className="relative w-full aspect-[3/4] rounded-[14px] overflow-hidden">
               {city.imageUrl ? (
                 <motion.div variants={cardImageHover} className="absolute inset-0">
-                  <Image
+                  <SmartImage
                     src={city.imageUrl}
                     alt={city.name}
                     fill

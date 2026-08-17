@@ -33,7 +33,10 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
     <Link href={href as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
       <article>
         {/* Image */}
-        <div className="relative rounded-[14px] overflow-hidden aspect-[4/3] mb-3">
+        {/* aspect-[4/3] reserves the box before the photo arrives, so nothing
+            below it moves when the image lands. bg-paper-warm is what the fade
+            in SmartImage resolves FROM — brand surface, not white void. */}
+        <div className="relative rounded-[14px] overflow-hidden aspect-[4/3] mb-3 bg-paper-warm">
           {cover ? (
             <SmartImage
               src={cover.public_url}

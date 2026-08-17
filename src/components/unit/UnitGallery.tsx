@@ -69,13 +69,22 @@ export function UnitGallery({ media, title, unitId, shareUrl, shareText }: UnitG
               className="flex-none w-full relative aspect-[4/3] bg-paper-warm block"
               style={{ scrollSnapAlign: 'start' }}
             >
+              {/* Same idea as the Lightbox: the slides within two of the
+                  active one are fetched now, so a swipe lands on a decoded
+                  image instead of starting a download. Everything beyond that
+                  stays lazy — a 30-photo listing must not pull 30 photos. */}
               <SmartImage
                 src={item.public_url}
                 alt={`${title} — ${i + 1}`}
                 fill
                 sizes="100vw"
                 className="object-cover"
-                priority={i === 0}
+                {...(i === 0
+                  ? { priority: true }
+                  : {
+                      loading: Math.abs(i - activeIdx) <= 2 ? ('eager' as const) : ('lazy' as const),
+                      fetchPriority: i === activeIdx ? ('high' as const) : ('low' as const),
+                    })}
               />
             </button>
           ))}
@@ -157,12 +166,17 @@ export function UnitGallery({ media, title, unitId, shareUrl, shareText }: UnitG
                 aria-label={t('gallery.openPhoto', { number: idx + 1 })}
                 className="group relative h-full overflow-hidden bg-paper-warm block"
               >
+                {/* Above the fold on desktop, so eager — but explicitly low
+                    priority so four thumbnails cannot delay the cover, which is
+                    the LCP element. */}
                 <SmartImage
                   src={item.public_url}
                   alt={`${title} — ${idx + 1}`}
                   fill
                   sizes="(min-width: 1280px) 270px, 21vw"
                   className="object-cover transition-transform duration-[240ms] group-hover:scale-[1.02]"
+                  loading="eager"
+                  fetchPriority="low"
                 />
                 {/* "+N" overlay on the last visible thumbnail when more exist */}
                 {isLastShown && (
