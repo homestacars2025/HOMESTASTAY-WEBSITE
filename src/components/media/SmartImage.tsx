@@ -3,6 +3,7 @@
 import Image, { type ImageProps } from 'next/image';
 import { useCallback, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { withImageHost } from '@/lib/image-loader';
 
 /**
  * next/image wrapper with a transform-failure fallback and a load-in fade.
@@ -40,9 +41,17 @@ export function SmartImage({ className, onError, ...props }: ImageProps) {
     if (node?.complete) setLoaded(true);
   }, []);
 
+  // The fallback path bypasses the loader by definition — `unoptimized` serves
+  // `src` verbatim — so the CDN host has to be applied here too. These are the
+  // heaviest images on the site (the ones the transform refused), which makes
+  // them the ones that least deserve a round trip to Korea. No-op when no CDN
+  // is configured, and for any src that is not Supabase Storage.
+  const src = failed && typeof props.src === 'string' ? withImageHost(props.src) : props.src;
+
   return (
     <Image
       {...props}
+      src={src}
       ref={ref}
       unoptimized={props.unoptimized || failed}
       onLoad={(e) => {
