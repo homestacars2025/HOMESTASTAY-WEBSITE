@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Images } from 'lucide-react';
 import { SaveButton } from '@/components/home/SaveButton';
@@ -28,6 +28,20 @@ export function UnitGallery({ media, title, unitId, shareUrl, shareText }: UnitG
     if (!a.is_cover && b.is_cover) return 1;
     return a.sort_order - b.sort_order;
   });
+
+  // The mobile carousel is `md:hidden`, and a display:none <img> STILL loads.
+  // Warming its neighbours on a desktop therefore downloads full-width slides
+  // nobody will ever see — measured: two extra 1600px fetches on a 1440 screen.
+  // Eager warming is gated on the carousel actually being the visible layout.
+  // Starts false so the server render and the first client render agree.
+  const [carouselVisible, setCarouselVisible] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setCarouselVisible(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   const [activeIdx, setActiveIdx] = useState(0);
   // null = closed; otherwise the index the lightbox opens at.
@@ -82,7 +96,10 @@ export function UnitGallery({ media, title, unitId, shareUrl, shareText }: UnitG
                 {...(i === 0
                   ? { priority: true }
                   : {
-                      loading: Math.abs(i - activeIdx) <= 2 ? ('eager' as const) : ('lazy' as const),
+                      loading:
+                        carouselVisible && Math.abs(i - activeIdx) <= 2
+                          ? ('eager' as const)
+                          : ('lazy' as const),
                       fetchPriority: i === activeIdx ? ('high' as const) : ('low' as const),
                     })}
               />
