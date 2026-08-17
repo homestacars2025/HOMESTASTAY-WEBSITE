@@ -102,6 +102,20 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
       // Supabase Storage — unit-media + geo-media buckets
       { protocol: 'https', hostname: 'djtpksherrayzxmunvkv.supabase.co', pathname: '/storage/v1/**' },
+      // The image CDN in front of that Storage host, when one is configured
+      // (NEXT_PUBLIC_IMAGE_HOST). Documentation only, like the entries above:
+      // the custom loader means Next never fetches these itself.
+      ...(process.env.NEXT_PUBLIC_IMAGE_HOST
+        ? [{
+            protocol: 'https' as const,
+            hostname: new URL(
+              /^https?:\/\//.test(process.env.NEXT_PUBLIC_IMAGE_HOST)
+                ? process.env.NEXT_PUBLIC_IMAGE_HOST
+                : `https://${process.env.NEXT_PUBLIC_IMAGE_HOST}`,
+            ).hostname,
+            pathname: '/storage/v1/**',
+          }]
+        : []),
     ],
   },
 };

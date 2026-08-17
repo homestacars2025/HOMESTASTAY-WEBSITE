@@ -1,5 +1,6 @@
 import { routing, type Locale } from '@/i18n/routing';
 import { CANONICAL_URL } from '@/lib/config/urls';
+import { withImageHost } from '@/lib/image-loader';
 
 /**
  * Shared Open Graph / social-card plumbing.
@@ -97,5 +98,8 @@ export function ogImage(src: string | null | undefined): string | undefined {
   url.searchParams.set('height', String(OG_IMAGE_HEIGHT));
   url.searchParams.set('resize', 'cover');
   url.searchParams.set('quality', '80');
-  return url.toString();
+  // Same CDN host as every other image on the site — a crawler fetching
+  // og:image should be answered from a nearby edge too. Host only; the
+  // render/image path and its parameters above are untouched.
+  return withImageHost(url.toString());
 }

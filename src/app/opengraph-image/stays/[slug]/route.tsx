@@ -5,6 +5,7 @@ import { getPublicUnitBySlug } from '@/lib/queries/stays';
 import { geistFont, brandMarkAccent, markBoxForArch, markInset } from '@/lib/seo/og-fonts';
 import { OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT, ogImage } from '@/lib/config/seo';
 import { cardPlace, formatCardPrice, unitTypeLabelFor } from '@/lib/seo/social-card';
+import { withStorageHost } from '@/lib/image-loader';
 
 /**
  * The share card for one unit: its cover photograph with the title, place and
@@ -83,18 +84,30 @@ function clamp(text: string, max: number): string {
  */
 async function coverBytes(url: string | undefined): Promise<string | null> {
   if (!url) return null;
-  try {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(4000),
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    const type = res.headers.get('content-type') ?? 'image/jpeg';
-    return `data:${type};base64,${buf.toString('base64')}`;
-  } catch {
-    return null;
-  }
+
+  const attempt = async (target: string): Promise<string | null> => {
+    try {
+      const res = await fetch(target, {
+        signal: AbortSignal.timeout(4000),
+        next: { revalidate: 3600 },
+      });
+      if (!res.ok) return null;
+      const buf = Buffer.from(await res.arrayBuffer());
+      const type = res.headers.get('content-type') ?? 'image/jpeg';
+      return `data:${type};base64,${buf.toString('base64')}`;
+    } catch {
+      return null;
+    }
+  };
+
+  const viaCdn = await attempt(url);
+  if (viaCdn) return viaCdn;
+
+  // A CDN that is misconfigured, cold or rate-limited must cost a slower card,
+  // not a card with no photograph. withStorageHost is a no-op when no CDN is
+  // configured, so this is a single request in that case.
+  const origin = withStorageHost(url);
+  return origin === url ? null : attempt(origin);
 }
 
 type Caption = {
