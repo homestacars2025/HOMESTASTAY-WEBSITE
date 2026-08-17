@@ -20,63 +20,94 @@ export async function geistFont(weight: 'Regular' | 'Medium' | 'SemiBold'): Prom
   return Uint8Array.from(file).buffer;
 }
 
+/** Square canvas: the 120-unit mark plus 100 units of shadow margin each side. */
+const MARK_VIEWBOX = 320;
+
+/** Height of the arch itself, stroke included, in viewBox units. */
+const ARCH_UNITS = 92;
+
+/** Distance from the canvas edge to the arch: 100 of margin plus its 15 inset. */
+const MARK_MARGIN_UNITS = 115;
+
 /**
- * The official brand lockup as a data URI, in the light-on-dark colourway.
+ * The <img> box that renders the arch at `archPx` tall.
  *
- * WHY THE REAL FILE AND NOT A HAND-DRAWN COPY
- *   The card used to redraw the mark as an SVG path and set the wordmark in
- *   Geist with an em dash — "homesta — stay" — which is not the lockup the site
- *   ships. public/brand/stay-lockup-compact.svg is all paths, no <text>, so
- *   satori rasterises the genuine artwork: same letterforms, same spacing, same
- *   relationship between "homesta" and "stay" as the site header.
- *
- * The only edit is the ink: the file paints "homesta" in --ink for a white
- * page, and the card sits on a photograph, so that one fill becomes white. The
- * accent stays exactly as the brand file specifies it.
- *
- * ⚠️ Needs an outputFileTracingIncludes entry, same as the fonts — nothing in
- * public/ is guaranteed to exist in a deployed function's filesystem.
+ * The arch is a minority of the canvas — the rest is deliberate empty margin —
+ * so sizing the image by eye gets the mark's weight against the wordmark wrong.
  */
-export async function brandLockupDark(): Promise<string> {
-  const svg = await readFile(
-    path.join(process.cwd(), 'public/brand/stay-lockup-compact.svg'),
-    'utf8',
-  );
-  const light = svg.replaceAll('#0E0E10', '#FFFFFF');
+/**
+ * The brand mark alone, in the accent, with its shadow baked in.
+ *
+ * WHY AN <img> AND NOT AN INLINE <svg> IN THE CARD
+ *   Satori implements no `filter` property, so an inline svg cannot carry a
+ *   drop shadow — and the card's logo now has nothing behind it but the
+ *   photograph, which makes the shadow the only thing keeping it legible. An
+ *   SVG data URI is rasterised by resvg, which does honour filters.
+ *
+ * The path is read from public/brand/mark.svg — the same canonical arch the
+ * footer's BrandMark draws — rather than restated here, so the card cannot
+ * drift from the site the way the old lockup's elongated arch did.
+ *
+ * The viewBox is grown by 100 units on every side. A filter cannot paint
+ * outside its canvas, and the margin has to clear the WIDEST pass: at 40 units
+ * against a stdDeviation of 22 (which carries ~3σ ≈ 66 units) the outer blur
+ * was sliced off, printing a soft grey square around the arch on the card.
+ */
+export async function brandMarkAccent(): Promise<string> {
+  const file = await readFile(path.join(process.cwd(), 'public/brand/mark.svg'), 'utf8');
 
-  // The shadow is baked into the artwork rather than applied in the card's CSS
-  // because satori implements no `filter` property — the only place a drop
-  // shadow can exist here is inside the SVG the rasteriser handles itself.
-  //
-  // Two passes: a tight, near-opaque one that darkens the pixels immediately
-  // around each glyph (this is what carries the contrast), and a wider, softer
-  // one that lifts the whole lockup off a busy photograph. Both in --ink, so
-  // the halo reads as the brand's own dark surface rather than as grey murk.
-  const filter =
-    '<filter id="lockup-shadow" x="-30%" y="-30%" width="160%" height="160%">' +
-    // Chained, not parallel: each pass takes the previous result as its input,
-    // so the tight opaque halo is itself shadowed by the wider ones and the
-    // darkness compounds close to the glyph edge, which is where legibility is
-    // decided. The "stay" accent is small and mid-tone — one soft pass left it
-    // at 1.3:1 over a noon sky.
-    '<feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#0E0E10" flood-opacity="1"/>' +
-    '<feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0E0E10" flood-opacity="1"/>' +
-    '<feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#0E0E10" flood-opacity="1"/>' +
-    '<feDropShadow dx="0" dy="0" stdDeviation="9" flood-color="#0E0E10" flood-opacity="0.95"/>' +
-    '<feDropShadow dx="0" dy="2" stdDeviation="15" flood-color="#0E0E10" flood-opacity="0.85"/>' +
-    '<feDropShadow dx="0" dy="4" stdDeviation="26" flood-color="#0E0E10" flood-opacity="0.6"/>' +
-    '</filter>';
+  const pathMatch = file.match(/d="([^"]+)"/);
+  if (!pathMatch) throw new Error('mark.svg: no path data');
 
-  const open = light.indexOf('>') + 1;
-  const shadowed =
-    light.slice(0, open) +
-    filter +
-    '<g filter="url(#lockup-shadow)">' +
-    light.slice(open).replace('</svg>', '') +
-    '</g></svg>';
+  // ONE template literal, deliberately. This was assembled from adjacent
+  // `...` + `...` fragments and the build dropped the closing quote of the
+  // viewBox attribute — the emitted bundle read `320 320width="320"`, which
+  // made resvg reject the document, and the mark rendered as an empty box on
+  // the card while the layout still reserved its space.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -100 ${MARK_VIEWBOX} ${MARK_VIEWBOX}" width="${MARK_VIEWBOX}" height="${MARK_VIEWBOX}">${SHADOW_FILTER}<g filter="url(#glyph-shadow)"><rect x="-100" y="-100" width="${MARK_VIEWBOX}" height="${MARK_VIEWBOX}" fill="none"/><path d="${pathMatch[1]}" fill="none" stroke="#E52851" stroke-width="14" stroke-linecap="round"/></g></svg>`;
 
-  return `data:image/svg+xml;base64,${Buffer.from(shadowed).toString('base64')}`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
-/** Intrinsic viewBox of the lockup — 793x250, ratio ≈ 3.172:1. */
-export const LOCKUP_RATIO = 793 / 250;
+/**
+ * The mark's shadow, matched to the text-shadow the wordmark carries beside it.
+ *
+ * Chained rather than parallel: each pass shadows the previous result, so the
+ * darkness compounds close to the stroke, which is where legibility is decided.
+ */
+const SHADOW_FILTER =
+  // A modest region — but see brandMarkAccent: it is measured against a group
+  // whose bounding box is the WHOLE canvas, not the arch, so 120% of it is
+  // ~30 units of fade room beyond a canvas that already carries 100.
+  //
+  // Two dead ends are recorded here so they are not retried: with the region
+  // measured against the bare arch, 200% gave the chained blurs only ~45 units
+  // and a hard grey square printed on the card; widening it to -110%/320% and,
+  // separately, switching to filterUnits="userSpaceOnUse" both made resvg treat
+  // the filter as invalid — and an element with an invalid filter is not
+  // rendered at all, per spec, so the mark silently vanished from the card.
+  '<filter id="glyph-shadow" x="-10%" y="-10%" width="120%" height="120%">' +
+  // Densities chosen to match the wordmark's text-shadow stack beside it —
+  // these are viewBox units (the canvas is 320 for a 92-unit arch), so they
+  // read larger than the px radii in the CSS.
+  '<feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0E0E10" flood-opacity="1"/>' +
+  '<feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#0E0E10" flood-opacity="1"/>' +
+  '<feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#0E0E10" flood-opacity="0.95"/>' +
+  '<feDropShadow dx="0" dy="6" stdDeviation="26" flood-color="#0E0E10" flood-opacity="0.8"/>' +
+  '</filter>';
+
+export function markBoxForArch(archPx: number): number {
+  return Math.round((archPx * MARK_VIEWBOX) / ARCH_UNITS);
+}
+
+/**
+ * The transparent margin around the arch inside that box, in px.
+ *
+ * The caller needs it to cancel the margin out with a negative CSS margin:
+ * otherwise flex lays out the whole 195px canvas and the wordmark sits ~70px
+ * further right than the design says, with the mark apparently adrift.
+ */
+export function markInset(boxPx: number): number {
+  return Math.round((boxPx * MARK_MARGIN_UNITS) / MARK_VIEWBOX);
+}
+

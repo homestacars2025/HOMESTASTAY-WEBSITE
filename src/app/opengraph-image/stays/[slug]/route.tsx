@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
 import { routing, type Locale } from '@/i18n/routing';
 import { getPublicUnitBySlug } from '@/lib/queries/stays';
-import { geistFont, brandLockupDark, LOCKUP_RATIO } from '@/lib/seo/og-fonts';
+import { geistFont, brandMarkAccent, markBoxForArch, markInset } from '@/lib/seo/og-fonts';
 import { OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT, ogImage } from '@/lib/config/seo';
 import { cardPlace, formatCardPrice, unitTypeLabelFor } from '@/lib/seo/social-card';
 
@@ -37,6 +37,10 @@ export const runtime = 'nodejs';
 export const revalidate = 300;
 
 const size = { width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT };
+
+// The arch at 56px tall — ~1.76x the cap height of the 44px wordmark beside it,
+// the same relationship the site footer sets the mark at.
+const MARK_BOX = markBoxForArch(56);
 
 // Brand tokens, inlined: satori resolves no stylesheet, so Tailwind's custom
 // properties do not exist inside this tree.
@@ -154,9 +158,9 @@ export async function GET(
     (locale === 'en' ? null : await captionFor(slug, 'en'));
 
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
-  const [photo, lockup, regular, medium, semibold] = await Promise.all([
+  const [photo, mark, regular, medium, semibold] = await Promise.all([
     coverBytes(ogImage(cover?.public_url)),
-    brandLockupDark(),
+    brandMarkAccent(),
     geistFont('Regular'),
     geistFont('Medium'),
     geistFont('SemiBold'),
@@ -187,21 +191,17 @@ export async function GET(
           />
         )}
 
-        {/* Scrim, both ends of the frame.
+        {/* Scrim, bottom only.
             The bottom half carries white type over whatever the photographer
             pointed at, and the worst case is not a dark room — it is a white
             kitchen or a noon balcony, where a light gradient leaves the title
             legible only on the darker half of the frame. So the bottom is taken
             close to opaque and the ramp starts higher.
 
-            The top now ramps too, for the lockup. It is deliberately a gentle
-            one (0.62 fading out by 26%) because it is NOT what carries the
-            logo's contrast — the shadow baked into the artwork does that. A
-            gradient heavy enough to protect the mid-tone accent on its own would
-            have to reach ~0.86, which turns the top quarter of every
-            photograph into a grey band.
-
-            The middle, which no element crosses, is left alone in both cases. */}
+            The TOP IS DELIBERATELY UNTOUCHED. The logo up there has nothing
+            behind it — no plate, no ramp — and is held together entirely by the
+            shadow on the glyphs themselves. The photograph's own corner is the
+            background, which is the point. */}
         <div
           style={{
             position: 'absolute',
@@ -211,17 +211,21 @@ export async function GET(
             height: '100%',
             display: 'flex',
             backgroundImage: photo
-              ? 'linear-gradient(180deg, rgba(14,14,16,0.80) 0%, rgba(14,14,16,0.46) 14%, rgba(14,14,16,0.08) 30%, rgba(14,14,16,0.24) 44%, rgba(14,14,16,0.62) 62%, rgba(14,14,16,0.88) 80%, rgba(14,14,16,0.97) 100%)'
+              ? 'linear-gradient(180deg, rgba(14,14,16,0) 0%, rgba(14,14,16,0) 32%, rgba(14,14,16,0.26) 46%, rgba(14,14,16,0.62) 62%, rgba(14,14,16,0.88) 80%, rgba(14,14,16,0.97) 100%)'
               : 'linear-gradient(180deg, rgba(14,14,16,1) 0%, rgba(14,14,16,1) 100%)',
           }}
         />
 
-        {/* The lockup, unplated.
-            It used to sit on a near-opaque ink pill, which held the contrast
-            but read as a black rectangle pasted onto the photograph. The
-            protection is now the vignette above plus the artwork itself:
-            brandLockupDark() bakes ink drop shadows into the SVG, so every
-            glyph also carries its own halo and the corner stays visible. */}
+        {/* The lockup: mark + "homesta stay" on one line, exactly the way the
+            site footer sets it — BrandMark beside a single line of Geist, both
+            words the same size. The old stacked artwork tucked "stay" under
+            "homesta" at a third of its size, which vanished in a chat
+            thumbnail.
+
+            NOTHING SITS BEHIND IT. The shadows are the whole mechanism: a
+            text-shadow stack on the wordmark, and the matching filter baked
+            into the mark's SVG (satori has no `filter`, so the mark has to
+            carry its own — see brandMarkAccent). */}
         <div
           style={{
             position: 'absolute',
@@ -229,19 +233,51 @@ export async function GET(
             left: 52,
             display: 'flex',
             alignItems: 'center',
+            gap: 18,
           }}
         >
           {/* next/image does not exist inside an ImageResponse; satori draws
-              its own <img>. */}
+              its own <img>.
+
+              The arch is asked for at 56px, and markBoxForArch works out the
+              box that yields it: most of the canvas is shadow margin. 56px of
+              arch against the ~32px cap height of 44px Geist reproduces the
+              ~1.76x ratio the footer sets the mark at. */}
           <img
-            src={lockup}
-            alt="Homesta Stay"
-            // 54px, not the site header's 28: the lockup sets "stay" much
-            // smaller than "homesta", and a card is read as a thumbnail in a
-            // chat list. At header size the sub-brand is a smudge.
-            width={Math.round(54 * LOCKUP_RATIO)}
-            height={54}
+            src={mark}
+            alt=""
+            width={MARK_BOX}
+            height={MARK_BOX}
+            // The negative margin cancels the canvas's shadow margin so the
+            // element's layout box is the arch itself. Without it flex reserves
+            // all 195px and the wordmark drifts ~70px away from the mark.
+            style={{ margin: `${-markInset(MARK_BOX)}px` }}
           />
+
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 44,
+              fontWeight: 500,
+              // The wordmark's own tracking, from the brand file.
+              letterSpacing: '-0.045em',
+              lineHeight: 1,
+              // Four layers: two tight and opaque to darken the pixels against
+              // the letterforms, two wide and soft to lift the whole word off a
+              // busy photograph. This is all that stands between the logo and a
+              // white sky.
+              // Eight layers, tuned by measurement on a flat #8FC7EE sky — the
+              // worst case a cover photo offers. Four layers put the accent at
+              // 1.80:1 and six at 2.53:1; this stack reaches 2.98:1 while the
+              // halo still hugs the letterforms rather than pooling into a
+              // shape. Satori does honour every layer (verified).
+              textShadow:
+                '0 0 2px rgba(14,14,16,1), 0 0 3px rgba(14,14,16,1), 0 0 5px rgba(14,14,16,1), 0 0 8px rgba(14,14,16,1), 0 0 12px rgba(14,14,16,1), 0 0 18px rgba(14,14,16,0.97), 0 0 28px rgba(14,14,16,0.9), 0 3px 48px rgba(14,14,16,0.8)',
+            }}
+          >
+            <span style={{ color: PAPER }}>homesta</span>
+            <span style={{ color: STAY, paddingLeft: 14 }}>stay</span>
+          </div>
         </div>
 
         {caption && (

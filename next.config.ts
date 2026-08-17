@@ -75,7 +75,7 @@ const nextConfig: NextConfig = {
     // a deployed function's filesystem unless it is traced in by name.
     '/opengraph-image/stays/[slug]/route': [
       './src/lib/pdf/fonts/*.ttf',
-      './public/brand/stay-lockup-compact.svg',
+      './public/brand/mark.svg',
     ],
   },
   images: {
