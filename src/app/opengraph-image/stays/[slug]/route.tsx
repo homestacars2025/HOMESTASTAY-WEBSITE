@@ -40,24 +40,22 @@ export const runtime = 'nodejs';
 
 const size = { width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT };
 
-// The arch at 48px tall — ~1.76x the cap height of the 38px "homesta" beside
-// it, the same relationship the site footer sets the mark at. The whole lockup
-// came down from 56/44: at the old size it crowded the top-left corner of the
-// photograph rather than sitting in it.
-const MARK_BOX = markBoxForArch(48);
+// The arch spans BOTH lines of the stacked wordmark beside it, which is the
+// proportion the site's own lockup uses: there the mark is 170 of 250 viewBox
+// units against a ~94-unit "homesta", so it is not sized against one line.
+const MARK_BOX = markBoxForArch(54);
 
 /**
- * "homesta" and "stay", in px.
+ * "homesta" over "stay", in px.
  *
- * The site's own lockup (public/brand/stay-lockup-compact.svg) sets "stay" at
- * 0.42x "homesta" — but it STACKS them, which gives the smaller word a line of
- * its own to hold. Set side by side at that ratio "stay" reads as a footnote,
- * and at the size WhatsApp draws a thumbnail it stops being legible at all.
- * 0.68 is the compromise: the hierarchy is unmistakable and the sub-brand still
- * reads at thumbnail scale (checked by downsampling the card to 260px).
+ * Stacking is what lets the ratio drop this far. Set side by side, "stay" at
+ * half the size read as a footnote and vanished at thumbnail scale; given a
+ * line of its own it holds at 0.55, near the 0.42 the site's own lockup
+ * (public/brand/stay-lockup-compact.svg) uses when it stacks the same two
+ * words. The second line is flush RIGHT, so the two words end together.
  */
-const HOMESTA_PX = 38;
-const STAY_PX = 26;
+const HOMESTA_PX = 40;
+const STAY_PX = 22;
 
 // Brand tokens, inlined: satori resolves no stylesheet, so Tailwind's custom
 // properties do not exist inside this tree.
@@ -300,36 +298,40 @@ const renderCard = unstable_cache(
             <div
               style={{
                 display: 'flex',
-                // The two words differ in size now, so they hang from the
-                // baseline rather than being centred — centring would float the
-                // smaller word in the middle of the taller one's height.
-                alignItems: 'baseline',
+                // Stacked, and flush right: on a column the alignItems axis is
+                // the CROSS axis, so flex-end lines the end of "stay" up with
+                // the end of "homesta" instead of centring it under the word.
+                flexDirection: 'column',
+                alignItems: 'flex-end',
                 fontWeight: 500,
                 // The wordmark's own tracking, from the brand file.
                 letterSpacing: '-0.045em',
                 lineHeight: 1,
-                // TWO layers, and the count is load-bearing twice over.
+                // TWO layers, both faint, and the count is load-bearing twice.
                 //
-                // Visually: the eight-layer stack this replaces stood five of its
-                // layers at full opacity inside 12px of the glyphs, which stopped
-                // being a shadow and became a black outline — it thickened the
-                // strokes, filled the counters of the o/e/a and blunted the
-                // terminals of the y. A tight-but-translucent pass for local
-                // separation plus one wide soft pass to lift the word off a busy
-                // photograph does the same job and leaves the letterforms alone.
+                // Visually: the original eight-layer stack stood five of its layers
+                // at FULL opacity inside 12px of the glyphs, which stopped being a
+                // shadow and became a black outline — it thickened the strokes,
+                // filled the counters of the o/e/a and blunted the terminal of the
+                // y. What is left is a tight pass for local separation and one wide
+                // pass to sit the word on the photograph, neither dark enough to
+                // touch a letterform.
+                //
+                // This is the floor, not a midpoint. Rendered on flat #FFFFFF — the
+                // worst ground a cover photo offers, and the only reason a shadow
+                // exists here at all — a lighter pair (3px/0.45 + 12px/0.35) left
+                // white-on-white genuinely hard to read. Below this the shadow stops
+                // doing the one job it has.
                 //
                 // For speed: satori rasterises every text-shadow layer as its own
-                // blurred pass, and each one measured ~0.4s of the card's render
-                // on this route. The eight-layer stack WAS the slow share — 3.5s
-                // of a 3.8s response. At two layers the render is ~0.5s.
-                //
-                // Checked at both extremes a cover photo offers: a flat #8FC7EE
-                // sky and pure #FFFFFF. Both stay legible.
-                textShadow: '0 0 6px rgba(14,14,16,0.7), 0 2px 22px rgba(14,14,16,0.5)',
+                // blurred pass, and each measured ~0.4s of the render on this route.
+                // The eight-layer stack WAS the slow share — 3.5s of a 3.8s
+                // response. At two layers the composite is ~0.5s.
+                textShadow: '0 0 4px rgba(14,14,16,0.55), 0 1px 14px rgba(14,14,16,0.4)',
               }}
             >
               <span style={{ color: PAPER, fontSize: HOMESTA_PX }}>homesta</span>
-              <span style={{ color: STAY, fontSize: STAY_PX, paddingLeft: 12 }}>stay</span>
+              <span style={{ color: STAY, fontSize: STAY_PX, marginTop: 6 }}>stay</span>
             </div>
           </div>
 

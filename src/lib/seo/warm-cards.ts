@@ -16,8 +16,15 @@ import { CANONICAL_URL } from '@/lib/config/urls';
  *   first, and the crawler would still take a CDN miss.
  */
 
-/** Kept low deliberately: this is a background chore, not a race. */
-const CONCURRENCY = 8;
+/**
+ * Measured, not guessed. At 8 the first full sweep covered ~half the catalogue
+ * before the deadline and the rest stayed cold — a sampled check found 5 of 10
+ * untouched units still taking a CDN miss. 200 units x 4 locales is ~800
+ * fetches; at the ~2s a cold card costs that needs 16 in flight to finish
+ * inside the budget, and every sweep after the first is far cheaper because it
+ * is answering from the card's own cache.
+ */
+const CONCURRENCY = 16;
 
 /** One card is a photo fetch plus a composite; 30s is generous even when cold. */
 const REQUEST_TIMEOUT_MS = 30_000;
