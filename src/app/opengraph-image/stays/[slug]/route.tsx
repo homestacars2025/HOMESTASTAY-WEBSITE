@@ -40,9 +40,24 @@ export const runtime = 'nodejs';
 
 const size = { width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT };
 
-// The arch at 56px tall — ~1.76x the cap height of the 44px wordmark beside it,
-// the same relationship the site footer sets the mark at.
-const MARK_BOX = markBoxForArch(56);
+// The arch at 48px tall — ~1.76x the cap height of the 38px "homesta" beside
+// it, the same relationship the site footer sets the mark at. The whole lockup
+// came down from 56/44: at the old size it crowded the top-left corner of the
+// photograph rather than sitting in it.
+const MARK_BOX = markBoxForArch(48);
+
+/**
+ * "homesta" and "stay", in px.
+ *
+ * The site's own lockup (public/brand/stay-lockup-compact.svg) sets "stay" at
+ * 0.42x "homesta" — but it STACKS them, which gives the smaller word a line of
+ * its own to hold. Set side by side at that ratio "stay" reads as a footnote,
+ * and at the size WhatsApp draws a thumbnail it stops being legible at all.
+ * 0.68 is the compromise: the hierarchy is unmistakable and the sub-brand still
+ * reads at thumbnail scale (checked by downsampling the card to 260px).
+ */
+const HOMESTA_PX = 38;
+const STAY_PX = 26;
 
 // Brand tokens, inlined: satori resolves no stylesheet, so Tailwind's custom
 // properties do not exist inside this tree.
@@ -285,7 +300,10 @@ const renderCard = unstable_cache(
             <div
               style={{
                 display: 'flex',
-                fontSize: 44,
+                // The two words differ in size now, so they hang from the
+                // baseline rather than being centred — centring would float the
+                // smaller word in the middle of the taller one's height.
+                alignItems: 'baseline',
                 fontWeight: 500,
                 // The wordmark's own tracking, from the brand file.
                 letterSpacing: '-0.045em',
@@ -310,8 +328,8 @@ const renderCard = unstable_cache(
                 textShadow: '0 0 6px rgba(14,14,16,0.7), 0 2px 22px rgba(14,14,16,0.5)',
               }}
             >
-              <span style={{ color: PAPER }}>homesta</span>
-              <span style={{ color: STAY, paddingLeft: 14 }}>stay</span>
+              <span style={{ color: PAPER, fontSize: HOMESTA_PX }}>homesta</span>
+              <span style={{ color: STAY, fontSize: STAY_PX, paddingLeft: 12 }}>stay</span>
             </div>
           </div>
 
@@ -472,16 +490,26 @@ export async function GET(
   // ImageResponse defaults to a one-year immutable cache, which would freeze a
   // stale price into every crawler's copy — hence an explicit header.
   //
-  // s-maxage stays short so a re-scrape after a price change gets the new card
-  // promptly; the week of stale-while-revalidate is what makes the response
-  // instant, because past the fresh window the edge answers from its copy and
-  // refreshes behind the request — and that refresh is a Data Cache hit, not a
-  // render.
+  // THE LONG NUMBER IS THE ONE THAT MATTERS, and it is not s-maxage.
+  //
+  // The instinct is to make s-maxage enormous so the entry "never expires".
+  // That is the wrong lever: an expired entry is not a slow one. Past the fresh
+  // window stale-while-revalidate has the edge answer from its stored copy
+  // immediately and refresh behind the request — measured at 227ms against
+  // production, indistinguishable from a HIT — and that refresh is now a Data
+  // Cache read rather than a composite. A long s-maxage would buy nothing and
+  // cost the thing we actually care about: after the owner moves a price, the
+  // edge would keep serving the old card for the whole window with no request
+  // able to correct it.
+  //
+  // So: ten fresh minutes, then thirty days during which the card is always
+  // served instantly and always one request away from being current. Nothing
+  // in normal operation falls out of the cache.
   return new Response(new Uint8Array(Buffer.from(card.body, 'base64')), {
     status: 200,
     headers: {
       'content-type': card.contentType,
-      'cache-control': 'public, max-age=600, s-maxage=600, stale-while-revalidate=604800',
+      'cache-control': 'public, max-age=600, s-maxage=600, stale-while-revalidate=2592000',
     },
   });
 }
