@@ -74,6 +74,12 @@ export async function brandMarkAccent(): Promise<string> {
  *
  * Chained rather than parallel: each pass shadows the previous result, so the
  * darkness compounds close to the stroke, which is where legibility is decided.
+ *
+ * DELIBERATELY LIGHT. The earlier four-pass stack (4/8/14/26 at near-full
+ * opacity) compounded into a black collar that thickened the arch and read as
+ * a smudge rather than a shadow. Two passes at partial opacity lift the mark
+ * off a bright photograph without touching its silhouette — the same trade the
+ * wordmark's two-layer text-shadow makes beside it.
  */
 const SHADOW_FILTER =
   // A modest region — but see brandMarkAccent: it is measured against a group
@@ -87,13 +93,12 @@ const SHADOW_FILTER =
   // the filter as invalid — and an element with an invalid filter is not
   // rendered at all, per spec, so the mark silently vanished from the card.
   '<filter id="glyph-shadow" x="-10%" y="-10%" width="120%" height="120%">' +
-  // Densities chosen to match the wordmark's text-shadow stack beside it —
-  // these are viewBox units (the canvas is 320 for a 92-unit arch), so they
-  // read larger than the px radii in the CSS.
-  '<feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0E0E10" flood-opacity="1"/>' +
-  '<feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#0E0E10" flood-opacity="1"/>' +
-  '<feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#0E0E10" flood-opacity="0.95"/>' +
-  '<feDropShadow dx="0" dy="6" stdDeviation="26" flood-color="#0E0E10" flood-opacity="0.8"/>' +
+  // Densities chosen to match the wordmark's text-shadow stack beside it.
+  // These are viewBox units — the canvas is 320 for a 92-unit arch, so one px
+  // on the card is ~1.6 units here: 11 and 26 restate the wordmark's 6px and
+  // 22px radii in the mark's own coordinate space.
+  '<feDropShadow dx="0" dy="0" stdDeviation="11" flood-color="#0E0E10" flood-opacity="0.6"/>' +
+  '<feDropShadow dx="0" dy="3" stdDeviation="26" flood-color="#0E0E10" flood-opacity="0.55"/>' +
   '</filter>';
 
 export function markBoxForArch(archPx: number): number {
