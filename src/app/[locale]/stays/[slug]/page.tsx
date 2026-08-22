@@ -10,7 +10,7 @@ import {
 } from '@/lib/config/seo';
 import {
   socialCardDescription, socialCardTitle, formatCardPrice, cardPlace, unitTypeLabelFor,
-  unitOgImageUrl,
+  unitOgImage,
 } from '@/lib/seo/social-card';
 import { ChevronLeft, Languages } from 'lucide-react';
 import { Header } from '@/components/home/Header';
@@ -29,6 +29,7 @@ import { parseStaysSearchParams } from '@/lib/stays/search-params';
 import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
+import { cardVersion } from '@/lib/seo/card-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,7 +92,21 @@ export async function generateMetadata({
   // bare photograph: see the route for why. It renders a branded card even for
   // a unit with no photo, so unlike before there is always an og:image and the
   // Twitter card is always the large one.
-  const image = unitOgImageUrl(slug, locale);
+  //
+  // Prefers the copy in Storage, which is not subject to the LRU eviction that
+  // was taking the route's cached bytes overnight, and falls back to the route
+  // whenever that copy is not there yet. The version is derived from the three
+  // facts the card draws that actually move — see cardVersion.
+  const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
+  const image = await unitOgImage(
+    slug,
+    locale,
+    cardVersion({
+      price: nightly,
+      title: unit.ad_title ?? unit.unit_name ?? null,
+      cover: cover?.public_url ?? null,
+    }),
+  );
 
   return {
     title,

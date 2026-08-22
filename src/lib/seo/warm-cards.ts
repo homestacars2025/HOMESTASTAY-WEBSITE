@@ -1,6 +1,7 @@
 import { createPublicClient } from '@/lib/supabase/public';
 import { routing } from '@/i18n/routing';
 import { CANONICAL_URL } from '@/lib/config/urls';
+import { storeCard } from './card-upload';
 
 /**
  * Pre-generating unit share cards, so no guest ever waits for one.
@@ -40,11 +41,14 @@ export type WarmResult = { warmed: number; attempted: number; total: number };
  * being warmed there is the CDN entry for the ?locale=ar URL, and that one is
  * per-URL, not per-render.
  */
-export function cardUrls(slug: string): string[] {
-  return routing.locales.map(
-    (locale) =>
-      `${CANONICAL_URL}/opengraph-image/stays/${encodeURIComponent(slug)}?locale=${locale}`,
-  );
+export type CardTarget = { slug: string; locale: string; url: string };
+
+export function cardUrls(slug: string): CardTarget[] {
+  return routing.locales.map((locale) => ({
+    slug,
+    locale,
+    url: `${CANONICAL_URL}/opengraph-image/stays/${encodeURIComponent(slug)}?locale=${locale}`,
+  }));
 }
 
 /** Every published unit's slug. Empty on failure — the caller reports it. */
@@ -111,10 +115,10 @@ export async function slugForRow(row: Record<string, unknown> | null): Promise<s
  *
  * A failure is reported and swallowed: one bad unit must not end a sweep.
  */
-async function warmOne(url: string, bust: string | null): Promise<boolean> {
-  const target = bust ? `${url}&_w=${bust}` : url;
+async function warmOne(target: CardTarget, bust: string | null): Promise<boolean> {
+  const url = bust ? `${target.url}&_w=${bust}` : target.url;
   try {
-    const res = await fetch(target, {
+    const res = await fetch(url, {
       // Not to be answered by a cached copy of this fetch inside the warming
       // function itself — unrelated to the CDN entry being filled.
       cache: 'no-store',
@@ -122,14 +126,24 @@ async function warmOne(url: string, bust: string | null): Promise<boolean> {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!res.ok) {
-      console.error('[og:warm] non-ok', { url: target, status: res.status });
+      console.error('[og:warm] non-ok', { url, status: res.status });
       return false;
     }
-    // Drain it — an unread body holds the connection open.
-    await res.arrayBuffer();
+
+    // The bytes are already in hand, so this is the cheap moment to make them
+    // permanent — see card-store for why the caches alone were not enough. A
+    // failed upload still counts as a warm: the CDN and Data Cache entries were
+    // filled by the request above, which is what the old design relied on.
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    await storeCard(
+      target.slug,
+      target.locale,
+      bytes,
+      res.headers.get('content-type') ?? 'image/jpeg',
+    );
     return true;
   } catch (error) {
-    console.error('[og:warm] failed', { url: target, error });
+    console.error('[og:warm] failed', { url, error });
     return false;
   }
 }
@@ -144,7 +158,7 @@ async function warmOne(url: string, bust: string | null): Promise<boolean> {
  * guest shared one of those listings and waited.
  */
 export async function warmCards(
-  urls: string[],
+  targets: CardTarget[],
   { deadlineMs, bust = null }: { deadlineMs: number; bust?: string | null },
 ): Promise<WarmResult> {
   const until = Date.now() + deadlineMs;
@@ -153,13 +167,13 @@ export async function warmCards(
   let attempted = 0;
 
   const worker = async () => {
-    while (next < urls.length && Date.now() < until) {
-      const url = urls[next++];
+    while (next < targets.length && Date.now() < until) {
+      const target = targets[next++];
       attempted++;
-      if (await warmOne(url, bust)) warmed++;
+      if (await warmOne(target, bust)) warmed++;
     }
   };
 
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, urls.length) }, worker));
-  return { warmed, attempted, total: urls.length };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
+  return { warmed, attempted, total: targets.length };
 }

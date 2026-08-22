@@ -1,5 +1,7 @@
 import { CANONICAL_URL } from '@/lib/config/urls';
 import type { UnitTypeEnum } from '@/lib/types/unit';
+import { unstable_cache } from 'next/cache';
+import { storedCardIfPresent } from './card-store';
 
 /**
  * The share card for a unit — the line of copy and the image URL.
@@ -119,4 +121,39 @@ export function unitTypeLabelFor(
  */
 export function unitOgImageUrl(slug: string, locale: string): string {
   return `${CANONICAL_URL}/opengraph-image/stays/${encodeURIComponent(slug)}?locale=${locale}`;
+}
+
+/**
+ * The best URL to publish as og:image: the stored card when it exists, and the
+ * route when it does not.
+ *
+ * WHY IT PREFERS THE STORED COPY
+ *   The route is served by a function whose CDN entry, and whose Data Cache
+ *   entry, are both evicted under LRU — measured going cold overnight. A file
+ *   in Storage is not evicted, and it is delivered from the same CDN host as
+ *   every photograph on the site, so it is close to the crawler wherever the
+ *   crawler is.
+ *
+ * WHY IT CHECKS RATHER THAN ASSUMES
+ *   A card that 404s is worse than a card that is slow, and the object does not
+ *   exist until something has warmed it. The check is a HEAD, cached under the
+ *   card's own version so it is one request per unit per locale per window, and
+ *   it fails toward the route on anything at all.
+ *
+ * The upload is left to the warm sweep; nothing is generated here, because this
+ * runs inside generateMetadata and a page render must never wait on a
+ * composite.
+ */
+export async function unitOgImage(
+  slug: string,
+  locale: string,
+  version: string,
+): Promise<string> {
+  const stored = await unstable_cache(
+    () => storedCardIfPresent(slug, locale, version),
+    ['og-card-present', slug, locale, version],
+    { tags: ['units'], revalidate: 3600 },
+  )();
+
+  return stored ?? unitOgImageUrl(slug, locale);
 }
