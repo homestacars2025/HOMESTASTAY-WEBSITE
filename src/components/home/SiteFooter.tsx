@@ -31,12 +31,18 @@ export function SiteFooter() {
 
           {/* Brand column */}
           <div className="md:col-span-1 flex flex-col gap-4">
+            {/* The brand size lives on the LINK, not on the mark: BrandMark is
+                sized in em, so one font-size here drives the arch and the gap
+                together and the lockup rescales as a unit. 0.33em is the same
+                mark-to-wordmark ratio the header's lockup SVG carries in its
+                geometry — the two have to agree, or the logo reads differently
+                at the top and bottom of the same page. */}
             <Link
               href={`/${locale}`}
-              className="inline-flex items-center gap-2"
+              className="inline-flex items-center gap-[0.33em] text-[28px]"
               aria-label="Homesta Stay — home"
             >
-              <BrandMark className="text-[28px] text-stay" />
+              <BrandMark className="text-stay" />
               <span
                 className="font-medium tracking-[-0.045em] text-[17px] leading-none"
                 style={{ fontFeatureSettings: '"ss01","cv11","cv06"' }}

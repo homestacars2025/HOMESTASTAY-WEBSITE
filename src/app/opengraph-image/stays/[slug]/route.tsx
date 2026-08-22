@@ -43,7 +43,20 @@ const size = { width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT };
 // The arch spans BOTH lines of the stacked wordmark beside it, which is the
 // proportion the site's own lockup uses: there the mark is 170 of 250 viewBox
 // units against a ~94-unit "homesta", so it is not sized against one line.
-const MARK_BOX = markBoxForArch(54);
+const ARCH_PX = 54;
+const MARK_BOX = markBoxForArch(ARCH_PX);
+
+/**
+ * The space between the mark and the wordmark, as a fraction of the arch's
+ * height rather than a flat pixel count — so it tracks ARCH_PX if the lockup is
+ * ever resized, instead of quietly going tight or loose.
+ *
+ * 0.33 is shared with the rest of the brand: the header's lockup SVG carries it
+ * in its geometry (a 56-unit gap against a 170-unit arch) and the footer sets
+ * it as 0.33em. The header's was 0.088 until it was widened — close enough that
+ * the arch looked stuck to the word.
+ */
+const MARK_GAP = Math.round(ARCH_PX * 0.33);
 
 /**
  * "homesta" over "stay", in px.
@@ -274,7 +287,7 @@ const renderCard = unstable_cache(
               left: 52,
               display: 'flex',
               alignItems: 'center',
-              gap: 18,
+              gap: MARK_GAP,
             }}
           >
             {/* next/image does not exist inside an ImageResponse; satori draws
