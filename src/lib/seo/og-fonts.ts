@@ -77,14 +77,12 @@ export async function brandMarkAccent(): Promise<string> {
  *
  * BARELY THERE, ON PURPOSE. The original four-pass stack (4/8/14/26 at
  * near-full opacity) compounded into a black collar that thickened the arch and
- * read as a smudge rather than a shadow. These two passes are the least that
- * still holds the mark against a white sky — checked by rendering the lockup on
- * flat #FFFFFF, which is the worst ground a cover photo offers.
+ * read as a smudge rather than a shadow. What is left is close to nothing.
  *
  * The radii track the wordmark's text-shadow beside it: at markBoxForArch(54)
- * one px on the card is ~1.7 viewBox units, so 7 and 24 here are its 4px and
- * 14px. Change one and change the other, or the two halves of the lockup stop
- * sitting on the same surface.
+ * one px on the card is ~1.7 viewBox units, so 5 and 20 here are its 3px and
+ * 12px. CHANGE ONE AND CHANGE THE OTHER — a mark and a wordmark carrying
+ * different shadows stop reading as one lockup on the same surface.
  */
 const SHADOW_FILTER =
   // A modest region — but see brandMarkAccent: it is measured against a group
@@ -98,8 +96,8 @@ const SHADOW_FILTER =
   // the filter as invalid — and an element with an invalid filter is not
   // rendered at all, per spec, so the mark silently vanished from the card.
   '<filter id="glyph-shadow" x="-10%" y="-10%" width="120%" height="120%">' +
-  '<feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#0E0E10" flood-opacity="0.5"/>' +
-  '<feDropShadow dx="0" dy="2" stdDeviation="24" flood-color="#0E0E10" flood-opacity="0.35"/>' +
+  '<feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#0E0E10" flood-opacity="0.4"/>' +
+  '<feDropShadow dx="0" dy="2" stdDeviation="20" flood-color="#0E0E10" flood-opacity="0.3"/>' +
   '</filter>';
 
 export function markBoxForArch(archPx: number): number {

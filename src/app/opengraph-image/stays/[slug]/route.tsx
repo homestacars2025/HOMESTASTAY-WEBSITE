@@ -307,27 +307,24 @@ const renderCard = unstable_cache(
                 // The wordmark's own tracking, from the brand file.
                 letterSpacing: '-0.045em',
                 lineHeight: 1,
-                // TWO layers, both faint, and the count is load-bearing twice.
+                // TWO layers, both very faint. The original eight-layer stack stood
+                // five of its layers at FULL opacity inside 12px of the glyphs, which
+                // stopped being a shadow and became a black outline — it thickened
+                // the strokes, filled the counters of the o/e/a and blunted the
+                // terminal of the y. What is left barely registers as a shadow at
+                // all, which is the brief: clean letterforms first.
                 //
-                // Visually: the original eight-layer stack stood five of its layers
-                // at FULL opacity inside 12px of the glyphs, which stopped being a
-                // shadow and became a black outline — it thickened the strokes,
-                // filled the counters of the o/e/a and blunted the terminal of the
-                // y. What is left is a tight pass for local separation and one wide
-                // pass to sit the word on the photograph, neither dark enough to
-                // touch a letterform.
-                //
-                // This is the floor, not a midpoint. Rendered on flat #FFFFFF — the
-                // worst ground a cover photo offers, and the only reason a shadow
-                // exists here at all — a lighter pair (3px/0.45 + 12px/0.35) left
-                // white-on-white genuinely hard to read. Below this the shadow stops
-                // doing the one job it has.
+                // THE COST IS REAL AND WAS ACCEPTED. Rendered on flat #FFFFFF — the
+                // worst ground a cover photo offers — white-on-white is now hard to
+                // read. A denser pair (4px/0.55 + 14px/0.4) held there and was tried
+                // first; this is the deliberate step past it. If a white-sky cover
+                // ever reads badly in the wild, that pair is what to go back to.
                 //
                 // For speed: satori rasterises every text-shadow layer as its own
                 // blurred pass, and each measured ~0.4s of the render on this route.
                 // The eight-layer stack WAS the slow share — 3.5s of a 3.8s
                 // response. At two layers the composite is ~0.5s.
-                textShadow: '0 0 4px rgba(14,14,16,0.55), 0 1px 14px rgba(14,14,16,0.4)',
+                textShadow: '0 0 3px rgba(14,14,16,0.45), 0 1px 12px rgba(14,14,16,0.35)',
               }}
             >
               <span style={{ color: PAPER, fontSize: HOMESTA_PX }}>homesta</span>
