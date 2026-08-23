@@ -55,7 +55,12 @@
     "total": "الإجمالي",
     "nights": "{count, plural, zero {# ليلة} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
     "save": "حفظ",
-    "unsave": "إزالة من المحفوظات"
+    "unsave": "إزالة من المحفوظات",
+    "specs": {
+      "bedrooms": "{count, plural, zero {بدون غرف نوم} one {غرفة نوم واحدة} two {غرفتا نوم} few {# غرف نوم} many {# غرفة نوم} other {# غرفة نوم}}",
+      "beds": "{count, plural, zero {بدون أسرّة} one {سرير واحد} two {سريران} few {# أسرّة} many {# سريرًا} other {# سرير}}",
+      "bathrooms": "{count, plural, zero {بدون حمّام} one {حمّام واحد} two {حمّامان} few {# حمّامات} many {# حمّامًا} other {# حمّام}}"
+    }
   },
   "pages": {
     "home": {

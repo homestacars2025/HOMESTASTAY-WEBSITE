@@ -55,7 +55,12 @@
     "total": "total",
     "nights": "{count, plural, one {# night} other {# nights}}",
     "save": "Save",
-    "unsave": "Remove from saved"
+    "unsave": "Remove from saved",
+    "specs": {
+      "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
+      "beds": "{count, plural, one {# bed} other {# beds}}",
+      "bathrooms": "{count, plural, one {# bath} other {# baths}}"
+    }
   },
   "pages": {
     "home": {

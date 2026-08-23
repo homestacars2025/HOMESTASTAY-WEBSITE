@@ -75,6 +75,12 @@ const CARD_SELECT = [
   'id,slug,unit_type,unit_name,status,min_nights,currency,cancellation_policy_id',
   // ad_description + latitude/longitude dropped: the card shows neither.
   'unit_info!inner(ad_title,city,region,municipality)',
+  // FOUR of the ten spec columns, for the card's "2 bedrooms · 2 beds · 1 bath"
+  // line. The other six (size, floor, balconies, kitchens, the two distances)
+  // stay on the detail page — this is four small integers per card, not the
+  // whole join the trim above was written to avoid. max_guests rides along so
+  // the guests filter can reuse this embed instead of adding a second one.
+  'unit_specifications(bedrooms,beds,bathrooms,max_guests)',
   // name + property_type dropped.
   'properties!inner(cover_photo_url,geo_cities:city_id(id,name,name_ar,name_en,name_tr),geo_districts:district_id(id,name,name_ar,name_en,name_tr),geo_countries:country_id(id,name,iso_code))',
   // Trimmed to one row per unit by the embedded order+limit in cardTrims().
@@ -597,12 +603,16 @@ async function queryPublicUnits(
     blocked = ids;
   }
 
-  // The guests filter needs max_guests, which CARD_SELECT drops — add it back as
-  // an inner join (filter only, one column). City makes the geo_cities embed
-  // inner so it actually filters the parent (see the note that was here before:
-  // without !inner PostgREST nulls the embed and the filter silently does nothing).
+  // Both filters work by making an embed INNER so it filters the parent —
+  // without !inner PostgREST nulls the embed and the filter silently does
+  // nothing (the note that was here before this).
+  //
+  // unit_specifications is FLIPPED, not appended: CARD_SELECT now carries it
+  // for the card's specs line, and naming the same table twice in one select
+  // is ambiguous. Flipping also keeps the old behaviour exactly — a unit with
+  // no specs row is excluded when filtering by guests, kept otherwise.
   let select = CARD_SELECT;
-  if (guests) select += ',unit_specifications!inner(max_guests)';
+  if (guests) select = select.replace('unit_specifications(', 'unit_specifications!inner(');
   if (city) select = select.replace('geo_cities:city_id(', 'geo_cities:city_id!inner(');
 
   let query = supabase

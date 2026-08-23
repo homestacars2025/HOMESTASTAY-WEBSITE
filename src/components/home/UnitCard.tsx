@@ -28,6 +28,28 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
   // no-district case is the normal one and must not print a stray separator.
   const place = formatPlace(locale, unit.region ?? unit.municipality, unit.city);
 
+  /**
+   * "2 bedrooms · 2 beds · 1 bath" — the Airbnb-style summary line.
+   *
+   * Each number goes through an ICU plural message, which is what makes Arabic
+   * correct: it has a DUAL, so two bedrooms is "غرفتا نوم", never "2 غرف نوم".
+   * A manual `=== 1 ? singular : plural` cannot express that, and would be
+   * wrong in Russian too (which needs few/many).
+   *
+   * A missing OR zero value drops its own entry rather than printing "0 beds",
+   * and because the parts are filtered before they are joined, dropping one
+   * never leaves a dangling separator. bathrooms is numeric in the database and
+   * may be fractional: Number() keeps 1.5 as 1.5 and renders 1.0 as "1".
+   */
+  const specs = unit.specifications;
+  const specLine = [
+    specs.bedrooms ? t('specs.bedrooms', { count: specs.bedrooms }) : null,
+    specs.beds ? t('specs.beds', { count: specs.beds }) : null,
+    Number(specs.bathrooms) > 0 ? t('specs.bathrooms', { count: Number(specs.bathrooms) }) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   // Live-resolved. total/nights are present only when the search carried dates.
   const { nightly_usd: nightlyUsd, total_usd: totalUsd, nights } = unit.pricing;
 
@@ -74,6 +96,14 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
           {/* Location */}
           <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute mb-1">
             {place}
+          </p>
+
+          {/* Specs. The box is rendered even when the line is empty — the two
+              units with no spec row would otherwise sit shorter than their
+              neighbours and pull the grid row out of alignment. Reserving the
+              height costs nothing and keeps the cards level. */}
+          <p className="text-xs text-mute mb-1 min-h-[1.125rem] line-clamp-1">
+            {specLine || null}
           </p>
 
           {/* Price — resolved live, hidden entirely when the unit has no price.

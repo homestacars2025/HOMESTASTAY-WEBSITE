@@ -55,7 +55,12 @@
     "total": "toplam",
     "nights": "{count, plural, one {# gece} other {# gece}}",
     "save": "Kaydet",
-    "unsave": "Kaydedilenlerden kaldır"
+    "unsave": "Kaydedilenlerden kaldır",
+    "specs": {
+      "bedrooms": "{count, plural, other {# yatak odası}}",
+      "beds": "{count, plural, other {# yatak}}",
+      "bathrooms": "{count, plural, other {# banyo}}"
+    }
   },
   "pages": {
     "home": {

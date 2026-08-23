@@ -55,7 +55,12 @@
     "total": "всего",
     "nights": "{count, plural, one {# ночь} few {# ночи} many {# ночей} other {# ночи}}",
     "save": "Сохранить",
-    "unsave": "Удалить из сохранённых"
+    "unsave": "Удалить из сохранённых",
+    "specs": {
+      "bedrooms": "{count, plural, one {# спальня} few {# спальни} many {# спален} other {# спальни}}",
+      "beds": "{count, plural, one {# кровать} few {# кровати} many {# кроватей} other {# кровати}}",
+      "bathrooms": "{count, plural, one {# ванная} few {# ванные} many {# ванных} other {# ванной}}"
+    }
   },
   "pages": {
     "home": {
