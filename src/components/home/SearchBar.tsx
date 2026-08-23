@@ -30,6 +30,18 @@ export interface SearchBarProps {
   };
 }
 
+/**
+ * Stable ids so each trigger can point aria-controls / aria-activedescendant at
+ * its OWN list.
+ *
+ * There are two, and both are in the DOM at once: the mobile card is hidden
+ * with `md:hidden` (display:none), not unmounted. One shared id would be
+ * duplicated on every desktop render, which is invalid HTML and — worse here —
+ * makes both aria references ambiguous, so the screen reader may follow the
+ * hidden one.
+ */
+const CITY_LISTBOX_ID = { mobile: 'searchbar-city-listbox-m', desktop: 'searchbar-city-listbox-d' } as const;
+
 type OpenPanel = 'city' | 'date' | 'guests' | null;
 
 // ── Dynamic import — calendar CSS + JS only load when panel first opens ────────
@@ -84,6 +96,15 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
   const [portalPos, setPortalPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const [mounted,   setMounted]   = useState(false);
 
+  /**
+   * Keyboard cursor into the city list, -1 when the pointer is driving.
+   *
+   * Separate from `cityId` on purpose: arrowing through the list must not
+   * change the selection until Enter, or a stray arrow key would silently
+   * re-run the search against a different city.
+   */
+  const [activeIndex, setActiveIndex] = useState(-1);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const whoRef       = useRef<HTMLButtonElement>(null);   // anchor for guests panel
   const panelRef     = useRef<HTMLDivElement>(null);
@@ -96,6 +117,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
     setCityId(id);
     setShowWhereError(false);
     setOpenPanel(null);
+    setActiveIndex(-1);
   }, []);
 
   const selectedCity = cities.find((c) => c.id === cityId);
@@ -136,42 +158,78 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
   // City and date panels span the full search bar width.
   // Guests panel is anchored to just the Who button.
 
-  const toggle = useCallback((panel: OpenPanel) => {
-    const next     = openPanel === panel ? null : panel;
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  /**
+   * Where the portal panel should sit for `panel`, in viewport coordinates.
+   *
+   * Pulled out of toggle() because the scroll listener needs the same numbers:
+   * the panel is position:fixed against a rect measured from the trigger, so
+   * those coordinates go stale the moment the page moves underneath it.
+   * Returns null on mobile, where every panel renders inline instead.
+   */
+  const measurePanel = useCallback((panel: Exclude<OpenPanel, null>) => {
+    if (typeof window === 'undefined' || window.innerWidth < 768) return null;
 
-    // Mobile: all panels rendered inline — no portal needed.
-    // Desktop: compute anchor position synchronously at the top level so both
-    // setState calls commit in the same React render.
-    if (!isMobile) {
-      if (next === 'guests') {
-        const el    = whoRef.current ?? containerRef.current;
-        const isWho = !!whoRef.current;
-        if (el) {
-          const r     = el.getBoundingClientRect();
-          const width = isWho ? Math.max(r.width, 200) : r.width;
-          const left  = isWho ? Math.max(8, r.right - width) : r.left;
-          setPortalPos({ top: r.bottom + 8, left, width });
-        }
-      } else if (next && containerRef.current) {
-        const r = containerRef.current.getBoundingClientRect();
-        setPortalPos({ top: r.bottom + 8, left: r.left, width: r.width });
-      }
-    } else {
-      setPortalPos(null);
+    if (panel === 'guests') {
+      const el    = whoRef.current ?? containerRef.current;
+      const isWho = !!whoRef.current;
+      if (!el) return null;
+      const r     = el.getBoundingClientRect();
+      const width = isWho ? Math.max(r.width, 200) : r.width;
+      const left  = isWho ? Math.max(8, r.right - width) : r.left;
+      return { top: r.bottom + 8, left, width };
     }
 
-    setOpenPanel(next);
-  }, [openPanel]);
+    const el = containerRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { top: r.bottom + 8, left: r.left, width: r.width };
+  }, []);
 
-  // ── Close on outside click, Escape, or scroll ─────────────────────────────
+  const toggle = useCallback((panel: OpenPanel) => {
+    const next = openPanel === panel ? null : panel;
+
+    // Measured synchronously at the top level so both setState calls commit in
+    // the same React render.
+    setPortalPos(next ? measurePanel(next) : null);
+    setActiveIndex(-1);
+    setOpenPanel(next);
+  }, [openPanel, measurePanel]);
+
+  // ── Close on outside click or Escape; follow the anchor on scroll ─────────
 
   useEffect(() => {
     if (!openPanel) return;
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpenPanel(null);
+      if (e.key === 'Escape') {
+        setOpenPanel(null);
+        setActiveIndex(-1);
+        return;
+      }
+
+      // Arrow/Enter/Home/End drive the city list. Focus stays on the trigger
+      // button (it is the combobox), so the keys are read here and the list is
+      // told which option is current through aria-activedescendant.
+      if (openPanel !== 'city' || cities.length === 0) return;
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); // or the page scrolls under the open list
+        setActiveIndex((i) => {
+          const step = e.key === 'ArrowDown' ? 1 : -1;
+          // From "nothing highlighted", Down goes to the first item and Up to
+          // the last, which is what every native listbox does.
+          if (i < 0) return step === 1 ? 0 : cities.length - 1;
+          return (i + step + cities.length) % cities.length;
+        });
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        setActiveIndex(e.key === 'Home' ? 0 : cities.length - 1);
+      } else if (e.key === 'Enter' && activeIndex >= 0) {
+        e.preventDefault(); // this Enter picks a city, it does not submit
+        chooseCity(cities[activeIndex].id);
+      }
     }
+
     function onMouse(e: MouseEvent) {
       const target = e.target as Node;
       if (
@@ -179,41 +237,118 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
         !panelRef.current?.contains(target)
       ) {
         setOpenPanel(null);
+        setActiveIndex(-1);
       }
     }
-    function onScroll() { setOpenPanel(null); }
+
+    /**
+     * FOLLOW the anchor rather than closing.
+     *
+     * This used to be `setOpenPanel(null)` on any window scroll, and that was
+     * the bug: the desktop list had no max-height, so reaching a city near the
+     * bottom meant scrolling the PAGE, which closed the list before the click
+     * landed. The list now scrolls internally (see CityList), and a page scroll
+     * re-measures instead — the panel is position:fixed against a rect taken
+     * from the trigger, so it has to be re-measured or it drifts away from the
+     * bar it belongs to.
+     *
+     * Capture phase, because scroll events do not bubble: without it a scroll
+     * inside any other scrollable ancestor would never reach this listener and
+     * the panel would drift. rAF-throttled so a fast scroll costs one measure
+     * per frame, not one per event.
+     */
+    let frame = 0;
+    function reposition() {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (openPanel) setPortalPos(measurePanel(openPanel));
+      });
+    }
 
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onMouse);
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', reposition, { passive: true, capture: true });
+    window.addEventListener('resize', reposition, { passive: true });
     return () => {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('mousedown', onMouse);
-      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('scroll', reposition, { capture: true } as EventListenerOptions);
+      window.removeEventListener('resize', reposition);
+      if (frame) cancelAnimationFrame(frame);
     };
-  }, [openPanel]);
+  }, [openPanel, cities, activeIndex, chooseCity, measurePanel]);
+
+  /**
+   * Keep the keyboard cursor inside the scroll viewport.
+   *
+   * Both lists exist in the DOM, so the option is looked up across both and the
+   * hidden one skipped: offsetParent is null under `display:none`, which is what
+   * `md:hidden` applies.
+   */
+  useEffect(() => {
+    if (openPanel !== 'city' || activeIndex < 0) return;
+    const options = document.querySelectorAll<HTMLElement>(`[data-city-option="${activeIndex}"]`);
+    for (const el of options) {
+      if (el.offsetParent !== null) {
+        el.scrollIntoView({ block: 'nearest' });
+        break;
+      }
+    }
+  }, [activeIndex, openPanel]);
 
   // ── Portal panel content ───────────────────────────────────────────────────
 
-  const CityPanelContent = (
+  /**
+   * The city list. ONE definition, rendered by both the desktop portal and the
+   * mobile card.
+   *
+   * They were two copies, and they had drifted: the mobile one capped its
+   * height and scrolled, the desktop one did neither. With twenty cities at
+   * ~48px the desktop list ran ~960px — past the bottom of a typical viewport —
+   * so the only way to reach the last few was to scroll the page, and a page
+   * scroll closed the panel. Keeping one definition is what stops that
+   * divergence coming back.
+   *
+   * max-height + overflow-y-auto gives it its own scroller. overscroll-contain
+   * is the other half: without it, scrolling past the end of the list chains to
+   * the page, which moves the bar the panel is anchored to.
+   */
+  const renderCityList = (listId: string) => (
     <div
+      id={listId}
       role="listbox"
-      className="bg-white rounded-[14px] border border-rule shadow-[0_8px_40px_rgba(0,0,0,0.13)] overflow-hidden"
+      aria-label={t('whereLabel')}
+      className="max-h-[min(60vh,360px)] overflow-y-auto overscroll-contain"
     >
-      {cities.map((city) => (
+      {cities.map((city, index) => (
         <button
           key={city.id}
+          id={`${listId}-${index}`}
+          data-city-option={index}
           type="button"
           role="option"
           aria-selected={city.id === cityId}
+          // Pointer and keyboard drive the same highlight, so moving the mouse
+          // takes the cursor back from the arrow keys rather than leaving two
+          // different rows looking current.
+          onMouseEnter={() => setActiveIndex(index)}
           onClick={() => chooseCity(city.id)}
-          className={`w-full flex items-center px-5 py-3.5 text-sm text-start transition-colors duration-[240ms] hover:bg-paper-warm ${
+          className={`w-full flex items-center px-5 py-3.5 text-sm text-start transition-colors duration-[240ms] ${
+            index === activeIndex ? 'bg-paper-warm' : ''
+          } ${
             city.id === cityId ? 'bg-paper-warm text-ink font-medium' : 'text-ink-soft'
           }`}
         >
           {city.localizedName}
         </button>
       ))}
+    </div>
+  );
+
+  const CityPanelContent = (
+    <div className="bg-white rounded-[14px] border border-rule shadow-[0_8px_40px_rgba(0,0,0,0.13)] overflow-hidden">
+      {renderCityList(CITY_LISTBOX_ID.desktop)}
     </div>
   );
 
@@ -323,8 +458,17 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
           {/* Where */}
           <button
             type="button"
+            role="combobox"
             aria-haspopup="listbox"
             aria-expanded={openPanel === 'city'}
+            aria-controls={openPanel === 'city' ? CITY_LISTBOX_ID.mobile : undefined}
+            // Focus never leaves this button, so this is how a screen reader is
+            // told which option the arrow keys are currently on.
+            aria-activedescendant={
+              openPanel === 'city' && activeIndex >= 0
+                ? `${CITY_LISTBOX_ID.mobile}-${activeIndex}`
+                : undefined
+            }
             onClick={() => toggle('city')}
             className="w-full flex items-center gap-3 px-4 py-4 border-b border-rule text-start"
           >
@@ -346,22 +490,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
 
           {/* City list — inline on mobile, anchored directly below the Where field */}
           {openPanel === 'city' && (
-            <div className="border-b border-rule max-h-[60vh] overflow-y-auto">
-              {cities.map((city) => (
-                <button
-                  key={city.id}
-                  type="button"
-                  role="option"
-                  aria-selected={city.id === cityId}
-                  onClick={() => chooseCity(city.id)}
-                  className={`w-full flex items-center px-5 py-3.5 text-sm text-start transition-colors duration-[240ms] hover:bg-paper-warm ${
-                    city.id === cityId ? 'bg-paper-warm text-ink font-medium' : 'text-ink-soft'
-                  }`}
-                >
-                  {city.localizedName}
-                </button>
-              ))}
-            </div>
+            <div className="border-b border-rule">{renderCityList(CITY_LISTBOX_ID.mobile)}</div>
           )}
 
           {/* When */}
@@ -466,8 +595,17 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
           {/* Where */}
           <button
             type="button"
+            role="combobox"
             aria-haspopup="listbox"
             aria-expanded={openPanel === 'city'}
+            aria-controls={openPanel === 'city' ? CITY_LISTBOX_ID.desktop : undefined}
+            // Focus never leaves this button, so this is how a screen reader is
+            // told which option the arrow keys are currently on.
+            aria-activedescendant={
+              openPanel === 'city' && activeIndex >= 0
+                ? `${CITY_LISTBOX_ID.desktop}-${activeIndex}`
+                : undefined
+            }
             onClick={() => toggle('city')}
             className="flex items-center gap-2.5 flex-1 px-6 py-4 min-w-0 rounded-s-[999px] hover:bg-paper-warm/60 transition-colors duration-[240ms] text-start"
           >
