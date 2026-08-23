@@ -30,6 +30,7 @@ import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
 import { cardVersion } from '@/lib/seo/card-store';
+import { formatPlace } from '@/lib/geo/localize';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,7 +80,7 @@ export async function generateMetadata({
   // the page then contradicts.
   const nightly = formatCardPrice(unit.pricing.nightly_usd);
   const cardDescription = socialCardDescription({
-    place: cardPlace(unit.region ?? unit.municipality, unit.city),
+    place: cardPlace(unit.region ?? unit.municipality, unit.city, locale),
     price: nightly ? t('social.perNight', { price: nightly }) : null,
     unitTypeLabel: unitTypeLabelFor(t, unit.unit_type),
   });
@@ -204,11 +205,10 @@ export default async function UnitDetailPage({
     other:     t('unitTypes.other'),
   };
 
-  // Location breadcrumb for the header (district · city)
-  const locationParts = [
-    unit.region ?? unit.municipality,
-    unit.city,
-  ].filter(Boolean);
+  // Location line for the header. formatPlace, not a hand-rolled join, so it
+  // punctuates the way the share text and the card do — and so the 126 units
+  // with no district print the city alone rather than a leading separator.
+  const locationLine = formatPlace(locale, unit.region ?? unit.municipality, unit.city);
 
   // ── Structured data ───────────────────────────────────────────────────────
   // The amenity labels are the SAME object UnitAmenitiesSection renders below,
@@ -240,7 +240,7 @@ export default async function UnitDetailPage({
   // another seeing the auto-preview should read the same sentence.
   const shareNightly = formatCardPrice(unit.pricing.nightly_usd);
   const shareText = socialCardDescription({
-    place: cardPlace(unit.region ?? unit.municipality, unit.city),
+    place: cardPlace(unit.region ?? unit.municipality, unit.city, locale),
     price: shareNightly ? t('social.perNight', { price: shareNightly }) : null,
     unitTypeLabel: unitTypeLabel[unit.unit_type],
   });
@@ -302,9 +302,9 @@ export default async function UnitDetailPage({
                 {title}
               </h1>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                {locationParts.length > 0 && (
+                {locationLine && (
                   <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute">
-                    {locationParts.join(' · ')}
+                    {locationLine}
                   </p>
                 )}
                 {unit.rating !== null && (

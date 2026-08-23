@@ -1,10 +1,11 @@
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { SmartImage } from '@/components/media/SmartImage';
 import { cn } from '@/lib/utils';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { SaveButton } from '@/components/home/SaveButton';
 import { Link } from '@/i18n/navigation';
 import type { UnitListing } from '@/lib/types/unit';
+import { formatPlace } from '@/lib/geo/localize';
 
 interface UnitCardProps {
   unit: UnitListing;
@@ -18,10 +19,14 @@ interface UnitCardProps {
 
 export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
   const t = useTranslations('card');
+  const locale = useLocale();
 
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
   const title = unit.ad_title ?? unit.unit_name ?? '—';
-  const district = unit.region ?? unit.municipality ?? '';
+  // One formatter for every surface: "District, City", or just the city when
+  // the unit has no district — which is 126 of the 146 properties, so the
+  // no-district case is the normal one and must not print a stray separator.
+  const place = formatPlace(locale, unit.region ?? unit.municipality, unit.city);
 
   // Live-resolved. total/nights are present only when the search carried dates.
   const { nightly_usd: nightlyUsd, total_usd: totalUsd, nights } = unit.pricing;
@@ -68,7 +73,7 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
 
           {/* Location */}
           <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute mb-1">
-            {district}{district && unit.city ? ' · ' : ''}{unit.city}
+            {place}
           </p>
 
           {/* Price — resolved live, hidden entirely when the unit has no price.

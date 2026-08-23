@@ -162,10 +162,21 @@ export interface UnitListing {
   // ── unit_info table (one-to-one with units) ──────────────────────────────
   ad_title: string | null;       // marketing title shown to guests
   ad_description: string | null; // full description shown on detail page
-  country: string | null;        // plain text per schema — not a FK
+  // All four resolved for the visitor's locale in mapRow — see lib/geo/localize.
+  // They are DISPLAY strings: never build a slug, a filter or a URL from them,
+  // because the same place reads differently in each language. Use the ids for
+  // that.
+  country: string | null;
   city: string | null;
-  region: string | null;         // neighbourhood / district (plain text)
-  municipality: string | null;
+  region: string | null;         // district / neighbourhood
+  municipality: string | null;   // legacy free text on unit_info, not localised
+
+  /** geo_cities.id — stable across locales. */
+  city_id: string | null;
+  /** geo_districts.id. Null for most units: only Istanbul has districts yet. */
+  district_id: string | null;
+  /** geo_countries.id. */
+  country_id: string | null;
   // Blurred by approximateCoords, NOT unit_info's real values: 300-500m off the
   // true address, deterministic per unit. This type describes a public listing,
   // so the exact point must never be assigned here. full_address and

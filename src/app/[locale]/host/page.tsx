@@ -52,27 +52,21 @@ const TRUST_POINTS = [
   { key: 'bookings', Icon: Zap   },
 ] as const;
 
-// Known i18n keys in the 'cities' namespace — for localized city names in the dropdown
-const CITY_KEYS = ['istanbul', 'trabzon', 'sapanca', 'antalya', 'fethiye', 'bodrum'] as const;
-type CityKey = typeof CITY_KEYS[number];
-
 export default async function HostPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
 
-  const [t, tCities, geoData] = await Promise.all([
+  const [t, geoData] = await Promise.all([
     getTranslations({ locale, namespace: 'pages.host' }),
-    getTranslations({ locale, namespace: 'cities' }),
-    getHostGeoData(),
+    // Names come localised from geo_cities/geo_districts, so every city in the
+    // table is covered rather than the six that had message keys.
+    getHostGeoData(locale),
   ]);
 
-  // Enrich cities with localized display names; fall back to English DB name
   const localizedCities = geoData.cities.map((c) => ({
-    id:           c.id,
-    name:         c.name,
-    localizedName: CITY_KEYS.includes(c.key as CityKey)
-      ? tCities(c.key as CityKey)
-      : c.name,
-    hasDistricts: c.hasDistricts,
+    id:            c.id,
+    name:          c.name,
+    localizedName: c.localizedName,
+    hasDistricts:  c.hasDistricts,
   }));
 
   return (

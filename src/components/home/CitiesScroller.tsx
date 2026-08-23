@@ -40,7 +40,7 @@ export function CitiesScroller({ cities }: CitiesScrollerProps) {
                 <motion.div variants={cardImageHover} className="absolute inset-0">
                   <SmartImage
                     src={city.imageUrl}
-                    alt={city.name}
+                    alt={city.localizedName}
                     fill
                     sizes="(min-width: 768px) 176px, 144px"
                     className="object-cover"
@@ -55,7 +55,7 @@ export function CitiesScroller({ cities }: CitiesScrollerProps) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
               <span className="absolute bottom-0 inset-x-0 px-3 pb-3 text-white text-sm font-medium">
-                {city.name}
+                {city.localizedName}
               </span>
             </div>
           </Link>

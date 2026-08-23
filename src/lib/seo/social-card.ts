@@ -2,6 +2,7 @@ import { CANONICAL_URL } from '@/lib/config/urls';
 import type { UnitTypeEnum } from '@/lib/types/unit';
 import { unstable_cache } from 'next/cache';
 import { storedCardIfPresent } from './card-store';
+import { formatPlace } from '@/lib/geo/localize';
 
 /**
  * The share card for a unit — the line of copy and the image URL.
@@ -86,12 +87,21 @@ export function formatCardPrice(nightlyUsd: number | null): string | null {
   return nightlyUsd === null ? null : `$${nightlyUsd}`;
 }
 
-/** Region and city, in the order the page header shows them. */
-export function cardPlace(region: string | null, city: string | null): string | null {
-  const parts = [region, city].filter(Boolean) as string[];
-  // A unit whose district is recorded as its city ("Istanbul, Istanbul").
-  const unique = parts.filter((p, i) => parts.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i);
-  return unique.length ? unique.join(', ') : null;
+/**
+ * District and city, in the order the page header shows them.
+ *
+ * A thin wrapper over formatPlace so the composited share card and the page
+ * cannot punctuate the same two names differently. The locale defaults to
+ * English on purpose: the OG image route calls this with no locale because
+ * Geist cannot draw an Arabic comma any more than it can draw Arabic letters,
+ * and its caption falls back to Latin copy wholesale (see latinSafe there).
+ */
+export function cardPlace(
+  region: string | null,
+  city: string | null,
+  locale: string = 'en',
+): string | null {
+  return formatPlace(locale, region, city);
 }
 
 /**

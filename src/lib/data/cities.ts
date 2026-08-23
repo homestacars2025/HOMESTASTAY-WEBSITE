@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { pickLocalizedName } from '@/lib/geo/localize';
 
 interface GeoCityMedia {
   url: string;
@@ -8,16 +9,19 @@ interface GeoCityMedia {
 
 export interface CityData {
   id: string;
+  /** Canonical name. The slug and the ?city= filter are derived from THIS. */
   name: string;
+  /** Same city in the visitor's language — display only. */
+  localizedName: string;
   imageUrl: string | null;
 }
 
-export async function getCities(): Promise<CityData[]> {
+export async function getCities(locale: string): Promise<CityData[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('geo_cities')
-    .select('id, name, media')
+    .select('id, name, media, name_ar, name_en, name_tr')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true });
@@ -33,6 +37,7 @@ export async function getCities(): Promise<CityData[]> {
     return {
       id: row.id as string,
       name: row.name as string,
+      localizedName: pickLocalizedName(locale, row) ?? (row.name as string),
       imageUrl: cover?.url ?? null,
     };
   });
@@ -42,14 +47,16 @@ export async function getCities(): Promise<CityData[]> {
 
 export interface HostCity {
   id: string;
-  name: string;        // English DB name — used when saving
-  key: string;         // lowercase for i18n lookup, e.g. "istanbul"
+  name: string;          // canonical DB name — used when saving and when filtering
+  localizedName: string; // display only, resolved for the caller's locale
+  key: string;           // lowercase, e.g. "istanbul" (legacy i18n lookup key)
   hasDistricts: boolean;
 }
 
 export interface HostDistrict {
   id: string;
   name: string;
+  localizedName: string;
   cityId: string;
 }
 
@@ -58,13 +65,13 @@ export interface HostGeoData {
   districtsByCityId: Record<string, HostDistrict[]>;
 }
 
-export async function getHostGeoData(): Promise<HostGeoData> {
+export async function getHostGeoData(locale: string = 'en'): Promise<HostGeoData> {
   const supabase = await createClient();
 
   // sort_order DESC puts Istanbul (=1) before the rest (=0), then alphabetical
   const { data: cityRows, error: cityErr } = await supabase
     .from('geo_cities')
-    .select('id, name')
+    .select('id, name, name_ar, name_en, name_tr')
     .eq('is_active', true)
     .order('sort_order', { ascending: false })
     .order('name', { ascending: true });
@@ -78,7 +85,7 @@ export async function getHostGeoData(): Promise<HostGeoData> {
 
   const { data: districtRows } = await supabase
     .from('geo_districts')
-    .select('id, name, city_id')
+    .select('id, name, city_id, name_ar, name_en, name_tr')
     .eq('is_active', true)
     .in('city_id', ids)
     .order('sort_order', { ascending: true })
@@ -88,12 +95,18 @@ export async function getHostGeoData(): Promise<HostGeoData> {
   for (const d of districtRows ?? []) {
     const cid = d.city_id as string;
     if (!districtsByCityId[cid]) districtsByCityId[cid] = [];
-    districtsByCityId[cid].push({ id: d.id as string, name: d.name as string, cityId: cid });
+    districtsByCityId[cid].push({
+      id: d.id as string,
+      name: d.name as string,
+      localizedName: pickLocalizedName(locale, d) ?? (d.name as string),
+      cityId: cid,
+    });
   }
 
   const cities: HostCity[] = (cityRows ?? []).map((c) => ({
     id: c.id as string,
     name: c.name as string,
+    localizedName: pickLocalizedName(locale, c) ?? (c.name as string),
     key: (c.name as string).toLowerCase(),
     hasDistricts: !!(districtsByCityId[c.id as string]?.length),
   }));

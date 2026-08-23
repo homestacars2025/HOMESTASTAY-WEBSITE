@@ -21,7 +21,8 @@ type FormCity = {
 
 type FormDistrict = {
   id: string;
-  name: string;
+  name: string;           // canonical DB name — what gets saved
+  localizedName: string;  // display name for the current locale
   cityId: string;
 };
 
@@ -493,7 +494,7 @@ export function HostForm({
               label={t('form.districtLabel')}
               placeholder={t('form.districtPlaceholder')}
               options={[
-                ...cityDistricts.map((d) => ({ value: d.id, label: d.name })),
+                ...cityDistricts.map((d) => ({ value: d.id, label: d.localizedName })),
                 { value: 'other', label: t('form.districtOther') },
               ]}
               scrollable

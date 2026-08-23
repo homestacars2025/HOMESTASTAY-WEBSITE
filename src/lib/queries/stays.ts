@@ -1,6 +1,8 @@
 import 'server-only';
 import { createPublicClient } from '@/lib/supabase/public';
 import { unstable_cache } from 'next/cache';
+import { pickLocalizedName } from '@/lib/geo/localize';
+import { countryNamesByIso, localizedCountryName } from '@/lib/geo/countries';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { approximateCoords } from '@/lib/geo/approximate';
 import {
@@ -52,7 +54,12 @@ const LISTING_SELECT = [
   'unit_amenities(tv,wifi,air_conditioning,heating,kitchen,dishwasher,washing_machine,hot_water,hair_dryer,iron,extra_bed,parking,elevator,pool,gym,self_check_in)',
   'unit_rules(allow_parties,allow_pets,allow_smoking,quiet_hours_enabled,quiet_hours_from,quiet_hours_to,allow_unregistered_guests,family_friendly,id_required,additional_rules)',
   'unit_media(id,unit_id,media_type,file_path,public_url,is_cover,sort_order)',
-  'properties!inner(name,property_type,cover_photo_url,geo_cities:city_id(name),geo_districts:district_id(name))',
+  // The geo embeds carry every language column, not just `name`: mapRow picks
+  // one per visitor locale (see lib/geo/localize). `name` stays selected as the
+  // last fallback AND as the canonical value the city filter matches on.
+  // geo_countries has no FK to the translated `countries` table, so only its
+  // iso_code comes back here and the name is resolved in lib/geo/countries.
+  'properties!inner(name,property_type,cover_photo_url,geo_cities:city_id(id,name,name_ar,name_en,name_tr),geo_districts:district_id(id,name,name_ar,name_en,name_tr),geo_countries:country_id(id,name,iso_code))',
   // Locale-aware marketing copy. All non-Turkish rows are AI translations of the
   // Turkish source. Resolved per visitor locale in mapRow (see resolveTranslation).
   'unit_translations(language_code,ad_title,ad_description)',
@@ -69,7 +76,7 @@ const CARD_SELECT = [
   // ad_description + latitude/longitude dropped: the card shows neither.
   'unit_info!inner(ad_title,city,region,municipality)',
   // name + property_type dropped.
-  'properties!inner(cover_photo_url,geo_cities:city_id(name),geo_districts:district_id(name))',
+  'properties!inner(cover_photo_url,geo_cities:city_id(id,name,name_ar,name_en,name_tr),geo_districts:district_id(id,name,name_ar,name_en,name_tr),geo_countries:country_id(id,name,iso_code))',
   // Trimmed to one row per unit by the embedded order+limit in cardTrims().
   'unit_media(public_url,is_cover,sort_order,media_type)',
   // ad_description dropped; rows narrowed to [locale, tr] by cardTrims().
@@ -275,6 +282,9 @@ function mapRow(
   policy: UnitCancellationPolicy | null,
   locale: string,
   pricing: UnitPricing,
+  /** ISO → translated country names. See lib/geo/countries for why it is passed
+   *  in rather than joined: the two country tables have no foreign key. */
+  countryNames: Map<string, { name_en?: string | null; name_tr?: string | null; name_ar?: string | null }>,
 ): UnitListing {
   const info = one<RawRow>(row.unit_info);
   const specsRow = one<RawRow>(row.unit_specifications);
@@ -292,8 +302,19 @@ function mapRow(
 
   // Location: prefer the canonical geo lookup (via property FKs); fall back to
   // the free-text values a host typed on unit_info.
-  const geoCity: string | null = props?.geo_cities?.name ?? null;
-  const geoDistrict: string | null = props?.geo_districts?.name ?? null;
+  //
+  // Localised HERE, at the one point where a DB row becomes a UnitListing, so
+  // every surface downstream — card, detail page, breadcrumb, JSON-LD, share
+  // card — reads the same name in the same language without asking. The rows
+  // carry name_ar/name_en/name_tr; pickLocalizedName falls back through English
+  // to the canonical `name`, so a missing translation degrades to a spelling
+  // rather than to a blank.
+  const cityRow = props?.geo_cities ?? null;
+  const districtRow = props?.geo_districts ?? null;
+  const countryRow = props?.geo_countries ?? null;
+
+  const geoCity: string | null = pickLocalizedName(locale, cityRow);
+  const geoDistrict: string | null = pickLocalizedName(locale, districtRow);
 
   const specifications: UnitSpecifications = specsRow
     ? {
@@ -360,10 +381,16 @@ function mapRow(
 
     ad_title: content.ad_title,
     ad_description: content.ad_description,
-    country: null, // not modelled on unit_info in the live Stay schema
+    country: localizedCountryName(locale, countryRow?.iso_code, countryRow?.name, countryNames),
     city: geoCity ?? info?.city ?? null,
     region: geoDistrict ?? info?.region ?? null,
     municipality: info?.municipality ?? null,
+    // The ids travel with the names so a caller can link, filter or group by
+    // place without re-deriving it from a translated string. district_id is
+    // null for most units — only Istanbul has districts recorded so far.
+    city_id: cityRow?.id ?? null,
+    district_id: districtRow?.id ?? null,
+    country_id: countryRow?.id ?? null,
     // Blurred here, at the single point where DB rows become public listings, so
     // no caller can accidentally publish the real address.
     ...approximateCoords(
@@ -504,9 +531,11 @@ async function mapCardRows(
   checkOut?: string,
 ): Promise<UnitListing[]> {
   const rows = data.filter(hasAdTitle);
-  const [policies, quotes] = await Promise.all([
+  const [policies, quotes, countryNames] = await Promise.all([
     fetchPolicies(supabase, rows.map((r) => r.cancellation_policy_id), locale),
     fetchQuotes(supabase, rows.map((r) => r.id as string), checkIn, checkOut),
+    // One cached lookup for the whole page, not one per unit.
+    countryNamesByIso(),
   ]);
   return rows.map((r) =>
     mapRow(
@@ -514,6 +543,7 @@ async function mapCardRows(
       policies.get(r.cancellation_policy_id) ?? null,
       locale,
       quotes.get(r.id as string) ?? EMPTY_PRICING,
+      countryNames,
     ),
   );
 }
@@ -748,9 +778,10 @@ async function queryPublicUnitBySlug(
 
   // No dates here: the detail page re-quotes live once the guest picks them
   // (see quoteStay). This call yields the representative nightly rate only.
-  const [policies, quotes] = await Promise.all([
+  const [policies, quotes, countryNames] = await Promise.all([
     fetchPolicies(supabase, [row.cancellation_policy_id], locale),
     fetchQuotes(supabase, [row.id as string]),
+    countryNamesByIso(),
   ]);
 
   return mapRow(
@@ -758,6 +789,7 @@ async function queryPublicUnitBySlug(
     policies.get(row.cancellation_policy_id) ?? null,
     locale,
     quotes.get(row.id as string) ?? EMPTY_PRICING,
+    countryNames,
   );
 }
 

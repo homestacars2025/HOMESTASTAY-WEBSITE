@@ -1,10 +1,7 @@
-import { getTranslations } from 'next-intl/server';
+import { getLocale } from 'next-intl/server';
 import { getHostGeoData } from '@/lib/data/cities';
 import { CollapsibleSearch } from '@/components/home/CollapsibleSearch';
 import type { StaysFilters } from '@/lib/queries/stays';
-
-const CITY_KEYS = ['istanbul', 'trabzon', 'sapanca', 'antalya', 'fethiye', 'bodrum'] as const;
-type CityKey = typeof CITY_KEYS[number];
 
 /** Midday avoids any chance a timezone shift rolls the date back a day. */
 function fromISODate(value: string): Date {
@@ -20,17 +17,18 @@ export async function SearchBarWrapper({
   /** /stays passes true: once a search has run, the bar becomes a summary. */
   collapsible?: boolean;
 }) {
-  const [tCities, geoData] = await Promise.all([
-    getTranslations('cities'),
-    getHostGeoData(),
-  ]);
+  const locale = await getLocale();
+  const geoData = await getHostGeoData(locale);
 
+  // The names come from geo_cities.name_ar/_en/_tr now, not from a hand-kept
+  // list of six keys in the message files: a city added to the database shows
+  // up translated without a code change, and the other fourteen stop being
+  // stuck on their Turkish spelling. `name` is untouched — the URL still
+  // carries it, so shared links keep working across a language switch.
   const cities = geoData.cities.map((c) => ({
     id: c.id,
     name: c.name,
-    localizedName: CITY_KEYS.includes(c.key as CityKey)
-      ? tCities(c.key as CityKey)
-      : c.name,
+    localizedName: c.localizedName,
   }));
 
   // The URL carries the city by name; the bar selects by id. Match case-insensitively,
