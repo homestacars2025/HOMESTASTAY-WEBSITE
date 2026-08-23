@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Header } from '@/components/home/Header';
 import { SignInForm } from '@/components/auth/SignInForm';
+import { isGoogleAuthEnabled } from '@/lib/auth/providers';
 
 export async function generateMetadata({
   params,
@@ -19,6 +20,9 @@ export default async function SignInPage({
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ returnUrl?: string }>;
 }) {
+  // Resolved on the server: the button is hidden unless the provider is
+  // actually enabled — see lib/auth/providers for what happens when it is not.
+  const googleEnabled = await isGoogleAuthEnabled();
   const { locale } = await params;
   const { returnUrl } = await searchParams;
   const t = await getTranslations({ locale, namespace: 'auth.signIn' });
@@ -39,7 +43,10 @@ export default async function SignInPage({
 
           {/* Card */}
           <div className="bg-white border border-rule rounded-[14px] p-8 shadow-[0_2px_20px_rgba(0,0,0,0.06)]">
-            <SignInForm returnUrl={returnUrl ? decodeURIComponent(returnUrl) : undefined} />
+            <SignInForm
+              returnUrl={returnUrl ? decodeURIComponent(returnUrl) : undefined}
+              googleEnabled={googleEnabled}
+            />
           </div>
 
         </div>

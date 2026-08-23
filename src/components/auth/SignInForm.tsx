@@ -1,13 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
+import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
 import { createClient } from '@/lib/supabase/client';
 import type { AuthError } from '@supabase/supabase-js';
 
 interface SignInFormProps {
   returnUrl?: string;
+  /** False when Google is not enabled on the Supabase project — see
+   *  lib/auth/providers. A button that cannot work is worse than no button. */
+  googleEnabled?: boolean;
 }
 
 /**
@@ -23,9 +28,18 @@ function isEmailNotConfirmed(error: AuthError): boolean {
   );
 }
 
-export function SignInForm({ returnUrl }: SignInFormProps) {
+export function SignInForm({ returnUrl, googleEnabled = false }: SignInFormProps) {
   const t      = useTranslations('auth.signIn');
+  const tOauth = useTranslations('auth.oauth');
   const router = useRouter();
+
+  /**
+   * An OAuth failure happens OFF-SITE — at Google's consent screen — so the
+   * callback route sends the guest back here with a flag rather than trying to
+   * report it from a page that no longer exists. Dismissing the consent screen
+   * is not an error to apologise for, so it gets its own gentler wording.
+   */
+  const authError = useSearchParams().get('authError');
 
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -72,10 +86,19 @@ export function SignInForm({ returnUrl }: SignInFormProps) {
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
 
-      {error && (
+      {(error || authError) && (
         <div role="alert" className="bg-stay/5 border border-stay/20 rounded-[8px] px-4 py-3 text-sm text-stay leading-relaxed">
-          {error}
+          {error || tOauth(authError === 'cancelled' ? 'error.cancelled' : 'error.failed')}
         </div>
+      )}
+
+      {/* Google first: it is one tap, and a guest who has an account through it
+          should not have to read past a password field to find it. */}
+      {googleEnabled && (
+        <>
+          <GoogleButton returnUrl={returnUrl} />
+          <AuthDivider />
+        </>
       )}
 
       {/* Email */}

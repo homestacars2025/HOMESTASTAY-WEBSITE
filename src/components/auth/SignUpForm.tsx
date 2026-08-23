@@ -6,12 +6,16 @@ import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 import { PhoneInput } from './PhoneInput';
+import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
 
 interface SignUpFormProps {
   returnUrl?: string;
+  /** False when Google is not enabled on the Supabase project — see
+   *  lib/auth/providers. A button that cannot work is worse than no button. */
+  googleEnabled?: boolean;
 }
 
-export function SignUpForm({ returnUrl }: SignUpFormProps) {
+export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps) {
   const t      = useTranslations('auth.signUp');
   const router = useRouter();
 
@@ -140,6 +144,16 @@ export function SignUpForm({ returnUrl }: SignUpFormProps) {
             </>
           )}
         </div>
+      )}
+
+      {/* Google needs no name, email or phone fields — it supplies what it can
+          and the callback writes the profile. So it goes above the form, not
+          after four inputs the guest may not have to fill in at all. */}
+      {googleEnabled && (
+        <>
+          <GoogleButton returnUrl={returnUrl} />
+          <AuthDivider />
+        </>
       )}
 
       {/* Name row */}

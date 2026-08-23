@@ -503,6 +503,15 @@
       "subtitle": "Create a free account or sign in to save places and make bookings.",
       "signIn": "Sign in",
       "createAccount": "Create account"
+    },
+    "oauth": {
+      "continueWithGoogle": "Continue with Google",
+      "loading": "Redirecting…",
+      "or": "or",
+      "error": {
+        "cancelled": "Google sign-in was cancelled. You can try again or use your email below.",
+        "failed": "We couldn't sign you in with Google. Please try again, or use your email below."
+      }
     }
   },
   "myBookings": {

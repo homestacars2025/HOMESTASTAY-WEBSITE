@@ -503,6 +503,15 @@
       "subtitle": "Yer kaydetmek ve rezervasyon yapmak için ücretsiz hesap oluşturun veya giriş yapın.",
       "signIn": "Giriş yap",
       "createAccount": "Hesap oluştur"
+    },
+    "oauth": {
+      "continueWithGoogle": "Google ile devam et",
+      "loading": "Yönlendiriliyor…",
+      "or": "veya",
+      "error": {
+        "cancelled": "Google ile giriş iptal edildi. Tekrar deneyebilir veya aşağıdan e-postanızı kullanabilirsiniz.",
+        "failed": "Google ile giriş yapılamadı. Lütfen tekrar deneyin veya aşağıdan e-postanızı kullanın."
+      }
     }
   },
   "myBookings": {
