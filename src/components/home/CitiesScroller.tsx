@@ -36,20 +36,20 @@ export function CitiesScroller({ cities }: CitiesScrollerProps) {
               indexed as a city page. Now points at the real destination page. */}
           <Link href={`/destinations/${city.slug}`} className="block">
             <div className="relative w-full aspect-[3/4] rounded-[14px] overflow-hidden">
-              {city.imageUrl ? (
-                <motion.div variants={cardImageHover} className="absolute inset-0">
-                  <SmartImage
-                    src={city.imageUrl}
-                    alt={city.localizedName}
-                    fill
-                    sizes="(min-width: 768px) 176px, 144px"
-                    className="object-cover"
-                    loading="lazy"
-                  />
-                </motion.div>
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-[--paper-warm] to-[--paper-cool]" />
-              )}
+              {/* No placeholder branch: getCities guarantees an image, and
+                  CityData.imageUrl is typed `string` to keep it that way. The
+                  grey gradient that used to stand in for a missing photo was
+                  the thing this strip was being fixed for. */}
+              <motion.div variants={cardImageHover} className="absolute inset-0">
+                <SmartImage
+                  src={city.imageUrl}
+                  alt={city.localizedName}
+                  fill
+                  sizes="(min-width: 768px) 176px, 144px"
+                  className="object-cover"
+                  loading="lazy"
+                />
+              </motion.div>
 
               {/* Readability gradient */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />

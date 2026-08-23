@@ -13,9 +13,57 @@ export interface CityData {
   name: string;
   /** Same city in the visitor's language — display only. */
   localizedName: string;
-  imageUrl: string | null;
+  /**
+   * Never null: getCities drops cities that have no cover image. The type says
+   * so deliberately, so the card cannot grow a placeholder branch again and the
+   * filter cannot be removed without the compiler noticing.
+   */
+  imageUrl: string;
 }
 
+/**
+ * A city's cover image URL, or null when it has none.
+ *
+ * "Has an image" means: media is an array, it is not empty, and the entry we
+ * would actually render carries a non-blank url string. Every other shape —
+ * null, [], an entry with no url, a url that is an empty string or whitespace —
+ * counts as no image.
+ *
+ * The entry checked is the one the card WOULD draw (is_cover first, then the
+ * first row), not media[0] blindly. Testing index 0 while rendering the
+ * is_cover entry is how a city ends up passing the filter and still drawing a
+ * blank card.
+ */
+function coverUrl(media: unknown): string | null {
+  if (!Array.isArray(media) || media.length === 0) return null;
+
+  const entries = media.filter((m): m is GeoCityMedia => !!m && typeof m === 'object');
+  const cover = entries.find((m) => m.is_cover) ?? entries[0];
+
+  const url = cover?.url;
+  return typeof url === 'string' && url.trim() !== '' ? url : null;
+}
+
+/**
+ * Cities for the homepage "Explore cities" strip — IMAGE REQUIRED.
+ *
+ * A city with no photograph rendered as a grey gradient card with a name on it,
+ * which read as a broken image rather than a design. Two of the twenty are in
+ * that state (Afyon and Muğla, both media = []), so they are dropped here
+ * rather than in the component: the strip never receives them, and there is no
+ * hidden element left behind to add width to the horizontal scroller.
+ *
+ * WHY THE FILTER IS HERE AND NOT IN THE QUERY
+ *   PostgREST can test a json path (media->0->>url), but only at a fixed index,
+ *   and the rule above is not about index 0 — it is about whichever entry the
+ *   card draws. A SQL filter and the render would then disagree for any city
+ *   whose cover is not first. At twenty rows the saving is a rounding error and
+ *   the divergence is a real bug, so the resolved value is what gets filtered.
+ *
+ * THIS DOES NOT TOUCH THE SEARCH FILTER. The city dropdown reads
+ * getHostGeoData below, which is a different query with no image condition —
+ * a city you can book in stays searchable whether or not we have a photo of it.
+ */
 export async function getCities(locale: string): Promise<CityData[]> {
   const supabase = await createClient();
 
@@ -31,16 +79,19 @@ export async function getCities(locale: string): Promise<CityData[]> {
     return [];
   }
 
-  return (data ?? []).map((row) => {
-    const media: GeoCityMedia[] = Array.isArray(row.media) ? row.media : [];
-    const cover = media.find((m) => m.is_cover) ?? media[0] ?? null;
-    return {
+  const cities: CityData[] = [];
+  for (const row of data ?? []) {
+    const imageUrl = coverUrl(row.media);
+    if (!imageUrl) continue;
+
+    cities.push({
       id: row.id as string,
       name: row.name as string,
       localizedName: pickLocalizedName(locale, row) ?? (row.name as string),
-      imageUrl: cover?.url ?? null,
-    };
-  });
+      imageUrl,
+    });
+  }
+  return cities;
 }
 
 // ── Host form geo data ─────────────────────────────────────────────────────────

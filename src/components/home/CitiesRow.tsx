@@ -26,6 +26,11 @@ export async function CitiesRow() {
     slug: slugs.get(city.id) ?? citySlug(city.name),
   }));
 
+  // Nothing to show: render NOTHING, heading included. A section titled
+  // "Explore cities" above an empty rail is worse than no section — it reads as
+  // a page that failed to load. Only reachable if no city has an image at all.
+  if (linked.length === 0) return null;
+
   return (
     <section className="pb-10">
       <h2 className="px-4 mb-5 text-[19px] font-medium tracking-[-0.025em] text-ink">
