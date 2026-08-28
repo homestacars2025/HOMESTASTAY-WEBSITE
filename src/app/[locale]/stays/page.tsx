@@ -9,10 +9,14 @@ import { StaysGallery } from '@/components/stays/StaysGallery';
 import { StaysSkeleton } from '@/components/stays/StaysSkeleton';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
 import { CategoryChips } from '@/components/home/CategoryChips';
-import { DestinationsRail } from '@/components/destinations/DestinationsRail';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnits, LISTING_PAGE_SIZE, type StaysFilters } from '@/lib/queries/stays';
-import { parseStaysSearchParams, buildStaysQuery } from '@/lib/stays/search-params';
+import {
+  parseStaysSearchParams,
+  parseStaysPage,
+  buildStaysQuery,
+  buildStaysQueryWithPage,
+} from '@/lib/stays/search-params';
 
 // Fresh data per request — real availability, no stale-cache leak of booked/archived units.
 export const dynamic = 'force-dynamic';
@@ -73,26 +77,18 @@ export async function generateMetadata({
   };
 }
 
-/** First value of a possibly-repeated query param. */
-function one(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-/** 1-based page from the URL; anything invalid degrades to page 1. */
-function pageFrom(value: string | string[] | undefined): number {
-  const n = Number.parseInt(one(value) ?? '1', 10);
-  return Number.isFinite(n) && n >= 1 ? n : 1;
-}
-
-/** Dates + guests only (no city) — the bit a unit page needs to preselect. */
-function unitSearchQuery(filters: StaysFilters): string {
-  const q = new URLSearchParams();
-  if (filters.checkIn && filters.checkOut) {
-    q.set('checkIn', filters.checkIn);
-    q.set('checkOut', filters.checkOut);
-  }
-  if (filters.guests) q.set('guests', String(filters.guests));
-  return q.toString();
+/**
+ * The whole active search, for the link into a unit page.
+ *
+ * It used to be dates + guests only, which meant the city, the category and
+ * the page number were gone the moment a guest opened a unit — and the back
+ * link on the detail page had nothing left to rebuild the search from. The
+ * unit page still reads only the dates/guests it needs for the booking card;
+ * the rest rides along so it can hand the guest back their results.
+ */
+function unitSearchQuery(filters: StaysFilters, page: number): string {
+  // Leading '?' is stripped here — UnitCard adds its own.
+  return buildStaysQueryWithPage(filters, page).replace(/^\?/, '');
 }
 
 export default async function StaysPage({ searchParams }: { searchParams: SearchParams }) {
@@ -105,7 +101,7 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
   // Params are visitor-editable, so anything invalid degrades to "no filter"
   // rather than erroring or emptying the page.
   const filters = parseStaysSearchParams(rawParams);
-  const page = pageFrom(rawParams.page);
+  const page = parseStaysPage(rawParams);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -124,13 +120,6 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
             guest can see what the filter did, and switch without going back. */}
         <div className="mb-8">
           <CategoryChips filters={filters} />
-        </div>
-
-        {/* Crawlable links into the city landing pages. Without a link path
-            from an indexed page, /destinations/* exists only in the sitemap —
-            which Google treats as a hint, not an endorsement. */}
-        <div className="mb-10">
-          <DestinationsRail locale={locale} />
         </div>
 
         {/* The results stream in their own boundary so the header + search bar
@@ -198,7 +187,7 @@ async function StaysResults({
 
   return (
     <>
-      <StaysGallery units={units} searchQuery={unitSearchQuery(filters)} />
+      <StaysGallery units={units} searchQuery={unitSearchQuery(filters, page)} />
       {totalPages > 1 && (
         <Pagination filters={filters} page={page} totalPages={totalPages} t={t} />
       )}

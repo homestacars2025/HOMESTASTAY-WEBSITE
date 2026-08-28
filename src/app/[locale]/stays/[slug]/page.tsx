@@ -25,7 +25,11 @@ import { UnitMapSection } from '@/components/unit/UnitMapSection';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnitBySlug } from '@/lib/queries/stays';
-import { parseStaysSearchParams } from '@/lib/stays/search-params';
+import {
+  parseStaysSearchParams,
+  parseStaysPage,
+  buildStaysQueryWithPage,
+} from '@/lib/stays/search-params';
 import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
@@ -184,7 +188,8 @@ export default async function UnitDetailPage({
   // re-pick. Reuses the listing parser — a lone/invalid date pair degrades to
   // none. When a valid pair is present, quote it server-side so the booking
   // card shows the right total on first paint (no client round-trip).
-  const search = parseStaysSearchParams(await searchParams);
+  const rawSearch = await searchParams;
+  const search = parseStaysSearchParams(rawSearch);
   const initialQuote =
     search.checkIn && search.checkOut
       ? await quoteStay(unit.id, search.checkIn, search.checkOut)
@@ -192,6 +197,10 @@ export default async function UnitDetailPage({
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const title = unit.ad_title ?? unit.unit_name ?? '—';
+
+  // The results the guest came from, rebuilt from the params the card link
+  // carried in. Empty when they arrived cold, which lands them on the index.
+  const backToStaysHref = `/stays${buildStaysQueryWithPage(search, parseStaysPage(rawSearch))}`;
 
   const unitTypeLabel: Record<UnitTypeEnum, string> = {
     apartment: t('unitTypes.apartment'),
@@ -269,10 +278,18 @@ export default async function UnitDetailPage({
       {/* pb-32 on mobile leaves room above the fixed bottom booking bar */}
       <main className="max-w-screen-xl mx-auto px-4 pt-6 pb-32 lg:pb-16">
 
-        {/* Back link */}
+        {/* Back link.
+            It used to be a bare '/stays', so pressing it wiped the search the
+            guest arrived with — city, dates, category, page, all of it — and
+            dropped them on the unfiltered index. The search lives entirely in
+            the URL, so rebuilding it here returns them to the exact results
+            they left. A visitor who landed on this page cold (shared link,
+            search engine) carries no params and still gets the plain index,
+            and the link stays a real crawlable anchor rather than a
+            history-dependent router.back(). */}
         <nav className="mb-6">
           <Link
-            href="/stays"
+            href={backToStaysHref as '/stays'}
             className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.08em] text-mute hover:text-ink transition-colors duration-[240ms]"
           >
             <ChevronLeft className="w-3.5 h-3.5 rtl:rotate-180" />

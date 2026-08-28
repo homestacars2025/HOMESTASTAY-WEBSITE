@@ -69,6 +69,17 @@ export function parseStaysSearchParams(params: RawParams): StaysFilters {
   return filters;
 }
 
+/**
+ * 1-based results page from the URL; anything invalid degrades to page 1.
+ *
+ * Lives here rather than on the listing page because the unit page reads it
+ * too — its back link has to know which page of results the guest came from.
+ */
+export function parseStaysPage(params: RawParams): number {
+  const n = Number.parseInt(single(params.page) ?? '1', 10);
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
 /** Build the /stays query string for a search. Omits empty values entirely. */
 export function buildStaysQuery(filters: StaysFilters): string {
   const q = new URLSearchParams();
@@ -79,6 +90,23 @@ export function buildStaysQuery(filters: StaysFilters): string {
     q.set('checkIn', filters.checkIn);
     q.set('checkOut', filters.checkOut);
   }
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
+/**
+ * The whole active search — filters AND page — as a query string.
+ *
+ * This is what round-trips a guest through a unit page. The card link carries
+ * it in and the detail page's back link rebuilds it on the way out, so opening
+ * a unit from page 3 of a filtered search returns to page 3 of that same
+ * search instead of the bare, unfiltered index.
+ */
+export function buildStaysQueryWithPage(filters: StaysFilters, page: number): string {
+  const q = new URLSearchParams(buildStaysQuery(filters));
+  // Page 1 is what parseStaysPage assumes when the param is absent, so writing
+  // it would only add noise to the common URL.
+  if (page > 1) q.set('page', String(page));
   const s = q.toString();
   return s ? `?${s}` : '';
 }
