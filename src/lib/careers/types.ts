@@ -63,6 +63,13 @@ export interface ApplicationPayload {
   email?: string;
   age?: number;
   nationality?: string;
+  /**
+   * Still part of the Edge Function's contract, and deliberately never set by
+   * this form: the fixed city and district fields were removed, and the
+   * Istanbul district is now an ordinary form_schema question. Its answer
+   * therefore arrives in `answers`, under whatever key the console gave it —
+   * NOT here.
+   */
   residence_city?: string;
   residence_district?: string;
   answers: Record<string, AnswerValue>;

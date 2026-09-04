@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { CountrySelect } from '@/components/booking/CountrySelect';
-import { CitySelect } from '@/components/careers/CitySelect';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { AGE_MAX, AGE_MIN, type FieldErrorKey, type FixedValues } from '@/lib/careers/validate';
 
@@ -21,13 +20,11 @@ import { AGE_MAX, AGE_MIN, type FieldErrorKey, type FixedValues } from '@/lib/ca
  * one box would tell the applicant to fix the field they deliberately left
  * blank.
  *
- * ⚠️ RESIDENCE CITY AND DISTRICT STORE A LATIN VALUE, NOT THE LABEL SHOWN.
- * CitySelect displays "إسطنبول" / "İstanbul" / "Стамбул" and stores "Istanbul"
- * in every locale, so the district gate and the stored spelling never depend
- * on the applicant's language. The district field appears only for Istanbul,
- * and the parent clears it whenever the city changes — see ApplicationForm's
- * setFixedValue, which is the guard that stops an Istanbul district being
- * submitted against Ankara.
+ * ⚠️ NO CITY OR DISTRICT HERE ANY MORE. They were fixed fields with their own
+ * pickers; the Istanbul district is now an ordinary form_schema question, so it
+ * is drawn by DynamicField and its answer travels in `answers` rather than in
+ * residence_district. Nothing about residence is fixed for every opening now —
+ * an opening that does not care simply does not ask.
  */
 
 const INPUT =
@@ -155,19 +152,6 @@ export function FixedFields({ values, onChange, errors }: FixedFieldsProps) {
         searchPlaceholder={t('countrySearch')}
       />
 
-      {/* City, and the district that only Istanbul has */}
-      <CitySelect
-        city={values.residenceCity}
-        district={values.residenceDistrict}
-        onCityChange={(v) => onChange('residenceCity', v)}
-        onDistrictChange={(v) => onChange('residenceDistrict', v)}
-        cityLabel={t('residenceCity')}
-        cityPlaceholder={t('residenceCityPlaceholder')}
-        districtLabel={t('residenceDistrict')}
-        districtPlaceholder={t('residenceDistrictPlaceholder')}
-        optionalText={t('optional')}
-        searchPlaceholder={t('countrySearch')}
-      />
     </div>
   );
 }

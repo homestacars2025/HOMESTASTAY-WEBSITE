@@ -43,8 +43,6 @@ const EMPTY_FIXED: FixedValues = {
   email: '',
   age: '',
   nationality: '',
-  residenceCity: '',
-  residenceDistrict: '',
 };
 
 interface ApplicationFormProps {
@@ -71,14 +69,7 @@ export function ApplicationForm({ slug, title, fields }: ApplicationFormProps) {
   const cvQuestion = useMemo(() => cvField(fields), [fields]);
 
   function setFixedValue<K extends keyof FixedValues>(key: K, value: FixedValues[K]) {
-    setFixed((prev) => {
-      const next = { ...prev, [key]: value };
-      // ⚠️ A district belongs to exactly one city. Changing the city without
-      // clearing it would submit an Istanbul district against Ankara — the
-      // kind of wrong that looks right in the payload.
-      if (key === 'residenceCity') next.residenceDistrict = '';
-      return next;
-    });
+    setFixed((prev) => ({ ...prev, [key]: value }));
   }
 
   function messageFor(result: Extract<ApplyResult, { ok: false }>): string {

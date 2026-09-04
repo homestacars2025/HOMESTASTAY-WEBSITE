@@ -211,8 +211,6 @@ export interface FixedValues {
   email: string;
   age: string;
   nationality: string;
-  residenceCity: string;
-  residenceDistrict: string;
 }
 
 /**

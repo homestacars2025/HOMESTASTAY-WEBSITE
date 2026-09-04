@@ -122,8 +122,6 @@ export async function submitApplication(input: ApplyInput): Promise<ApplyResult>
   const email = fixed.email.trim().toLowerCase();
   const age = fixed.age.trim();
   const nationality = fixed.nationality.trim();
-  const city = fixed.residenceCity.trim();
-  const district = fixed.residenceDistrict.trim();
 
   const ageNumber = age === '' ? null : Number(age);
 
@@ -136,10 +134,9 @@ export async function submitApplication(input: ApplyInput): Promise<ApplyResult>
         ageNumber >= AGE_MIN && ageNumber <= AGE_MAX
           ? { age: ageNumber } : {}),
     ...(nationality ? { nationality } : {}),
-    ...(city ? { residence_city: city } : {}),
-    // A district without its city is meaningless, and the form clears it on
-    // every city change — this is the belt to that braces.
-    ...(city && district ? { residence_district: district } : {}),
+    // residence_city / residence_district are not sent: the form no longer
+    // collects them, and the Istanbul district rides in `answers` as a normal
+    // schema question.
     answers: pruneAnswers(answers),
     ...(cv ? { cv } : {}),
     source: 'website',
