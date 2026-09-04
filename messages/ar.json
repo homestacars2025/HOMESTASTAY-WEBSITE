@@ -812,7 +812,6 @@
       "age": "العمر",
       "nationality": "الجنسية",
       "nationalityPlaceholder": "اختر جنسيتك",
-      "countrySearch": "بحث",
       "optional": "اختياري",
       "questionsTitle": "بعض الأسئلة",
       "cvChoose": "أرفق سيرتك الذاتية",
@@ -831,7 +830,9 @@
       "errorFix": "راجع الحقول المُعلَّمة.",
       "errorClosed": "توقّف استقبال الطلبات على هذه الوظيفة.",
       "errorRateLimited": "محاولات كثيرة. حاول مرة أخرى بعد قليل.",
-      "errorGeneric": "تعذّر إرسال طلبك. حاول مرة أخرى."
+      "errorGeneric": "تعذّر إرسال طلبك. حاول مرة أخرى.",
+      "choosePlaceholder": "اختر إجابة",
+      "searchPlaceholder": "بحث"
     },
     "success": {
       "title": "تم استلام طلبك",

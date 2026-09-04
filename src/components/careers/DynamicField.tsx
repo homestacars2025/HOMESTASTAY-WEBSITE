@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { ChoiceSelect } from '@/components/careers/ChoiceSelect';
 import type { AnswerValue, FormField } from '@/lib/careers/types';
 
 /**
@@ -10,11 +11,26 @@ import type { AnswerValue, FormField } from '@/lib/careers/types';
  * payload's top-level `cv` rather than into `answers`. ApplicationForm filters
  * it out before mapping.
  *
+ * ⚠️ A single_choice IS DRAWN TWO WAYS, DECIDED BY COUNT ALONE.
+ * Up to CHOICE_DROPDOWN_THRESHOLD options it is radio cards: everything
+ * visible, one tap, no hidden state — the right control for "yes / no". Past
+ * that it is a searchable dropdown, because 39 Istanbul districts as radio
+ * cards is a wall the applicant scrolls past to reach the next question on a
+ * 375px screen. The rule is general and lives here, so no opening and no
+ * console author has to think about it.
+ *
  * RTL: every axis is logical (ms/me, text-start, items-start), so this renders
  * correctly in Arabic with no second rule. The one exception is `number`,
  * which is dir="ltr" — a numeral is a left-to-right token in every locale, the
  * same call TopupAmountForm makes.
  */
+
+/**
+ * Where radio cards stop being kinder than a dropdown. Eight is a list you can
+ * still take in at a glance; a "yes / no / maybe" stays flat, a district list
+ * collapses.
+ */
+const CHOICE_DROPDOWN_THRESHOLD = 8;
 
 const INPUT =
   'w-full bg-white border rounded-[10px] px-4 py-3 text-sm text-ink ' +
@@ -35,10 +51,15 @@ export function DynamicField({ field, value, invalid, onChange }: DynamicFieldPr
   const errorId = `${id}-error`;
   const border = invalid ? 'border-stay' : 'border-rule';
 
-  // A radio group and a checkbox group are labelled by a <legend> inside a
-  // <fieldset>; a single control by a <label>. Using the wrong one leaves a
-  // screen reader announcing "radio button" with no question attached.
-  const isGroup = field.type === 'single_choice' || field.type === 'multiple_choice';
+  // A dropdown is ONE control and takes a <label>; a radio or checkbox group is
+  // several and takes a <legend> inside a <fieldset>. Using the wrong one
+  // leaves a screen reader announcing "radio button" with no question attached,
+  // or a label pointing at nothing.
+  const asDropdown =
+    field.type === 'single_choice' && field.options.length > CHOICE_DROPDOWN_THRESHOLD;
+
+  const isGroup =
+    (field.type === 'single_choice' && !asDropdown) || field.type === 'multiple_choice';
 
   const label = (
     <>
@@ -113,6 +134,21 @@ export function DynamicField({ field, value, invalid, onChange }: DynamicFieldPr
         );
 
       case 'single_choice':
+        if (asDropdown) {
+          return (
+            <ChoiceSelect
+              id={id}
+              options={field.options}
+              value={typeof value === 'string' ? value : ''}
+              onChange={(next) => onChange(next)}
+              invalid={invalid}
+              describedBy={invalid ? errorId : undefined}
+              placeholder={t('choosePlaceholder')}
+              searchPlaceholder={t('searchPlaceholder')}
+              label={field.label}
+            />
+          );
+        }
         return (
           <div className="flex flex-col gap-2">
             {field.options.map((option) => {

@@ -812,7 +812,6 @@
       "age": "Age",
       "nationality": "Nationality",
       "nationalityPlaceholder": "Select your nationality",
-      "countrySearch": "Search",
       "optional": "Optional",
       "questionsTitle": "A few questions",
       "cvChoose": "Attach your CV",
@@ -831,7 +830,9 @@
       "errorFix": "Please check the highlighted fields.",
       "errorClosed": "This role has stopped accepting applications.",
       "errorRateLimited": "Too many attempts. Please try again in a little while.",
-      "errorGeneric": "We couldn't send your application. Please try again."
+      "errorGeneric": "We couldn't send your application. Please try again.",
+      "choosePlaceholder": "Select an answer",
+      "searchPlaceholder": "Search"
     },
     "success": {
       "title": "Application received",

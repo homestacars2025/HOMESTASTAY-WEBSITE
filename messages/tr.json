@@ -812,7 +812,6 @@
       "age": "Yaş",
       "nationality": "Uyruk",
       "nationalityPlaceholder": "Uyruğunuzu seçin",
-      "countrySearch": "Ara",
       "optional": "İsteğe bağlı",
       "questionsTitle": "Birkaç soru",
       "cvChoose": "CV'nizi ekleyin",
@@ -831,7 +830,9 @@
       "errorFix": "Lütfen işaretli alanları kontrol edin.",
       "errorClosed": "Bu pozisyon başvuru almayı durdurdu.",
       "errorRateLimited": "Çok fazla deneme. Lütfen biraz sonra tekrar deneyin.",
-      "errorGeneric": "Başvurunuz gönderilemedi. Lütfen tekrar deneyin."
+      "errorGeneric": "Başvurunuz gönderilemedi. Lütfen tekrar deneyin.",
+      "choosePlaceholder": "Bir seçenek seçin",
+      "searchPlaceholder": "Ara"
     },
     "success": {
       "title": "Başvurunuz alındı",

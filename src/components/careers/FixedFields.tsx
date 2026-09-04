@@ -81,7 +81,7 @@ export function FixedFields({ values, onChange, errors }: FixedFieldsProps) {
             variant="booking"
             invalid={contactInvalid}
             errorId="contact-error"
-            searchPlaceholder={t('countrySearch')}
+            searchPlaceholder={t('searchPlaceholder')}
           />
         </div>
 
@@ -149,7 +149,7 @@ export function FixedFields({ values, onChange, errors }: FixedFieldsProps) {
         label={t('nationality')}
         optionalText={t('optional')}
         placeholder={t('nationalityPlaceholder')}
-        searchPlaceholder={t('countrySearch')}
+        searchPlaceholder={t('searchPlaceholder')}
       />
 
     </div>
