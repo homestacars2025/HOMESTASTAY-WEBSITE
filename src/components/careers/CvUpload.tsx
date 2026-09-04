@@ -3,7 +3,12 @@
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Paperclip, X, FileText } from 'lucide-react';
-import { CV_EXTENSIONS, CV_MAX_BYTES, CV_MIME_TYPES } from '@/app/[locale]/careers/[slug]/actions';
+import {
+  CV_EXTENSIONS,
+  CV_MAX_BYTES,
+  CV_MIME_TYPES,
+  humanFileSize,
+} from '@/lib/careers/validate';
 import type { CvPayload } from '@/lib/careers/types';
 
 /**
@@ -24,11 +29,6 @@ interface CvUploadProps {
   invalid: boolean;
   errorId: string;
   onChange: (cv: CvPayload | null, fileName: string | null) => void;
-}
-
-/** "2.4 MB" — one decimal, locale-formatted by the caller's Intl elsewhere. */
-function humanSize(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function hasAllowedExtension(name: string): boolean {
@@ -58,7 +58,7 @@ export function CvUpload({ label, required, invalid, errorId, onChange }: CvUplo
 
     // ── Refuse BEFORE reading ────────────────────────────────────────────
     if (file.size > CV_MAX_BYTES) {
-      setLocalError(t('cvTooLarge', { max: humanSize(CV_MAX_BYTES) }));
+      setLocalError(t('cvTooLarge', { max: humanFileSize(CV_MAX_BYTES) }));
       reset();
       return;
     }
@@ -124,7 +124,7 @@ export function CvUpload({ label, required, invalid, errorId, onChange }: CvUplo
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-sm text-ink" dir="ltr">{fileName}</span>
             <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute">
-              {humanSize(fileSize)}
+              {humanFileSize(fileSize)}
             </span>
           </span>
           <button
@@ -152,7 +152,7 @@ export function CvUpload({ label, required, invalid, errorId, onChange }: CvUplo
       )}
 
       <p className="mt-1.5 text-xs leading-relaxed text-mute">
-        {t('cvHint', { max: humanSize(CV_MAX_BYTES) })}
+        {t('cvHint', { max: humanFileSize(CV_MAX_BYTES) })}
       </p>
 
       {localError && (

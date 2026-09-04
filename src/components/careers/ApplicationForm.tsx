@@ -8,7 +8,15 @@ import { FixedFields } from '@/components/careers/FixedFields';
 import { CvUpload } from '@/components/careers/CvUpload';
 import { ApplicationSuccess } from '@/components/careers/ApplicationSuccess';
 import { submitApplication, type ApplyResult } from '@/app/[locale]/careers/[slug]/actions';
-import { answerFields, cvField, validateApplication, type FieldErrorKey, type FixedValues } from '@/lib/careers/validate';
+import {
+  answerFields,
+  cvField,
+  humanFileSize,
+  validateApplication,
+  CV_MAX_BYTES,
+  type FieldErrorKey,
+  type FixedValues,
+} from '@/lib/careers/validate';
 import type { AnswerValue, CvPayload, FormField } from '@/lib/careers/types';
 
 /**
@@ -80,7 +88,9 @@ export function ApplicationForm({ slug, title, fields }: ApplicationFormProps) {
       case 'rejected':      return result.message ?? t('errorGeneric');
       case 'closed':        return t('errorClosed');
       case 'rate_limited':  return t('errorRateLimited');
-      case 'cv_too_large':  return t('cvTooLarge', { max: '5.0 MB' });
+      // The limit is named from the constant, not typed twice: a hardcoded
+      // "5.0 MB" here would go stale the day CV_MAX_BYTES moves.
+      case 'cv_too_large':  return t('cvTooLarge', { max: humanFileSize(CV_MAX_BYTES) });
       case 'cv_type':       return t('cvWrongType');
       case 'invalid':       return t('errorFix');
       default:              return t('errorGeneric');

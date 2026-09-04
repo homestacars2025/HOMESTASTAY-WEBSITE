@@ -4,6 +4,8 @@ import { SUBMIT_URL, anonKey, fetchOpening } from '@/lib/careers/fetch-opening';
 import {
   AGE_MAX,
   AGE_MIN,
+  CV_MAX_BYTES,
+  CV_MIME_TYPES,
   pruneAnswers,
   validateApplication,
   type FieldErrorKey,
@@ -34,8 +36,14 @@ import type { AnswerValue, ApplicationPayload, CvPayload } from '@/lib/careers/t
 
 // ── Limits ────────────────────────────────────────────────────────────────────
 
-/** 5 MB on the RAW file, matching the client check. */
-export const CV_MAX_BYTES = 5 * 1024 * 1024;
+/**
+ * ⚠️ NOTHING BUT ASYNC FUNCTIONS MAY BE EXPORTED FROM THIS FILE.
+ * 'use server' turns every export into a server-action reference, so a
+ * constant exported here reaches a Client Component as a proxy rather than a
+ * value — `[...CONST]` then throws "is not iterable", which is how this page
+ * 500'd on its first deploy. The CV limits therefore live in
+ * lib/careers/validate.ts and are imported by both sides.
+ */
 
 /**
  * Generous room for base64 (+33%) plus the JSON around it. This is the guard
@@ -43,20 +51,6 @@ export const CV_MAX_BYTES = 5 * 1024 * 1024;
  * already refused anything over CV_MAX_BYTES before reading it.
  */
 const CV_MAX_BASE64 = Math.ceil((CV_MAX_BYTES * 4) / 3) + 4096;
-
-export const CV_MIME_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-] as const;
-
-/**
- * Extensions are checked alongside the MIME type because browsers are not
- * reliable about .docx — Safari and some Windows configurations send
- * application/octet-stream for it. Refusing a real CV over a header the
- * applicant cannot see or fix would be the wrong trade.
- */
-export const CV_EXTENSIONS = ['.pdf', '.doc', '.docx'] as const;
 
 // ── Result ────────────────────────────────────────────────────────────────────
 

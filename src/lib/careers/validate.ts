@@ -164,6 +164,38 @@ export const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const AGE_MIN = 16;
 export const AGE_MAX = 99;
 
+/**
+ * CV limits.
+ *
+ * ⚠️ THEY LIVE HERE, NOT IN actions.ts, AND THAT IS LOAD-BEARING. A file with
+ * 'use server' may export only async functions: Next replaces every other
+ * export with a server-action reference, so a Client Component importing an
+ * array from it receives a proxy and `[...CONST]` throws "is not iterable" —
+ * which is exactly what took the page down on first deploy. Anything both
+ * sides need is a plain module, imported by the action and the form alike.
+ */
+
+/** 5 MB, on the RAW file — never on its base64 expansion. */
+export const CV_MAX_BYTES = 5 * 1024 * 1024;
+
+export const CV_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+] as const;
+
+/**
+ * Checked alongside the MIME type, not instead of it: browsers send
+ * application/octet-stream for .docx often enough that a mime-only rule
+ * rejects real CVs.
+ */
+export const CV_EXTENSIONS = ['.pdf', '.doc', '.docx'] as const;
+
+/** "5.0 MB" — one spelling of the limit, for every message that names it. */
+export function humanFileSize(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /** Error keys the form turns into localized messages. */
 export type FieldErrorKey =
   | 'full_name'
