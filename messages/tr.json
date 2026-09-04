@@ -797,5 +797,50 @@
       },
       "refundAssuranceLyd": "Tutarın tamamı, ödeme yaptığınız Libya kanalı üzerinden iade edilir. Ekibimiz bu iadeyi elle işler ve tamamlamak için sizinle iletişime geçer — rezervasyon numaranızı hazır bulundurun."
     }
+  },
+  "careers": {
+    "department": "Departman",
+    "applyTitle": "Bu pozisyona başvur",
+    "unavailableTitle": "Bu pozisyon şu anda yüklenemiyor",
+    "unavailableBody": "Bizim tarafımızda bir sorun oluştu. Lütfen birazdan tekrar deneyin.",
+    "formUnavailableTitle": "Bu başvuru formu kullanılamıyor",
+    "formUnavailableBody": "Üzerinde çalışıyoruz. Lütfen kısa süre sonra tekrar bakın veya bize ulaşın.",
+    "form": {
+      "fullName": "Ad soyad",
+      "phone": "Telefon",
+      "email": "E-posta",
+      "age": "Yaş",
+      "nationality": "Uyruk",
+      "nationalityPlaceholder": "Uyruğunuzu seçin",
+      "countrySearch": "Ara",
+      "residenceCity": "İkamet ili",
+      "residenceCityPlaceholder": "İl seçin",
+      "residenceDistrict": "İlçe",
+      "residenceDistrictPlaceholder": "İlçe seçin",
+      "optional": "İsteğe bağlı",
+      "questionsTitle": "Birkaç soru",
+      "cvChoose": "CV'nizi ekleyin",
+      "cvReading": "Dosya okunuyor…",
+      "cvRemove": "Dosyayı kaldır",
+      "cvHint": "PDF, DOC veya DOCX. En fazla {max}.",
+      "cvTooLarge": "Bu dosya {max} sınırından büyük. Lütfen daha küçük bir dosya ekleyin.",
+      "cvWrongType": "Lütfen PDF, DOC veya DOCX dosyası ekleyin.",
+      "cvReadFailed": "Dosya okunamadı. Lütfen başka bir dosya deneyin.",
+      "submit": "Başvuruyu gönder",
+      "submitting": "Gönderiliyor…",
+      "privacyNote": "Bilgileriniz yalnızca işe alım ekibimize ulaşır.",
+      "errorRequired": "Bu alan zorunludur.",
+      "errorContact": "Size ulaşabilmemiz için bir telefon numarası veya e-posta adresi girin.",
+      "errorAge": "{min} ile {max} arasında bir yaş girin.",
+      "errorFix": "Lütfen işaretli alanları kontrol edin.",
+      "errorClosed": "Bu pozisyon başvuru almayı durdurdu.",
+      "errorRateLimited": "Çok fazla deneme. Lütfen biraz sonra tekrar deneyin.",
+      "errorGeneric": "Başvurunuz gönderilemedi. Lütfen tekrar deneyin."
+    },
+    "success": {
+      "title": "Başvurunuz alındı",
+      "body": "{title} pozisyonuna başvurduğunuz için teşekkürler. Başvurunuz işe alım ekibimizde.",
+      "note": "Uygun bulunursa, verdiğiniz iletişim bilgilerinden size ulaşacağız."
+    }
   }
 }

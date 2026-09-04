@@ -797,5 +797,50 @@
       },
       "refundAssuranceLyd": "يُعاد إليك كامل المبلغ عبر قناة الدفع الليبية نفسها التي دفعت بها. ينفّذ فريقنا الاسترداد يدوياً وسيتواصل معك لإتمامه — يُرجى تجهيز رقم الحجز."
     }
+  },
+  "careers": {
+    "department": "القسم",
+    "applyTitle": "التقديم على هذه الوظيفة",
+    "unavailableTitle": "تعذّر تحميل هذه الوظيفة الآن",
+    "unavailableBody": "حدث خلل من جانبنا. أعد المحاولة بعد قليل.",
+    "formUnavailableTitle": "نموذج التقديم غير متاح",
+    "formUnavailableBody": "نعمل على إصلاحه. عد إلينا قريباً، أو تواصل معنا.",
+    "form": {
+      "fullName": "الاسم الكامل",
+      "phone": "رقم الهاتف",
+      "email": "البريد الإلكتروني",
+      "age": "العمر",
+      "nationality": "الجنسية",
+      "nationalityPlaceholder": "اختر جنسيتك",
+      "countrySearch": "بحث",
+      "residenceCity": "مدينة الإقامة",
+      "residenceCityPlaceholder": "اختر المدينة",
+      "residenceDistrict": "المنطقة",
+      "residenceDistrictPlaceholder": "اختر المنطقة",
+      "optional": "اختياري",
+      "questionsTitle": "بعض الأسئلة",
+      "cvChoose": "أرفق سيرتك الذاتية",
+      "cvReading": "جارٍ قراءة الملف…",
+      "cvRemove": "إزالة الملف",
+      "cvHint": "PDF أو DOC أو DOCX. بحد أقصى {max}.",
+      "cvTooLarge": "حجم الملف يتجاوز {max}. أرفق ملفاً أصغر.",
+      "cvWrongType": "أرفق ملفاً بصيغة PDF أو DOC أو DOCX.",
+      "cvReadFailed": "تعذّرت قراءة الملف. جرّب ملفاً آخر.",
+      "submit": "إرسال الطلب",
+      "submitting": "جارٍ الإرسال…",
+      "privacyNote": "بياناتك تصل إلى فريق التوظيف لدينا فقط.",
+      "errorRequired": "هذا الحقل مطلوب.",
+      "errorContact": "زوّدنا برقم هاتف أو بريد إلكتروني كي نتمكّن من الوصول إليك.",
+      "errorAge": "أدخل عمراً بين {min} و{max}.",
+      "errorFix": "راجع الحقول المُعلَّمة.",
+      "errorClosed": "توقّف استقبال الطلبات على هذه الوظيفة.",
+      "errorRateLimited": "محاولات كثيرة. حاول مرة أخرى بعد قليل.",
+      "errorGeneric": "تعذّر إرسال طلبك. حاول مرة أخرى."
+    },
+    "success": {
+      "title": "تم استلام طلبك",
+      "body": "شكراً لتقديمك على {title}. طلبك الآن لدى فريق التوظيف.",
+      "note": "إن كان هناك تطابق، سنتواصل معك عبر بيانات الاتصال التي زوّدتنا بها."
+    }
   }
 }
