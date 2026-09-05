@@ -832,7 +832,8 @@
       "errorRateLimited": "محاولات كثيرة. حاول مرة أخرى بعد قليل.",
       "errorGeneric": "تعذّر إرسال طلبك. حاول مرة أخرى.",
       "choosePlaceholder": "اختر إجابة",
-      "searchPlaceholder": "بحث"
+      "searchPlaceholder": "بحث",
+      "errorSubmitFailed": "تعذّر إرسال طلبك — انقطع الاتصال، أو كان الملف كبيراً. حاول مرة أخرى، وإن أرفقت سيرة ذاتية فتأكّد أنها أقل من {max}."
     },
     "success": {
       "title": "تم استلام طلبك",

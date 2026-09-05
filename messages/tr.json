@@ -832,7 +832,8 @@
       "errorRateLimited": "Çok fazla deneme. Lütfen biraz sonra tekrar deneyin.",
       "errorGeneric": "Başvurunuz gönderilemedi. Lütfen tekrar deneyin.",
       "choosePlaceholder": "Bir seçenek seçin",
-      "searchPlaceholder": "Ara"
+      "searchPlaceholder": "Ara",
+      "errorSubmitFailed": "Başvurunuz gönderilemedi — bağlantı koptu ya da dosya çok büyüktü. Tekrar deneyin; CV eklediyseniz {max} altında olduğundan emin olun."
     },
     "success": {
       "title": "Başvurunuz alındı",

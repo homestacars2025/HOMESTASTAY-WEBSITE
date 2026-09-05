@@ -105,15 +105,27 @@ export function ApplicationForm({ slug, title, fields }: ApplicationFormProps) {
     setErrors(new Set());
 
     startTransition(async () => {
-      const result = await submitApplication({ slug, fixed, answers, cv });
+      // ⚠️ WRAPPED, AND THAT IS NOT DEFENSIVE PADDING. A Server Action that
+      // fails at the transport — a 413 over the body limit, a dropped mobile
+      // connection mid-upload — REJECTS rather than returning a result. An
+      // uncaught rejection inside a transition escapes to the error boundary
+      // and replaces the whole page with a blank "Application error", losing
+      // everything the applicant typed. Catching it keeps them on the form
+      // with their answers intact and one sentence explaining what to do.
+      try {
+        const result = await submitApplication({ slug, fixed, answers, cv });
 
-      if (result.ok) {
-        setDone(true);
-        return;
+        if (result.ok) {
+          setDone(true);
+          return;
+        }
+
+        if (result.status === 'invalid') setErrors(new Set(result.fields));
+        setPageError(messageFor(result));
+      } catch (err) {
+        console.error('[careers/apply] the action did not complete', err);
+        setPageError(t('errorSubmitFailed', { max: humanFileSize(CV_MAX_BYTES) }));
       }
-
-      if (result.status === 'invalid') setErrors(new Set(result.fields));
-      setPageError(messageFor(result));
     });
   }
 

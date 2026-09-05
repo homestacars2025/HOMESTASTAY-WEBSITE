@@ -175,8 +175,20 @@ export const AGE_MAX = 99;
  * sides need is a plain module, imported by the action and the form alike.
  */
 
-/** 5 MB, on the RAW file — never on its base64 expansion. */
-export const CV_MAX_BYTES = 5 * 1024 * 1024;
+/**
+ * 3 MB, on the RAW file — never on its base64 expansion.
+ *
+ * ⚠️ PAIRED WITH experimental.serverActions.bodySizeLimit IN next.config.ts.
+ * The CV crosses the wire base64-encoded inside a Server Action payload, so
+ * the real ceiling is this × 1.34 plus the rest of the form. Raise one without
+ * the other and every application carrying a large CV dies at a 413 that
+ * reaches the applicant as a blank error page.
+ *
+ * Lowered from 5 MB after that happened. 3 MB is still generous for a CV — a
+ * text PDF is well under 1 MB — and it halves the upload time that made this
+ * fail on a phone in the first place.
+ */
+export const CV_MAX_BYTES = 3 * 1024 * 1024;
 
 export const CV_MIME_TYPES = [
   'application/pdf',

@@ -57,6 +57,26 @@ const HTML_LIMITED_BOTS =
 
 const nextConfig: NextConfig = {
   // Resolve the workspace-root warning from the parent-dir package-lock.json
+  /**
+   * Server Action request bodies.
+   *
+   * ⚠️ THE DEFAULT IS 1 MB AND IT IS ENFORCED, NOT ADVISORY. Next answers 413
+   * "Body exceeded 1 MB limit" above it (see action-handler.js), the client
+   * action proxy throws, and an uncaught throw inside a transition takes the
+   * whole page to the error boundary — which is exactly how a careers
+   * application with a normal-sized CV died while smaller ones went through.
+   *
+   * The careers form sends the CV base64-encoded inside the action payload, so
+   * this must clear CV_MAX_BYTES × 1.34 plus the rest of the form. At
+   * CV_MAX_BYTES = 3 MB that is ~4 MB; 6 MB leaves real headroom without
+   * making an unbounded upload possible. RAISE THIS FIRST if CV_MAX_BYTES ever
+   * goes up — lib/careers/validate.ts is the other half of the pair.
+   */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
+  },
   outputFileTracingRoot: path.join(__dirname),
   htmlLimitedBots: HTML_LIMITED_BOTS,
   // The confirmation email renders the legal PDFs with embedded Geist. Vercel's

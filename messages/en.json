@@ -832,7 +832,8 @@
       "errorRateLimited": "Too many attempts. Please try again in a little while.",
       "errorGeneric": "We couldn't send your application. Please try again.",
       "choosePlaceholder": "Select an answer",
-      "searchPlaceholder": "Search"
+      "searchPlaceholder": "Search",
+      "errorSubmitFailed": "We couldn't send your application — the connection dropped, or the file was too large. Try again, and if you attached a CV make sure it is under {max}."
     },
     "success": {
       "title": "Application received",
