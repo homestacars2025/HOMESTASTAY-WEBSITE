@@ -7,7 +7,8 @@ import {
 } from '@/lib/payment/kuveyt-turk';
 import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
 import { performRefund } from '@/lib/payment/refund-service';
-import { isWalletOrder, loadTopupIntentByOrder } from '@/lib/wallet/topup';
+import { isAppOrder, isWalletOrder, loadTopupIntentByOrder } from '@/lib/wallet/topup';
+import { appReturnUrl } from '@/lib/app/deep-link';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -336,8 +337,32 @@ async function handleWalletTopup({
   responseCode: string;
   responseMessage: string;
 }): Promise<NextResponse> {
-  const back = (query: string) =>
-    NextResponse.redirect(new URL(`/wallet?${query}`, request.url), { status: 303 });
+  // ── Where the guest is sent afterwards ────────────────────────────────────
+  // ⚠️ THE ONLY THING THE APP MARKER CHANGES. Everything above and below —
+  // the 3DS verdict, ProvisionGate, complete_wallet_topup, every log line — is
+  // identical for a web top-up and an app one. This picks the destination.
+  //
+  // A web order id can never reach the app branch: isAppOrder tests for
+  // 'WT-A-', and a web id is 'WT-' followed immediately by a hyphen-free
+  // base36 stamp, so its fourth character is never '-'. Proven over real ids
+  // in src/lib/wallet/__tests__/order-id.test.ts.
+  //
+  // ⚠️ The deep link carries NO secret and NO verdict — only the order id the
+  // app already has, and a coarse hint. It wakes the app and closes the
+  // browser; the app then asks /api/app/wallet/topup/status, which is the
+  // truth. Anyone can type a custom-scheme URL by hand.
+  //
+  // APP_RETURN_URL_BASE unset ⇒ appReturnUrl returns null ⇒ the web redirect,
+  // exactly as before. A safe degradation, not an outage: the app still learns
+  // the outcome by polling.
+  const back = (query: string) => {
+    if (isAppOrder(merchantOrderId)) {
+      const hint = new URLSearchParams(query).get('topup') ?? 'pending';
+      const deepLink = appReturnUrl(merchantOrderId, hint);
+      if (deepLink) return NextResponse.redirect(deepLink, { status: 303 });
+    }
+    return NextResponse.redirect(new URL(`/wallet?${query}`, request.url), { status: 303 });
+  };
 
   const failIntent = async (reason: string) => {
     const { error } = await supabase.rpc('fail_wallet_topup', {

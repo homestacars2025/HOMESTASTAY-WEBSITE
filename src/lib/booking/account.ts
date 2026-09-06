@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 /**
  * Who is booking, when a session exists. SERVER ONLY.
@@ -33,6 +34,39 @@ export async function getBookingAccount(): Promise<BookingAccount | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) return null;
 
+  return readAccount(supabase, user);
+}
+
+/**
+ * The same account, for a caller whose identity came from a BEARER TOKEN
+ * rather than a cookie — the mobile app's API surface.
+ *
+ * Split out rather than duplicated because the Libya rule reads this shape and
+ * must give one answer whoever asks. getBookingAccount above is now the cookie
+ * door onto it; nothing about the website's behaviour changes.
+ *
+ * The caller has already verified `user` with getUser() against the auth
+ * server, and `supabase` is that user's own scoped client — so the profile
+ * read below is still authorised by the database, not asserted by us.
+ */
+export async function getAccountForUser(
+  supabase: SupabaseClient,
+  user: User,
+): Promise<BookingAccount | null> {
+  if (!user.email) return null;
+  return readAccount(supabase, user);
+}
+
+async function readAccount(
+  supabase: SupabaseClient,
+  user: User,
+): Promise<BookingAccount | null> {
+  // Both callers check this already; repeated here because an account with no
+  // address cannot be the identity on a booking, and TypeScript cannot carry
+  // the caller's narrowing across the boundary.
+  const email = user.email;
+  if (!email) return null;
+
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('first_name, last_name, phone')
@@ -53,7 +87,7 @@ export async function getBookingAccount(): Promise<BookingAccount | null> {
     // auth.users.email, never profiles.email: profiles is a copy that can
     // drift, and this value is what the wallet gate compares against on the
     // result page. One source, one answer.
-    email:     user.email.trim().toLowerCase(),
+    email:     email.trim().toLowerCase(),
     firstName: nonEmpty(profile?.first_name),
     lastName:  nonEmpty(profile?.last_name),
     phone:     nonEmpty(profile?.phone),

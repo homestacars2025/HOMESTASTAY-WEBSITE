@@ -45,6 +45,44 @@ export function newWalletOrderId(): string {
   return `${WALLET_ORDER_PREFIX}${stamp}-${suffix}`;
 }
 
+/**
+ * The mobile app's marker, and why it lives INSIDE the order id.
+ *
+ * The bank callback carries no cookies and no session — the order id is the
+ * only thing that comes back — so anything the callback must know has to ride
+ * on it. That is the same reasoning that put 'WT-' there in the first place.
+ * A column on wallet_topup_intents would not reach the callback any faster and
+ * would mean a schema change this codebase is not allowed to make.
+ *
+ * ⚠️ 'WT-A-' STILL STARTS WITH 'WT-', so isWalletOrder is unchanged and the
+ * callback still routes app top-ups into the wallet branch. The marker only
+ * decides where the guest is sent AFTERWARDS.
+ *
+ * ⚠️ IT CANNOT COLLIDE WITH A WEB ORDER ID, and that is structural rather than
+ * lucky: a web id is 'WT-' followed immediately by an 8-character base36
+ * stamp, which contains no hyphen — so position 4 of a web id is never '-'
+ * and 'WT-A-' can never match one. Proven over real ids in
+ * src/lib/wallet/__tests__/order-id.test.ts.
+ */
+const APP_ORDER_PREFIX = `${WALLET_ORDER_PREFIX}A-`;
+
+/** A top-up started from the mobile app. Shape: WT-A-<base36 ms>-<8 hex>. */
+export function newAppWalletOrderId(): string {
+  const stamp = Date.now().toString(36).toUpperCase();
+  const suffix = randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+  return `${APP_ORDER_PREFIX}${stamp}-${suffix}`;
+}
+
+/**
+ * Did this top-up start in the app?
+ *
+ * Read in the bank callback to choose between a deep link and the web
+ * redirect. False for every web order id, past and present.
+ */
+export function isAppOrder(merchantOrderId: string): boolean {
+  return merchantOrderId.startsWith(APP_ORDER_PREFIX);
+}
+
 // ── Intent lookup ─────────────────────────────────────────────────────────────
 
 /**

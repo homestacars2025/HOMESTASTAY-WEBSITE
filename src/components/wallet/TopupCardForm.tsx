@@ -32,10 +32,24 @@ interface TopupCardFormProps {
   rateLabel: string;
   /** From profiles, so the guest is not asked to retype it. May be empty. */
   phone: string;
+  /**
+   * Where the card is posted. Defaults to the website's own route; the mobile
+   * app's hosted page overrides it, because that request is authorised by a
+   * signed capability rather than a session cookie the system browser does not
+   * have. Additive — every existing caller keeps the original target.
+   */
+  action?: string;
+  /**
+   * Extra hidden inputs, for whatever the chosen action needs beyond the
+   * intent — the app path carries its capability token here.
+   */
+  hiddenFields?: Record<string, string>;
 }
 
 export async function TopupCardForm({
   locale, intentId, amountLabel, usdLabel, rateLabel, phone,
+  action = '/api/payment/wallet/start',
+  hiddenFields,
 }: TopupCardFormProps) {
   const t = await getTranslations({ locale, namespace: 'wallet.topup' });
   const tPay = await getTranslations({ locale, namespace: 'booking.payment' });
@@ -50,7 +64,7 @@ export async function TopupCardForm({
   return (
     <form
       method="POST"
-      action="/api/payment/wallet/start"
+      action={action}
       autoComplete="on"
       // Session replay must never be able to reconstruct a card. Clarity masks
       // inputs by default, but a default is a dashboard setting someone can
@@ -60,6 +74,9 @@ export async function TopupCardForm({
     >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="intentId" value={intentId} />
+      {hiddenFields && Object.entries(hiddenFields).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
 
       <AmountPanel
         title={t('chargedTryLabel')}
