@@ -56,10 +56,27 @@ export function tlyncBackendUrl(): string {
  *
  * This URL can never mark anything paid — see the route.
  */
-export function tlyncFrontendUrl(locale: string, customRef: string): string {
+export function tlyncFrontendUrl(
+  locale: string,
+  customRef: string,
+  appReturnUrl?: string | null,
+): string {
   const url = new URL(`${paymentOrigin()}/api/payment/tlync/return`);
   url.searchParams.set('locale', locale);
   url.searchParams.set('ref', customRef);
+
+  // ⚠️ THIS STAYS OUR ROUTE EVEN FOR THE APP, and the reason is the whole
+  // design. Handing TLYNC the deep link directly would send the browser to
+  // homesta:// WITHOUT the request ever passing through us — so nothing would
+  // settle, and the app would wake up next to a payment we had not recorded.
+  // The return route settles from the receipt FIRST, then redirects here.
+  //
+  // Carried as a parameter rather than an environment variable because Expo's
+  // dev scheme changes per machine and per session. It is validated before it
+  // gets here (parseAppReturnUrl) and again on the way out, since between
+  // those two points it has been held by a third party.
+  if (appReturnUrl) url.searchParams.set('app', appReturnUrl);
+
   return url.toString();
 }
 

@@ -11,6 +11,7 @@ import {
 import { isTlyncConfigured } from '@/lib/payment/tlync';
 import { tlyncBackendUrl, tlyncFrontendUrl } from '@/lib/payment/urls';
 import { newAppWalletOrderId } from '@/lib/wallet/topup';
+import { parseAppReturnUrl } from '@/lib/app/deep-link';
 import { routing } from '@/i18n/routing';
 
 /**
@@ -63,7 +64,9 @@ export async function POST(request: NextRequest) {
 
   const { user, supabase: asUser } = caller;
 
-  let body: { amountUsd?: unknown; gateway?: unknown; locale?: unknown };
+  let body: {
+    amountUsd?: unknown; gateway?: unknown; locale?: unknown; returnUrl?: unknown;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -85,6 +88,19 @@ export async function POST(request: NextRequest) {
   // reach it or an Arabic guest gets an English form. Validated against the
   // real locale list rather than interpolated: this value lands in a path.
   const locale = pickLocale(body.locale);
+
+  // Where the app wants to be woken. Optional: without it the flow still
+  // works, falling back to APP_RETURN_URL_BASE and then to the web page.
+  //
+  // ⚠️ VALIDATED HERE AND AGAIN AT THE RETURN ROUTE. This string leaves our
+  // control — TLYNC holds it and hands it back in a query parameter — and an
+  // unchecked value would let someone craft a redirect from our own domain to
+  // theirs. parseAppReturnUrl refuses http and https outright; a rejected
+  // value is answered now rather than silently dropped, so a misconfigured app
+  // build fails loudly in development instead of quietly in production.
+  const rawReturnUrl = typeof body.returnUrl === 'string' ? body.returnUrl : null;
+  const appReturn = parseAppReturnUrl(rawReturnUrl);
+  if (rawReturnUrl && !appReturn) return bad(400, 'invalid_return_url');
   if (gateway === 'tlync' && !isTlyncConfigured()) return bad(400, 'invalid_gateway');
 
   // ── The dinar rail is for Libyan guests, re-checked SERVER-SIDE ───────────
@@ -156,7 +172,9 @@ export async function POST(request: NextRequest) {
     // buildCustomRef's output, not the bare id. 'WT-A-' still leads it, so
     // both discriminators survive.
     const customRef = buildCustomRef(newAppWalletOrderId());
-    return startTlync({ admin, customRef, amountLocal, account, intentId });
+    return startTlync({
+      admin, customRef, amountLocal, account, intentId, locale, appReturn,
+    });
   }
 
   // ⚠️ NO ORDER ID AND NO attach_topup_order ON THE CARD PATH, DELIBERATELY.
@@ -209,13 +227,16 @@ export async function POST(request: NextRequest) {
  * reconciled against anything.
  */
 async function startTlync({
-  admin, customRef, amountLocal, account, intentId,
+  admin, customRef, amountLocal, account, intentId, locale, appReturn,
 }: {
   admin: ReturnType<typeof createAdminClient>;
   customRef: string;
   amountLocal: number;
   account: { email: string; phone: string | null };
   intentId: string;
+  locale: string;
+  /** Already validated by parseAppReturnUrl, or null. */
+  appReturn: string | null;
 }) {
   const { error: attachError } = await admin.rpc('attach_topup_order', {
     p_intent_id:         intentId,
@@ -243,10 +264,11 @@ async function startTlync({
       phone,
       email:       account.email,
       backendUrl:  tlyncBackendUrl(),
-      // The locale is the app's problem, not ours; 'en' keeps the return
-      // route's own redirect valid. The app closes the browser on the deep
-      // link long before this page matters.
-      frontendUrl: tlyncFrontendUrl('en', customRef),
+      // Still OUR return route, never the deep link directly: it settles from
+      // the receipt first and only then redirects the app. The app's own
+      // returnUrl rides along as a parameter, and the locale is the app's so
+      // the web fallback page is in the guest's language rather than English.
+      frontendUrl: tlyncFrontendUrl(locale, customRef, appReturn),
       customRef,
     });
   } catch (err) {

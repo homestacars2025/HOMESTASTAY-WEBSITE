@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
 import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
-import { isWalletOrder } from '@/lib/wallet/topup';
+import { isAppOrder, isWalletOrder } from '@/lib/wallet/topup';
+import { appReturnUrl, parseAppReturnUrl } from '@/lib/app/deep-link';
 import { routing } from '@/i18n/routing';
 
 /**
@@ -66,14 +67,46 @@ async function handle(request: NextRequest) {
 
     console.log('[tlync/return] wallet outcome', { customRef, ...walletOutcome });
 
+    // ── Web or app? ────────────────────────────────────────────────────────
+    // ⚠️ THE SETTLEMENT ABOVE HAS ALREADY HAPPENED, and that ordering is the
+    // whole point of routing TLYNC's frontend_url through here rather than
+    // straight at the deep link: a browser sent directly to homesta:// never
+    // passes through this server, so nothing would settle and the app would
+    // wake beside a payment we had not recorded. Only the DESTINATION differs
+    // below; the money question was answered from the receipt already.
+    //
+    // A web order id can never reach the app branch — isAppOrder tests for
+    // 'WT-A-', and buildCustomRef only appends a suffix, so the prefix still
+    // leads the string. Covered by the sixth case in
+    // src/lib/wallet/__tests__/order-id.test.ts.
+    //
+    // The returnUrl is re-validated here, not trusted from the query: between
+    // /start and this request it travelled out to TLYNC and came back, and an
+    // unchecked value would let anyone craft a link from our own domain to
+    // theirs. parseAppReturnUrl refuses http and https outright.
+    const appBase = isAppOrder(customRef)
+      ? parseAppReturnUrl(url.searchParams.get('app'))
+      : null;
+
+    const finish = (webPath: string, hint: string) => {
+      if (isAppOrder(customRef)) {
+        const deepLink = appReturnUrl(customRef, hint, appBase);
+        if (deepLink) return NextResponse.redirect(deepLink, { status: 303 });
+        // No app URL configured or supplied: fall through to the web page.
+        // The app still learns the outcome by polling /status — it just does
+        // not get the browser closed for it.
+      }
+      return to(webPath);
+    };
+
     switch (walletOutcome.status) {
       case 'paid':
       case 'already_paid':
-        return to(`/${locale}/wallet?topup=success`);
+        return finish(`/${locale}/wallet?topup=success`, 'success');
 
       case 'not_completed':
         // The guest backed out, confirmed by receipt. Nothing was charged.
-        return to(`/${locale}/wallet?topup=failed&reason=cancelled`);
+        return finish(`/${locale}/wallet?topup=failed&reason=cancelled`, 'failed');
 
       case 'receipt_unavailable':
       case 'write_failed':
@@ -82,11 +115,11 @@ async function handle(request: NextRequest) {
         // guest they failed and never tell them they succeeded — 'pending'
         // says we are checking and asks them not to pay again, which is
         // exactly true. The reconcile sweep settles it.
-        return to(`/${locale}/wallet?topup=pending`);
+        return finish(`/${locale}/wallet?topup=pending`, 'pending');
 
       case 'unknown_ref':
       default:
-        return to(`/${locale}/wallet?topup=failed&reason=unknown`);
+        return finish(`/${locale}/wallet?topup=failed&reason=unknown`, 'failed');
     }
   }
 
