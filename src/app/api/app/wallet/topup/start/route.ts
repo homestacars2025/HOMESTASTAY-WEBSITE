@@ -148,31 +148,33 @@ export async function POST(request: NextRequest) {
     return bad(500, 'server_error');
   }
 
-  // ── Claim the order id BEFORE any gateway hears about it ─────────────────
-  // Same ordering as the website: a payment that somehow completes while our
-  // write path is dying must still be resolvable from the order id alone.
-  const merchantOrderId = newAppWalletOrderId();
-
   if (gateway === 'tlync') {
-    // TLYNC echoes custom_ref back everywhere, so the value stored must be the
-    // value the callback will present — buildCustomRef's output, not the bare
-    // id. 'WT-A-' still leads it, so both discriminators survive.
-    const customRef = buildCustomRef(merchantOrderId);
+    // TLYNC IS THE OPPOSITE CASE, and its ordering is right as it stands: the
+    // gateway is called in THIS request, so the order id must exist and be
+    // attached before that call. TLYNC also echoes custom_ref back everywhere,
+    // so the value stored must be the value the callback will present —
+    // buildCustomRef's output, not the bare id. 'WT-A-' still leads it, so
+    // both discriminators survive.
+    const customRef = buildCustomRef(newAppWalletOrderId());
     return startTlync({ admin, customRef, amountLocal, account, intentId });
   }
 
-  const { error: attachError } = await admin.rpc('attach_topup_order', {
-    p_intent_id:         intentId,
-    p_merchant_order_id: merchantOrderId,
-  });
-
-  if (attachError) {
-    console.error('[app/topup/start] attach_topup_order failed', {
-      intentId, merchantOrderId,
-      message: attachError.message, code: attachError.code,
-    });
-    return bad(500, 'server_error');
-  }
+  // ⚠️ NO ORDER ID AND NO attach_topup_order ON THE CARD PATH, DELIBERATELY.
+  //
+  // attach_topup_order moves the intent to 'processing', which means "a
+  // gateway is holding this now". On the card path no gateway hears anything
+  // in this request — the guest has not even seen the form yet. Claiming it
+  // here made every app intent 'processing' the moment it was created, and the
+  // hosted page refuses anything that is not 'pending', so every app top-up
+  // was born unpayable.
+  //
+  // The website has always done it the other way round: it mints and attaches
+  // inside the SAME request that posts to the bank (payment/wallet/start,
+  // where the card arrives). The card path now mirrors that exactly —
+  // /api/app/wallet/topup/pay claims the id at the moment it calls PayGate.
+  //
+  // The consequence worth knowing: there is no merchantOrderId to return yet.
+  // intentId is the app's handle until a payment actually starts.
 
   // ── The hosted card page ─────────────────────────────────────────────────
   // A signed capability, not a session: the system browser has no cookie of
@@ -189,7 +191,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     intentId,
-    merchantOrderId,
+    // Null until /pay claims one. Present as a key so the app can read it
+    // without a guard, and honestly empty rather than invented.
+    merchantOrderId: null,
     payUrl,
     amountUsd,
     amountLocal,

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { readPayToken } from '@/lib/app/pay-token';
-import { loadOwnedIntent } from '@/lib/wallet/topup';
+import { loadOwnedIntent, newAppWalletOrderId } from '@/lib/wallet/topup';
 import {
   kuveytConfig, payGateUrl, buildPayGateXml, postToBank, splitE164, toMinorUnits,
 } from '@/lib/payment/kuveyt-turk';
@@ -62,13 +62,6 @@ export async function POST(request: NextRequest) {
     return fail('server');
   }
 
-  if (!intent.merchantOrderId) {
-    // /start attaches the order id before returning the payUrl, so this cannot
-    // happen on the normal path — and if it did, minting a second id here
-    // would create an attempt the callback could never reconcile.
-    console.error('[app/topup/pay] intent has no merchant order id', { intentId: intent.id });
-    return fail('server');
-  }
 
   // ── Contact details for CardHolderData (mandatory for 3DS 2.0) ───────────
   // Email comes from the account, never the form: it identifies the profile,
@@ -116,6 +109,31 @@ export async function POST(request: NextRequest) {
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     '0.0.0.0';
 
+  // ── Claim the order id, HERE, because this is the request that reaches the
+  //    bank ────────────────────────────────────────────────────────────────
+  // attach_topup_order moves the intent to 'processing' — "a gateway is
+  // holding this now" — so it belongs in the same request as the PayGate call
+  // and nowhere earlier. Doing it in /start made every intent 'processing'
+  // before the guest saw the form, and the hosted page correctly refused them.
+  //
+  // Written BEFORE the bank call, not after: a payment that somehow completes
+  // while our write path is dying must still be resolvable from the order id
+  // alone. That is the website's ordering, and this is now the same.
+  const merchantOrderId = newAppWalletOrderId();
+
+  const { error: attachError } = await admin.rpc('attach_topup_order', {
+    p_intent_id:         intent.id,
+    p_merchant_order_id: merchantOrderId,
+  });
+
+  if (attachError) {
+    console.error('[app/topup/pay] attach_topup_order failed', {
+      intentId: intent.id, merchantOrderId,
+      message: attachError.message, code: attachError.code,
+    });
+    return fail('server');
+  }
+
   // Integer kuruş, derived on the decimal digits — never through a double.
   const amountMinor = toMinorUnits(intent.amountMinor.toFixed(2));
 
@@ -127,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     const xml = buildPayGateXml({
       cfg,
-      merchantOrderId: intent.merchantOrderId,
+      merchantOrderId,
       amountMinor,
       okUrl:   url,
       failUrl: url,
@@ -139,7 +157,7 @@ export async function POST(request: NextRequest) {
     const html = await postToBank(payGateUrl(cfg), xml);
 
     console.log('[app/topup/pay] payGate 2xx', {
-      merchantOrderId: intent.merchantOrderId, bytes: html.length,
+      merchantOrderId, bytes: html.length,
     });
 
     // The bank's 3DS page becomes the document, inside the system browser the
@@ -154,18 +172,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error('[app/topup/pay] bank call failed', {
-      merchantOrderId: intent.merchantOrderId,
+      merchantOrderId,
       error: err instanceof Error ? err.message : String(err),
     });
     // Nothing reached the bank, so the intent is safe to release — the guest
     // can start again instead of waiting for it to expire.
     const { error } = await admin.rpc('fail_wallet_topup', {
-      p_merchant_order_id: intent.merchantOrderId,
+      p_merchant_order_id: merchantOrderId,
       p_reason: 'bank_unreachable',
     });
     if (error) {
       console.error('[app/topup/pay] fail_wallet_topup did not record the failure', {
-        merchantOrderId: intent.merchantOrderId, message: error.message,
+        merchantOrderId, message: error.message,
       });
     }
     return fail('bank');
