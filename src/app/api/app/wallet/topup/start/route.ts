@@ -11,6 +11,7 @@ import {
 import { isTlyncConfigured } from '@/lib/payment/tlync';
 import { tlyncBackendUrl, tlyncFrontendUrl } from '@/lib/payment/urls';
 import { newAppWalletOrderId } from '@/lib/wallet/topup';
+import { routing } from '@/i18n/routing';
 
 /**
  * Open a wallet top-up from the mobile app.
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 
   const { user, supabase: asUser } = caller;
 
-  let body: { amountUsd?: unknown; gateway?: unknown };
+  let body: { amountUsd?: unknown; gateway?: unknown; locale?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -79,6 +80,11 @@ export async function POST(request: NextRequest) {
 
   const gateway = body.gateway as Gateway;
   if (gateway !== 'kuveyt' && gateway !== 'tlync') return bad(400, 'invalid_gateway');
+
+  // The hosted card page lives under [locale], so the app's language has to
+  // reach it or an Arabic guest gets an English form. Validated against the
+  // real locale list rather than interpolated: this value lands in a path.
+  const locale = pickLocale(body.locale);
   if (gateway === 'tlync' && !isTlyncConfigured()) return bad(400, 'invalid_gateway');
 
   // ── The dinar rail is for Libyan guests, re-checked SERVER-SIDE ───────────
@@ -172,7 +178,13 @@ export async function POST(request: NextRequest) {
   // A signed capability, not a session: the system browser has no cookie of
   // ours. Short-lived, bound to this intent AND this profile. See pay-token.ts.
   const token = mintPayToken({ intentId, profileId: user.id });
-  const payUrl = `${originOf(request)}/api/app/wallet/topup/pay?t=${encodeURIComponent(token)}`;
+
+  // ⚠️ THE PAGE, NOT THE FORM'S ACTION. /api/app/wallet/topup/pay exports POST
+  // only — it is what the card form submits to, and a browser opening it with
+  // GET gets 405 and a blank window. That was the bug: the app was handed the
+  // endpoint instead of the page it is posted from.
+  const payUrl =
+    `${originOf(request)}/${locale}/wallet/app-pay?t=${encodeURIComponent(token)}`;
 
   return NextResponse.json({
     ok: true,
@@ -271,6 +283,20 @@ async function failIntent(
       merchantOrderId, reason, message: error.message,
     });
   }
+}
+
+/**
+ * The app's locale, or 'en'.
+ *
+ * Checked against routing.locales rather than trusted: this string is
+ * interpolated into a URL path, and an unvalidated one would let a caller
+ * point payUrl at any path on our own origin.
+ */
+function pickLocale(value: unknown): string {
+  const candidate = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return (routing.locales as readonly string[]).includes(candidate)
+    ? candidate
+    : routing.defaultLocale;
 }
 
 /**
