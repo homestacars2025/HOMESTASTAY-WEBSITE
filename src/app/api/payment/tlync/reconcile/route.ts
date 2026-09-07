@@ -35,7 +35,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /** Comfortably under TLYNC's 30 req/min, leaving room for live traffic. */
-const MAX_BATCH = 10;
+const MAX_BATCH = 30;
 
 /** How far back to look. Older than this is a reconciliation for a human. */
 const LOOKBACK_HOURS = 48;
@@ -57,11 +57,28 @@ export async function POST(request: NextRequest) {
   const since = new Date(Date.now() - LOOKBACK_HOURS * 3_600_000).toISOString();
 
   // Attempts that were handed to TLYNC and never resolved either way.
+  //
+  // ⚠️ 'failed' IS IN THIS LIST, AND ONLY FOR TWO RESPONSE CODES.
+  // Until the fix in tlync-settle.ts, a receipt reading of 'incomplete' or
+  // 'not_found' wrote a terminal failure — so attempts that TLYNC went on to
+  // collect are sitting there marked failed and invisible to this sweep. They
+  // are recoverable: the settle path's success branch guards only on
+  // .neq('status','paid'), so failed → paid still works.
+  //
+  // Scoped by RESPONSE CODE rather than by status, deliberately. A
+  // 'tlync_refused' or 'bank_unreachable' failure is real — the gateway said
+  // no, or nothing ever reached it — and re-asking about those would burn
+  // TLYNC's 30-per-minute budget on settled questions. After the fix no new
+  // row can carry these two codes, so this clause shrinks to nothing on its
+  // own and can be deleted once the backlog is cleared.
   const { data: pending, error } = await supabase
     .from('booking_payments')
     .select('merchant_order_id, created_at')
     .eq('payment_gateway', 'tlync')
-    .in('status', ['initiated', '3ds_pending'])
+    .or(
+      "status.in.(initiated,3ds_pending)," +
+      "and(status.eq.failed,response_code.in.(tlync_incomplete,tlync_not_found))",
+    )
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(MAX_BATCH);
@@ -122,11 +139,20 @@ async function sweepWalletTopups(
   // nothing but time. Zero left is a valid answer — the next run picks it up.
   if (budget <= 0) return empty;
 
+  // Same recovery clause as the booking sweep, and the same reason — with one
+  // difference worth knowing: a wallet intent marked 'failed' CANNOT be
+  // settled by this sweep even once TLYNC confirms it, because
+  // complete_wallet_topup refuses a terminal status outright. Listing them
+  // here makes them visible and reported; crediting one still needs the row
+  // returned to 'processing' first. The booking side has no such barrier.
   const { data, error } = await supabase
     .from('wallet_topup_intents')
     .select('merchant_order_id, created_at')
     .eq('gateway', 'tlync')
-    .eq('status', 'processing')
+    .or(
+      "status.eq.processing," +
+      "and(status.eq.failed,failure_reason.in.(tlync_incomplete,tlync_not_found))",
+    )
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(budget);

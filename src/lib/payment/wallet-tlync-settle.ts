@@ -109,16 +109,34 @@ export async function settleWalletTopup(
   }
 
   if (receipt.result === 'incomplete' || receipt.result === 'not_found') {
-    const { error } = await supabase.rpc('fail_wallet_topup', {
-      p_merchant_order_id: customRef,
-      p_reason: `tlync_${receipt.result}`,
+    // ⚠️ NOTHING IS WRITTEN HERE ANY MORE, AND THAT IS THE FIX.
+    //
+    // This branch used to mark the payment failed. It cost a customer their
+    // money: TLYNC answered 'incomplete' while the payment was still in
+    // flight, we recorded a terminal failure, TLYNC then collected — and the
+    // settle path refuses a terminal row, so the money was taken and never
+    // credited. Thirty booking attempts and seven top-ups went the same way
+    // over a month before anyone noticed.
+    //
+    // The mistake was reading 'incomplete' as a verdict. It is not: it means
+    // "TLYNC knows this payment and it is not finished YET", which is
+    // indistinguishable from "will finish in thirty seconds". And TLYNC's
+    // receipt API has NO explicit failure result at all — success, incomplete,
+    // not_found, error — so a definitive failure is something we can never
+    // learn from it. Inventing one from 'incomplete' was inventing a verdict
+    // the provider does not issue.
+    //
+    // 'not_found' joins it for the same reason plus one more: a 404 can be a
+    // race moments after initiate, before TLYNC has registered the reference.
+    //
+    // So the row is left exactly as it is and the sweep comes back. The ONLY
+    // thing that may now write a terminal failure is TIME — an intent past its
+    // expiry, decided in the database, not read off a receipt. This is the
+    // rule the file already stated for 'error' one branch above and failed to
+    // apply here: never turn "we do not know" into "it failed".
+    log('not completed YET — intent left untouched for the sweep', {
+      receipt: receipt.result, intentStatus: intent.status,
     });
-    if (error) {
-      console.error('[wallet/tlync-settle] fail_wallet_topup errored', {
-        customRef, trigger, message: error.message, code: error.code,
-      });
-    }
-    log('not completed — intent failed, wallet untouched', { receipt: receipt.result });
     return { status: 'not_completed', receipt: receipt.result };
   }
 
