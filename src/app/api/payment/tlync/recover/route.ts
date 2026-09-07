@@ -69,9 +69,17 @@ export async function POST(request: NextRequest) {
   const params = new URL(request.url).searchParams;
   const apply = params.get('apply') === '1';
   const limit = clamp(Number(params.get('limit')) || DEFAULT_LIMIT, 1, 30);
+  // Paging and a kind filter, because one run cannot cover the backlog inside
+  // TLYNC's rate budget. Without `skip` a second run re-reads the same oldest
+  // rows; without `kind` the bookings fill every slot and the wallet intents —
+  // the ones that cannot self-recover — are never reached at all.
+  const skip = Math.max(0, Number(params.get('skip')) || 0);
+  const kindParam = params.get('kind');
+  const kind: 'booking' | 'wallet' | 'both' =
+    kindParam === 'booking' || kindParam === 'wallet' ? kindParam : 'both';
 
   const supabase = createAdminClient();
-  const rows = await listBugged(supabase, limit);
+  const rows = await listBugged(supabase, limit, skip, kind);
 
   console.log('[tlync/recover] starting', {
     mode: apply ? 'APPLY — WILL WRITE' : 'dry — read only',
@@ -166,8 +174,12 @@ export async function POST(request: NextRequest) {
 async function listBugged(
   supabase: ReturnType<typeof createAdminClient>,
   limit: number,
+  skip: number,
+  kind: 'booking' | 'wallet' | 'both',
 ): Promise<Row[]> {
   const rows: Row[] = [];
+
+  if (kind === 'wallet') return listWallet(supabase, limit, skip);
 
   const { data: bookings, error: bookingError } = await supabase
     .from('booking_payments')
@@ -176,7 +188,7 @@ async function listBugged(
     .eq('status', 'failed')
     .in('response_code', BUGGED_BOOKING_CODES)
     .order('created_at', { ascending: true })
-    .limit(limit);
+    .range(skip, skip + limit - 1);
 
   if (bookingError) {
     console.error('[tlync/recover] booking listing failed', { message: bookingError.message });
@@ -196,8 +208,22 @@ async function listBugged(
     });
   }
 
+  if (kind === 'booking') return rows;
+
   const remaining = limit - rows.length;
   if (remaining <= 0) return rows;
+
+  rows.push(...(await listWallet(supabase, remaining, 0)));
+  return rows;
+}
+
+/** The wallet half, split out so `kind=wallet` can reach it directly. */
+async function listWallet(
+  supabase: ReturnType<typeof createAdminClient>,
+  limit: number,
+  skip: number,
+): Promise<Row[]> {
+  const rows: Row[] = [];
 
   const { data: intents, error: intentError } = await supabase
     .from('wallet_topup_intents')
@@ -208,7 +234,7 @@ async function listBugged(
       `and(status.eq.failed,failure_reason.in.(${BUGGED_WALLET_REASONS.join(',')}))`,
     )
     .order('created_at', { ascending: true })
-    .limit(remaining);
+    .range(skip, skip + limit - 1);
 
   if (intentError) {
     console.error('[tlync/recover] intent listing failed', { message: intentError.message });
