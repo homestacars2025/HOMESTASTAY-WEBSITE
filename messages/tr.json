@@ -295,6 +295,60 @@
       "s13Body": "Gizlilikle ilgili sorularınız, talepleriniz veya endişeleriniz için lütfen web sitemizin iletişim formu aracılığıyla bizimle iletişime geçin. Gizlilik taleplerine önem veriyor ve en kısa sürede yanıt vermeye çalışıyoruz.",
       "crossLinkLabel": "Hizmet Şartları",
       "crossLinkPrefix": "Ayrıca okuyun:"
+    },
+    "about": {
+      "metaTitle": "Hakkımızda — Homesta Stay",
+      "metaDescription": "Homesta, gezginleri Türkiye'deki doğrulanmış konaklamalarla buluşturur — daire, villa, bungalov ve oda. Misafiri ev sahibine şeffaf biçimde bağlayan bir aracı.",
+      "eyebrow": "Hakkımızda",
+      "heading": "Türkiye'de doğrulanmış konaklamalar, rezervasyondan çıkışa",
+      "intro": "Homesta, gezginleri Türkiye'nin başlıca şehir ve destinasyonlarındaki doğrulanmış konaklamalarla buluşturan bir platformdur — daire, villa, bungalov ve oda. Misafiri doğrudan mülk sahibine bağlayan bir aracı olarak şeffaflık ve güvenle çalışıyoruz; böylece her konaklama, rezervasyondan çıkışa kadar içi rahat bir deneyim oluyor.",
+      "missionTitle": "Misyonumuz",
+      "missionBody": "Türkiye'de güvenilir bir konaklama ayırtmayı her gezgin için kolaylaştırmak — dili ve gideceği yer ne olursa olsun — net fiyatlar, anında onay ve yolculuk boyunca yanında olan bir destekle.",
+      "whyTitle": "Neden Homesta",
+      "why": {
+        "verifiedTitle": "Doğrulanmış konaklamalar",
+        "verifiedBody": "Her mülk, yayınlanmadan önce ekibimizce incelenir.",
+        "instantTitle": "Anında rezervasyon",
+        "instantBody": "Ödeme tamamlanır tamamlanmaz hızlı onay.",
+        "clearTitle": "Tam şeffaflık",
+        "clearBody": "Gizli ücret olmadan net fiyatlar.",
+        "supportTitle": "Çok dilli destek",
+        "supportBody": "Size kendi dilinizde hizmet veren bir ekip.",
+        "payTitle": "Güvenli ve çeşitli ödeme",
+        "payBody": "Her adımda korunan, birden fazla ödeme yöntemi."
+      },
+      "marketsTitle": "Hizmet verdiğimiz pazarlar",
+      "marketsBody": "Dünyanın dört bir yanından Türkiye'ye gelen her ziyaretçiyi ağırlıyoruz. Platformumuz şu anda dört dili destekliyor — Arapça, İngilizce, Türkçe ve Rusça — Almanca, Fransızca, Farsça ve Çince de yolda.",
+      "ownersTitle": "Mülk sahipleri için",
+      "ownersLead": "Bizimle çalışmanın iki yolu — mülkünüze uygun olanı seçin.",
+      "owners": {
+        "directTitle": "Doğrudan ilan",
+        "directBadge": "En yaygın",
+        "directBody": "Mülkünüzü ilan edin ve istediğiniz fiyatın tamamını koruyun — gelirinizi paylaşmak yerine komisyonumuzu fiyatınızın üzerine ekleriz. En basit ve en yaygın seçenek.",
+        "managedTitle": "Tam yönetim",
+        "managedBadge": "%20'den başlayan",
+        "managedBody": "Mülkünüz çalıştığımız bölgelerdeyse, onu profesyonelce yönetir ve geliri %20'den başlayarak paylaşırız — fotoğraf çekimi, temizlik, giriş ve çıkış, misafir yanıtları ve 50'den fazla platformda ilan yönetimi. Uğraşmadan gelir isteyenler için ideal."
+      },
+      "dashboardTitle": "Mülk sahibi paneli",
+      "dashboardLead": "Her şeyi tek yerden yöneten esnek bir panel.",
+      "dashboard": {
+        "listing": "Mülkleri ilan edin ve yönetin",
+        "bookings": "Rezervasyonları anlık izleyin",
+        "finance": "Net finansal veriler",
+        "calendar": "Belirli tarihleri kapatın",
+        "pricing": "Esnek fiyatlandırma — her güne farklı fiyat",
+        "discounts": "Konaklama süresine göre oransal indirimler"
+      },
+      "groupTitle": "Homesta Group hakkında",
+      "groupBody": "Homesta, Homesta Group'a ait bir markadır. Konaklama platformunun yanı sıra grup, Homesta Cars ile 100'den fazla araçlık bir filo işletir — konaklama ve ulaşımın tek yerde buluştuğu eksiksiz bir seyahat deneyimi.",
+      "groupBranches": "Grubun Türkiye'de iki şubesi var — Şişli ve Başakşehir — ve daha fazla ile açılmayı planlıyor.",
+      "groupCta": "Homesta Cars'ı keşfedin",
+      "partnersTitle": "İş ortaklıklarımız",
+      "partnersBody": "Türkiye dışında 10'dan fazla seyahat acentesi ve uygulamasıyla çalışıyoruz. Seyahat acentelerine özel fiyatlarla bir abonelik ve profesyonel bir panel, destekleyen uygulama ve acentelerle de API entegrasyonu sunuyoruz.",
+      "partnersCta": "İş birliği için bize yazın",
+      "contactTitle": "Bize ulaşın",
+      "contactBody": "Dilediğiniz zaman yazın — kendi dilinizde yanıtlıyoruz.",
+      "contactCta": "E-posta gönderin"
     }
   },
   "unit": {

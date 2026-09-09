@@ -295,6 +295,60 @@
       "s13Body": "For any privacy-related questions, requests, or concerns, please contact us through the contact form on our website. We take privacy enquiries seriously and will respond as promptly as possible.",
       "crossLinkLabel": "Terms of Service",
       "crossLinkPrefix": "Also read our"
+    },
+    "about": {
+      "metaTitle": "About Us — Homesta Stay",
+      "metaDescription": "Homesta connects travellers with verified stays across Türkiye — apartments, villas, cabins and rooms. A broker linking guests directly to owners, transparently.",
+      "eyebrow": "About us",
+      "heading": "Verified stays in Türkiye, from booking to checkout",
+      "intro": "Homesta connects travellers with verified stays across Türkiye — apartments, villas, cabins and rooms — in the country's main cities and destinations. We work as a broker, linking the guest directly to the property owner with transparency and trust, so every stay is a reassuring experience from booking to checkout.",
+      "missionTitle": "Our mission",
+      "missionBody": "To make booking a trustworthy stay in Türkiye simple for every traveller — whatever their language or destination — with clear prices, instant confirmation, and support that stays with them for the whole journey.",
+      "whyTitle": "Why Homesta",
+      "why": {
+        "verifiedTitle": "Verified stays",
+        "verifiedBody": "Every property is inspected by our team before it is listed.",
+        "instantTitle": "Instant booking",
+        "instantBody": "Fast confirmation as soon as payment completes.",
+        "clearTitle": "Full transparency",
+        "clearBody": "Clear prices with no hidden fees.",
+        "supportTitle": "Multilingual support",
+        "supportBody": "A team that serves you in your own language.",
+        "payTitle": "Secure, varied payment",
+        "payBody": "Several payment methods, protected at every step."
+      },
+      "marketsTitle": "The markets we serve",
+      "marketsBody": "We welcome every visitor to Türkiye, from markets all over the world. Our platform currently supports four languages — Arabic, English, Turkish and Russian — and German, French, Persian and Chinese are on the way.",
+      "ownersTitle": "For property owners",
+      "ownersLead": "Two ways to work with us — choose what suits your unit.",
+      "owners": {
+        "directTitle": "Direct listing",
+        "directBadge": "Most popular",
+        "directBody": "List your unit and keep your full asking price — we add our commission on top of it rather than sharing your revenue. The simplest option, and the most popular.",
+        "managedTitle": "Full management",
+        "managedBadge": "From 20%",
+        "managedBody": "If your unit is inside the areas we cover, we manage it professionally and share the revenue from 20% — photography, cleaning, check-in and check-out, guest replies, and listing management across more than 50 platforms. Best for owners who want income without the work."
+      },
+      "dashboardTitle": "The owner dashboard",
+      "dashboardLead": "One flexible place to run everything.",
+      "dashboard": {
+        "listing": "List and manage your units",
+        "bookings": "Watch bookings as they happen",
+        "finance": "Clear financial figures",
+        "calendar": "Block specific dates",
+        "pricing": "Flexible pricing — a different rate for each day",
+        "discounts": "Proportional discounts by length of stay"
+      },
+      "groupTitle": "About Homesta Group",
+      "groupBody": "Homesta is a brand owned by Homesta Group. Alongside the stays platform, the group runs a fleet of more than 100 cars through Homesta Cars — a complete travel experience: somewhere to stay and a way to move, in one place.",
+      "groupBranches": "The group has two branches in Türkiye — Şişli and Başakşehir — and plans to expand into more provinces.",
+      "groupCta": "Visit Homesta Cars",
+      "partnersTitle": "Our partnerships",
+      "partnersBody": "We already work with more than 10 travel agencies and apps outside Türkiye. Travel agencies get a dedicated subscription at preferential rates and a professional dashboard, plus API integration with the apps and agencies that support it.",
+      "partnersCta": "To work with us, get in touch",
+      "contactTitle": "Get in touch",
+      "contactBody": "Write to us any time — we answer in your language.",
+      "contactCta": "Email us"
     }
   },
   "unit": {
