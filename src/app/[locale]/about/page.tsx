@@ -6,7 +6,6 @@ import {
   ArrowUpRight, Mail, Building2,
 } from 'lucide-react';
 import { Header } from '@/components/home/Header';
-import { SiteFooter } from '@/components/home/SiteFooter';
 import { FadeUp } from '@/components/motion/FadeUp';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { Link } from '@/i18n/navigation';
@@ -236,11 +235,22 @@ export default async function AboutPage({
               {/* External, so a plain <a> rather than the locale-aware Link —
                   homestacars.com has its own routing and no locale prefix of
                   ours. rel="noopener" is mandatory with target="_blank". */}
+              {/* Homesta Cars blue — #6EA4E7, the sub-brand accent named in
+                  CLAUDE.md §1. The two brands share one identity system and
+                  differ only by accent, so this button carrying Cars' colour
+                  instead of Stay's red is the system working as designed: it
+                  reads as a doorway to a sibling brand rather than one more
+                  Stay CTA.
+
+                  ⚠️ INK TEXT, NOT WHITE. White on this blue measures 2.58:1 and
+                  fails WCAG AA; ink measures 7.46:1. The blue also sits at
+                  7.46:1 against the ink section behind it, so the button stays
+                  clearly separated from its own background. */}
               <a
                 href={CARS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-9 inline-flex min-h-[44px] items-center gap-2 rounded-[999px] bg-white px-7 py-3.5 text-sm font-semibold text-ink transition-opacity duration-[240ms] hover:opacity-90"
+                className="mt-9 inline-flex min-h-[44px] items-center gap-2 rounded-[999px] bg-[#6EA4E7] px-7 py-3.5 text-sm font-semibold text-ink transition-opacity duration-[240ms] hover:opacity-90"
               >
                 {t('groupCta')}
                 {/* Mirrors in Arabic so the arrow always points "away". */}
@@ -254,7 +264,13 @@ export default async function AboutPage({
         <FadeUp delay={0.04}>
           {/* topSpace: this is the one section that follows the dark block. */}
           <Section title={t('partnersTitle')} topSpace>
-            <p className="max-w-2xl text-[17px] leading-relaxed text-ink-soft">
+            {/* The proof point leads: a concrete figure earns the paragraph
+                that follows it. Owner-maintained and coarse, like every other
+                number on this page. */}
+            <p className="max-w-2xl text-[17px] font-medium leading-relaxed text-ink">
+              {t('partnersProof')}
+            </p>
+            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-ink-soft">
               {t('partnersBody')}
             </p>
             <a
@@ -290,8 +306,8 @@ export default async function AboutPage({
           </section>
         </FadeUp>
       </main>
-
-      <SiteFooter />
+      {/* No <SiteFooter /> here: [locale]/layout.tsx renders it for every page.
+          Adding one made it appear twice on this page and nowhere else. */}
     </div>
   );
 }
