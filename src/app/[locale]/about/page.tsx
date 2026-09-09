@@ -252,7 +252,8 @@ export default async function AboutPage({
 
         {/* ── Partnerships ───────────────────────────────────────────────── */}
         <FadeUp delay={0.04}>
-          <Section title={t('partnersTitle')}>
+          {/* topSpace: this is the one section that follows the dark block. */}
+          <Section title={t('partnersTitle')} topSpace>
             <p className="max-w-2xl text-[17px] leading-relaxed text-ink-soft">
               {t('partnersBody')}
             </p>
@@ -300,14 +301,29 @@ export default async function AboutPage({
 // reaches the browser as JavaScript.
 
 function Section({
-  title, lead, children,
+  title, lead, children, topSpace = false,
 }: {
   title: string;
   lead?: string;
   children: React.ReactNode;
+  /**
+   * Adds the matching top padding.
+   *
+   * Sections normally need none: each one carries its own BOTTOM padding, so
+   * consecutive white sections already breathe. It stops working exactly once
+   * — after the full-bleed dark group block, whose own padding ends at its
+   * background edge. Without this the next heading sits flush against the
+   * black, which reads as one squashed unit rather than two sections.
+   */
+  topSpace?: boolean;
 }) {
   return (
-    <section className="mx-auto max-w-5xl px-4 pb-16 md:pb-24">
+    <section
+      className={
+        'mx-auto max-w-5xl px-4 pb-16 md:pb-24 ' +
+        (topSpace ? 'pt-16 md:pt-24' : '')
+      }
+    >
       <h2 className="text-[clamp(1.4rem,4vw,2rem)] font-medium tracking-[-0.035em] text-ink">
         {title}
       </h2>
