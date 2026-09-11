@@ -5,29 +5,38 @@
  * browser. Everything public is served an offset point instead, produced here.
  */
 
-/** Offset distance applied to every published coordinate. */
-const MIN_OFFSET_M = 300;
-const MAX_OFFSET_M = 500;
+/**
+ * Offset distance applied to every published coordinate.
+ *
+ * 300–500 m → 40–70 m, by the owner's decision: a guest should be able to see
+ * which block a stay is on, not merely which neighbourhood. It is a deliberate
+ * trade of privacy for precision, and it is a real trade — at 300–500 m the
+ * published point could have been any of hundreds of buildings; at 40–70 m it
+ * is one of a handful on the same street.
+ *
+ * ⚠️ THE RADIUS MOVES WITH THIS, ALWAYS. The circle must still contain the
+ * property, so APPROX_RADIUS_M must stay above MAX_OFFSET_M. Changing one of
+ * these two numbers without the other either exposes the address or draws a
+ * circle the property is not in.
+ */
+const MIN_OFFSET_M = 40;
+const MAX_OFFSET_M = 70;
 
 /**
  * The published circle's radius. Consumed by UnitMap.
  *
- * ⚠️ THIS IS A FLOOR, NOT A PREFERENCE. The radius must be at least
- * MAX_OFFSET_M or the real address can sit OUTSIDE the circle drawn around the
- * offset point — which would tell a guest the stay is somewhere it isn't.
- * Privacy is unaffected either way (the centre is already 300–500 m wrong);
- * what a smaller circle breaks is honesty.
+ * ⚠️ THIS MUST STAY ABOVE MAX_OFFSET_M. The circle is drawn around the OFFSET
+ * point, so a radius below the maximum offset can leave the real property
+ * outside it — telling a guest the stay is somewhere it is not. That is what
+ * the radius protects: honesty, not privacy. Privacy comes from the offset
+ * above, and shrinking the circle alone would never have exposed anything.
  *
- * 600 → 500 m. 500 is exactly the floor and it is safe as an equality, not by
- * luck: the offset is MIN + unitFloat × (MAX − MIN) with unitFloat in [0, 1),
- * so the distance is in [300, 500) — strictly under 500. Every property is
- * therefore strictly inside a 500 m circle, mathematically rather than
- * empirically.
- *
- * DO NOT GO BELOW THIS unless MAX_OFFSET_M drops with it. Anything under 500
- * draws a circle that may not contain the property at all.
+ * 500 → 100 m, alongside the offset drop to 40–70 m. The guarantee survives
+ * and is mathematical rather than empirical: distance = MIN + f × (MAX − MIN)
+ * with f in [0, 1) lands in [40, 70), strictly under 70, leaving at least 30 m
+ * of margin inside a 100 m circle. Every property is inside it, always.
  */
-export const APPROX_RADIUS_M = 500;
+export const APPROX_RADIUS_M = 100;
 
 /** FNV-1a. Not a security hash — just a cheap, stable string -> uint32. */
 function hash32(input: string): number {
@@ -53,9 +62,18 @@ function unitFloat(seed: string): number {
  * and recover the true address. One stable offset per unit cannot be averaged
  * away, however many times it is sampled.
  *
- * The offset is not a secret, but it is not reversible from the published point
- * alone: recovering the original needs the unit id *and* this function, and even
- * then only to within the ring it draws.
+ * ⚠️ THE OFFSET IS NOT A SECRET, AND IT IS FULLY REVERSIBLE TO ANYONE WHO HAS
+ * BOTH THE UNIT ID AND THIS FUNCTION. The id travels in the public page
+ * payload, so the only thing standing between a reader and the exact original
+ * coordinate is that this code is not published — which is obscurity, not a
+ * control. An earlier version of this comment claimed the original was
+ * recoverable "only to within the ring it draws"; that was wrong, because the
+ * offset is deterministic rather than random once the seed is known.
+ *
+ * At 300–500 m that overstatement still left a wide margin. At 40–70 m the
+ * published point is close to the true one regardless, so the trade the owner
+ * made is the real protection here — not this function's irreversibility,
+ * which it does not have.
  */
 export function approximateCoords(
   seed: string,

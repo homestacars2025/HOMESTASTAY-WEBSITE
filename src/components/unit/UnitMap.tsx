@@ -104,12 +104,15 @@ export default function UnitMap({ latitude, longitude, token, labels }: UnitMapP
   return (
     <Map
       mapboxAccessToken={token}
-      // 13 → 14 alongside the 600 → 500 m circle: a tighter circle at the old
-      // zoom sat small in the frame and read as less informative than it is.
-      // Still neighbourhood, not street — 14 shows the surrounding blocks and
-      // main roads, not individual buildings, which is the level that matches
-      // what the data actually claims.
-      initialViewState={{ latitude, longitude, zoom: 14 }}
+      // 14 → 16, following the circle down from 500 m to 100 m. A 100 m circle
+      // at zoom 14 is a dot; at 16 it fills a comfortable part of the frame and
+      // the surrounding buildings are legible, which is the whole point of the
+      // owner's decision to tighten it.
+      //
+      // 16 shows individual buildings — and that is acceptable only because the
+      // CENTRE IS STILL WRONG by 40–70 m. The pin does not sit on the property,
+      // so a reader sees the block, not the door.
+      initialViewState={{ latitude, longitude, zoom: 16 }}
       mapStyle={STYLES[style]}
       style={{ width: '100%', height: '100%' }}
       // Touch pan/zoom and scroll zoom are on by default; keep rotation off so
