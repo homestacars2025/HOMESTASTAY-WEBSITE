@@ -10,11 +10,24 @@ const MIN_OFFSET_M = 300;
 const MAX_OFFSET_M = 500;
 
 /**
- * The published circle's radius must be at least MAX_OFFSET_M, or the real
- * address can sit outside the circle drawn around it — which would tell a guest
- * the stay is somewhere it isn't. Consumed by UnitMap.
+ * The published circle's radius. Consumed by UnitMap.
+ *
+ * ⚠️ THIS IS A FLOOR, NOT A PREFERENCE. The radius must be at least
+ * MAX_OFFSET_M or the real address can sit OUTSIDE the circle drawn around the
+ * offset point — which would tell a guest the stay is somewhere it isn't.
+ * Privacy is unaffected either way (the centre is already 300–500 m wrong);
+ * what a smaller circle breaks is honesty.
+ *
+ * 600 → 500 m. 500 is exactly the floor and it is safe as an equality, not by
+ * luck: the offset is MIN + unitFloat × (MAX − MIN) with unitFloat in [0, 1),
+ * so the distance is in [300, 500) — strictly under 500. Every property is
+ * therefore strictly inside a 500 m circle, mathematically rather than
+ * empirically.
+ *
+ * DO NOT GO BELOW THIS unless MAX_OFFSET_M drops with it. Anything under 500
+ * draws a circle that may not contain the property at all.
  */
-export const APPROX_RADIUS_M = 600;
+export const APPROX_RADIUS_M = 500;
 
 /** FNV-1a. Not a security hash — just a cheap, stable string -> uint32. */
 function hash32(input: string): number {

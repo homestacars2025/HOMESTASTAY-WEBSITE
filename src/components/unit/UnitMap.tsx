@@ -104,7 +104,12 @@ export default function UnitMap({ latitude, longitude, token, labels }: UnitMapP
   return (
     <Map
       mapboxAccessToken={token}
-      initialViewState={{ latitude, longitude, zoom: 13 }} // neighbourhood, not street, level
+      // 13 → 14 alongside the 600 → 500 m circle: a tighter circle at the old
+      // zoom sat small in the frame and read as less informative than it is.
+      // Still neighbourhood, not street — 14 shows the surrounding blocks and
+      // main roads, not individual buildings, which is the level that matches
+      // what the data actually claims.
+      initialViewState={{ latitude, longitude, zoom: 14 }}
       mapStyle={STYLES[style]}
       style={{ width: '100%', height: '100%' }}
       // Touch pan/zoom and scroll zoom are on by default; keep rotation off so
