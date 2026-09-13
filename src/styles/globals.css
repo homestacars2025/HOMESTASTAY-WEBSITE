@@ -61,12 +61,25 @@
   --hairline-dark: #25252A;
 }
 
-/* Arabic locale typography — Tajawal for all text including headings.
-   --font-tajawal / --font-cairo are only defined when locale=ar (injected by next/font via html className).
-   [lang="ar"] matches the <html> element; CSS custom property inheritance flows to all children.
-   Cairo is kept imported as a fallback but nothing explicitly renders in it. */
+/* Arabic locale typography — IBM Plex Sans Arabic for all text, headings
+   included. The same face the Homesta Stay mobile app uses, so the two
+   surfaces read as one product.
+
+   --font-plex-arabic is only defined when locale=ar: next/font injects it via
+   the <html> className, which the layout only adds for that locale. So this
+   rule is inert everywhere else and no other locale pays for the font.
+
+   ONE LINE IS THE WHOLE SWITCH, and that is the point — every component in the
+   site reads var(--font-sans) and none of them knows a locale exists.
+   [lang="ar"] matches <html>, and custom-property inheritance carries it to
+   every child.
+
+   Replaced Tajawal (400/500/700), which had NO 600 — so Arabic semibold was
+   silently falling back to 500 or being synthesised. Plex Arabic ships a real
+   600. Cairo was loaded alongside it and rendered nothing anywhere; it is
+   gone. */
 [lang="ar"] {
-  --font-sans: var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Hero doodle wall — fade in from transparent to final 13% opacity */

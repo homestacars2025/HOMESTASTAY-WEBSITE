@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
-import { Tajawal, Cairo } from 'next/font/google';
+import { IBM_Plex_Sans_Arabic } from 'next/font/google';
 import { routing, type Locale } from '@/i18n/routing';
 import { AuthGateProvider } from '@/contexts/AuthGateContext';
 import { MotionProvider } from '@/components/layout/MotionProvider';
@@ -17,21 +17,34 @@ import { Clarity } from '@/components/analytics/Clarity';
 import '@/styles/globals.css';
 import { CANONICAL_URL } from '@/lib/config/urls';
 
-// Arabic body font — clean, readable; workhorse for all Arabic UI text
-const tajawal = Tajawal({
+/**
+ * Arabic typeface — the whole Arabic UI, headings included.
+ *
+ * Matches the Homesta Stay mobile app, so a guest who moves between the two
+ * sees one typeface rather than two. Replaces Tajawal, which shipped
+ * 400/500/700 and had NO 600 — every Arabic semibold was therefore falling
+ * back to 500 or being synthesised by the browser. IBM Plex Sans Arabic has a
+ * real 600, so all four weights here are genuine cuts.
+ *
+ * NOT A CDN, despite the module name: next/font/google downloads the files at
+ * BUILD time and serves them from our own origin. There is no request to
+ * Google at runtime and no third-party dependency — the self-hosting benefit
+ * without hand-writing @font-face.
+ *
+ * preload: false is deliberate. This font is only needed on /ar, and the
+ * variable below is only attached to <html> for that locale, so preloading it
+ * would cost every English, Turkish and Russian visitor a download they never
+ * use.
+ *
+ * The 'latin' subset rides along because an Arabic page is full of Latin
+ * runs — Homesta, API, +90 — and without it each one would fall back to a
+ * different face mid-sentence.
+ */
+const plexArabic = IBM_Plex_Sans_Arabic({
   subsets: ['arabic', 'latin'],
-  weight: ['400', '500', '700'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
-  variable: '--font-tajawal',
-  preload: false,
-});
-
-// Arabic accent font — used only for headings in Arabic locale
-const cairo = Cairo({
-  subsets: ['arabic', 'latin'],
-  weight: ['600', '700'],
-  display: 'swap',
-  variable: '--font-cairo',
+  variable: '--font-plex-arabic',
   preload: false,
 });
 
@@ -68,7 +81,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     <html
       lang={locale}
       dir={dir}
-      className={`${GeistSans.variable} ${GeistMono.variable}${isArabic ? ` ${tajawal.variable} ${cairo.variable}` : ''}`}
+      className={`${GeistSans.variable} ${GeistMono.variable}${isArabic ? ` ${plexArabic.variable}` : ''}`}
     >
       <body>
         {/* Organization + WebSite, on every page for the same reason the pixel
