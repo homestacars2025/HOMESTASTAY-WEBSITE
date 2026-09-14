@@ -27,5 +27,16 @@ export const COMPANY = {
   /** Kept single-sourced in social.ts so the contact widgets and the legal
    *  seller block always show the same address. */
   email:     CONTACT_EMAIL,
-  phone:     '+90 542 843 40 91',
+  /**
+   * The COMPANY line, not a person's mobile.
+   *
+   * Replaced 14 Sep 2026. The previous number was an individual's personal
+   * phone, and it was not confined to the legal pages: organizationSchema()
+   * carries it as contactPoint.telephone, and that schema is emitted from the
+   * root layout on EVERY page — so it was in the JSON-LD of the homepage, the
+   * listings, the blog, all four locales. Anything published that widely has
+   * been crawled and is in third-party indexes; changing it here stops the
+   * bleeding but does not retract what is already out.
+   */
+  phone:     '+90 535 207 32 12',
 } as const;
