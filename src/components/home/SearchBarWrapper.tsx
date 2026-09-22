@@ -49,6 +49,16 @@ export async function SearchBarWrapper({
       initial={{
         cityId,
         guests: filters?.guests,
+        refine: filters
+          ? {
+              types: filters.types,
+              district: filters.district,
+              priceMin: filters.priceMin,
+              priceMax: filters.priceMax,
+              amenities: filters.amenities,
+              sort: filters.sort,
+            }
+          : undefined,
         dateRange: filters?.checkIn
           ? {
               from: fromISODate(filters.checkIn),

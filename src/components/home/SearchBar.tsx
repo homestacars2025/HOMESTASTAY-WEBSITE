@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 // Locale-aware router: a plain next/navigation push would drop the /ar prefix.
 import { useRouter } from '@/i18n/navigation';
 import { buildStaysQuery, toISODate } from '@/lib/stays/search-params';
+import type { StaysFilters } from '@/lib/stays/filters';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import type { DateRange } from './DateRangePicker';
@@ -27,6 +28,13 @@ export interface SearchBarProps {
     cityId?: string;
     guests?: number;
     dateRange?: DateRange;
+    /**
+     * The refinements the bar does not edit — type chips, the filter sheet,
+     * the sort — so a new search keeps them instead of silently dropping them.
+     * The district rides along only while the city stays the same: Şişli means
+     * nothing in Antalya.
+     */
+    refine?: Pick<StaysFilters, 'types' | 'district' | 'priceMin' | 'priceMax' | 'amenities' | 'sort'>;
   };
 }
 
@@ -141,7 +149,10 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
       return;
     }
 
+    const { district, ...refine } = initial?.refine ?? {};
     const query = buildStaysQuery({
+      ...refine,
+      district: selectedCity.id === initial?.cityId ? district : undefined,
       city: selectedCity.name,
       guests,
       checkIn: dateRange.from ? toISODate(dateRange.from) : undefined,
@@ -150,7 +161,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
     setShowWhereError(false);
     setOpenPanel(null);
     router.push(`/stays${query}`);
-  }, [router, selectedCity, guests, dateRange]);
+  }, [router, selectedCity, guests, dateRange, initial?.refine, initial?.cityId]);
   // Show guest count in the Who field only after user changes from the default
   const guestLabel   = guests > 1 ? t('guestCount', { count: guests }) : null;
 

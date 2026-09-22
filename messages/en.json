@@ -30,11 +30,52 @@
   },
   "categories": {
     "all": "All",
-    "apartments": "Apartments",
-    "villas": "Villas",
-    "cabins": "Cabins",
-    "rooms": "Rooms",
+    "apartment": "Apartment",
+    "villa": "Villa",
+    "studio": "Studio",
+    "suite": "Suite",
+    "room": "Room",
+    "cabin": "Cabin",
+    "farm": "Farm",
+    "bed": "Bed",
+    "other": "Place",
     "label": "Browse by type"
+  },
+  "filters": {
+    "button": "Filters",
+    "title": "Filters",
+    "close": "Close filters",
+    "clearAll": "Clear all",
+    "show": "{count, plural, =0 {No stays match} one {Show # stay} other {Show # stays}}",
+    "results": "{count, plural, =0 {No stays} one {# stay} other {# stays}}",
+    "price": {
+      "title": "Price per night",
+      "any": "Any price",
+      "approx": "Approximate — the total may vary with your dates",
+      "min": "Minimum price per night",
+      "max": "Maximum price per night"
+    },
+    "amenities": {
+      "title": "Amenities",
+      "parking": "Parking",
+      "pool": "Pool",
+      "elevator": "Elevator",
+      "self_check_in": "Self check-in",
+      "washing_machine": "Washing machine",
+      "gym": "Gym",
+      "extra_bed": "Extra bed"
+    },
+    "district": {
+      "title": "Neighbourhood",
+      "any": "All neighbourhoods"
+    },
+    "sort": {
+      "label": "Sort by",
+      "recommended": "Recommended",
+      "price_asc": "Price: low to high",
+      "price_desc": "Price: high to low",
+      "newest": "Newest"
+    }
   },
   "sections": {
     "featured": "Featured stays",

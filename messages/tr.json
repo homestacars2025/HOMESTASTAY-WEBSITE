@@ -30,11 +30,52 @@
   },
   "categories": {
     "all": "Tümü",
-    "apartments": "Apartmanlar",
-    "villas": "Villalar",
-    "cabins": "Kabin",
-    "rooms": "Odalar",
+    "apartment": "Daire",
+    "villa": "Villa",
+    "studio": "Stüdyo",
+    "suite": "Suit",
+    "room": "Oda",
+    "cabin": "Kabin",
+    "farm": "Çiftlik",
+    "bed": "Yatak",
+    "other": "Mekân",
     "label": "Türe göre gözat"
+  },
+  "filters": {
+    "button": "Filtreler",
+    "title": "Filtreler",
+    "close": "Filtreleri kapat",
+    "clearAll": "Tümünü temizle",
+    "show": "{count, plural, =0 {Eşleşen konaklama yok} other {# konaklamayı göster}}",
+    "results": "{count, plural, =0 {Konaklama yok} other {# konaklama}}",
+    "price": {
+      "title": "Gecelik fiyat",
+      "any": "Her fiyat",
+      "approx": "Yaklaşık — toplam, tarihlerinize göre değişebilir",
+      "min": "En düşük gecelik fiyat",
+      "max": "En yüksek gecelik fiyat"
+    },
+    "amenities": {
+      "title": "Olanaklar",
+      "parking": "Otopark",
+      "pool": "Havuz",
+      "elevator": "Asansör",
+      "self_check_in": "Kendin giriş yap",
+      "washing_machine": "Çamaşır makinesi",
+      "gym": "Spor salonu",
+      "extra_bed": "İlave yatak"
+    },
+    "district": {
+      "title": "Semt",
+      "any": "Tüm semtler"
+    },
+    "sort": {
+      "label": "Sırala",
+      "recommended": "Önerilen",
+      "price_asc": "Fiyat: düşükten yükseğe",
+      "price_desc": "Fiyat: yüksekten düşüğe",
+      "newest": "En yeni"
+    }
   },
   "sections": {
     "featured": "Öne çıkan konaklamalar",

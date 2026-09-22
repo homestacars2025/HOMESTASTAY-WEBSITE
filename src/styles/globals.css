@@ -80,6 +80,30 @@
    gone. */
 [lang="ar"] {
   --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  /* Geist Mono has no Arabic glyphs. With nothing after it but ui-monospace,
+     every Arabic label set in mono (eyebrows, chips, the card's location line)
+     fell to the system monospace face, which puts each letter in a fixed-width
+     cell — "الـسـعـر" instead of "السعر". Font fallback is per glyph, so
+     putting Plex Arabic second changes nothing for Latin text and digits
+     (still Geist Mono) and gives the Arabic letters a face that joins.
+
+     "GeistMono" is the face itself, not var(--font-geist-mono): that variable
+     carries the geist package's own fallback list (ui-monospace … "Courier
+     New", monospace), and Courier New HAS Arabic glyphs — it would claim them
+     before Plex was ever reached. Verified with the DevTools platform-fonts
+     readout, not assumed. If the geist package ever renames its family, this
+     degrades to Plex Arabic for everything in mono on Arabic pages — still
+     joined, never boxed. */
+  --font-mono: "GeistMono", var(--font-plex-arabic), ui-monospace, monospace;
+}
+
+/* Letter-spacing pulls Arabic letters apart at their joins — cursive script
+   must not be tracked. The mono style's 0.06–0.12em tracking (§7) is a Latin
+   convention; in Arabic it is reset wherever mono is used, which is also every
+   place the tracking utilities are paired with it. Unlayered, so it wins over
+   the tracking-* utilities without !important. */
+[lang="ar"] .font-mono {
+  letter-spacing: normal;
 }
 
 /* Hero doodle wall — fade in from transparent to final 13% opacity */
@@ -172,4 +196,71 @@ body {
   font-weight: 500;
   letter-spacing: -0.045em;
   font-feature-settings: "ss01", "cv11", "cv06";
+}
+
+/* ── /stays filter sheet ───────────────────────────────────────────────────
+   Dual price slider: two native range inputs stacked on one track. The inputs
+   themselves are transparent and click-through; only their thumbs take the
+   pointer, so either thumb can be grabbed wherever it sits. */
+.price-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.price-range::-webkit-slider-runnable-track { background: transparent; height: 100%; }
+.price-range::-moz-range-track { background: transparent; }
+.price-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 26px;
+  height: 26px;
+  margin-top: 9px; /* (44 − 26) / 2 — centres the thumb on the 44px input */
+  border-radius: 999px;
+  background: var(--white, #fff);
+  border: 1px solid var(--rule);
+  box-shadow: 0 2px 8px rgba(14, 14, 16, 0.14);
+  cursor: grab;
+}
+.price-range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--white, #fff);
+  border: 1px solid var(--rule);
+  box-shadow: 0 2px 8px rgba(14, 14, 16, 0.14);
+  cursor: grab;
+}
+/* The input box spans the whole track; its own outline would ring the track.
+   Focus is shown on the thumb instead (below). */
+.price-range:focus { outline: none; }
+.price-range:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--ink); outline-offset: 2px; }
+.price-range:focus-visible::-moz-range-thumb { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* The sheet rises from the bottom on a phone and slides in from the inline
+   end on desktop — 240ms, the brand's "slow exhale". */
+@keyframes sheet-rise { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheet-slide { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes sheet-slide-rtl { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
+.filter-sheet[open] { animation: sheet-rise 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+.filter-sheet[open]::backdrop { animation: backdrop-in 240ms ease-out; }
+@media (min-width: 640px) {
+  /* Pinned to the inline END — the right in LTR, the left in Arabic. Written
+     here rather than as utilities: the logical start/end insets are not
+     emitted by our Tailwind build, and a dialog with both sides at 0 is
+     over-constrained, which RTL resolves by pinning it to the right. */
+  .filter-sheet { inset-inline-start: auto; inset-inline-end: 0; }
+  .filter-sheet[open] { animation-name: sheet-slide; }
+  [dir="rtl"] .filter-sheet[open] { animation-name: sheet-slide-rtl; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .filter-sheet[open], .filter-sheet[open]::backdrop { animation: none; }
 }

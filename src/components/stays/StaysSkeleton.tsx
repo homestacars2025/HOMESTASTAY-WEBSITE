@@ -26,11 +26,16 @@ export function StaysSkeleton() {
       {/* Announced to assistive tech; visually the pulsing cards do the talking. */}
       <span role="status" className="sr-only">{t('loadingResults')}</span>
 
-      {/* Category-chip row placeholder */}
-      <div className="flex gap-2 px-4 pb-4" aria-hidden="true">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-8 w-20 rounded-[999px] bg-paper-warm animate-pulse shrink-0" />
-        ))}
+      {/* Toolbar placeholder — same box as StaysToolbar (44px pills, then the
+          count line), so the grid lands where it will stay. */}
+      <div className="px-4 mb-6" aria-hidden="true">
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-11 w-28 rounded-[999px] bg-paper-warm animate-pulse" />
+          <div className="h-11 w-40 rounded-[999px] bg-paper-warm animate-pulse" />
+        </div>
+        <div className="mt-4 h-[16px] flex items-center">
+          <div className="h-2.5 w-20 rounded bg-paper-warm animate-pulse" />
+        </div>
       </div>
 
       {/* Card grid placeholder — same columns as StaysGallery */}

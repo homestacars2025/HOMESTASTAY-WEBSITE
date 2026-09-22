@@ -1,6 +1,7 @@
 'use client';
 
 import { Minus, Plus } from 'lucide-react';
+import { MAX_GUESTS } from '@/lib/stays/filters';
 
 // ── Shared guests stepper — used in BookingCard and SearchBar ────────────────
 // Props carry explicit label strings so the component is namespace-agnostic.
@@ -21,15 +22,15 @@ export function GuestsStepper({
   inputLabel,
 }: GuestsStepperProps) {
   function dec() { onChange(Math.max(1, value - 1)); }
-  function inc() { onChange(Math.min(20, value + 1)); }
+  function inc() { onChange(Math.min(MAX_GUESTS, value + 1)); }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = parseInt(e.target.value, 10);
-    if (!isNaN(raw)) onChange(Math.min(20, Math.max(1, raw)));
+    if (!isNaN(raw)) onChange(Math.min(MAX_GUESTS, Math.max(1, raw)));
   }
   function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
     const raw = parseInt(e.target.value, 10);
-    onChange(isNaN(raw) || raw < 1 ? 1 : raw > 20 ? 20 : raw);
+    onChange(isNaN(raw) || raw < 1 ? 1 : raw > MAX_GUESTS ? MAX_GUESTS : raw);
   }
 
   return (
@@ -47,7 +48,7 @@ export function GuestsStepper({
       <input
         type="number"
         min={1}
-        max={20}
+        max={MAX_GUESTS}
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}
@@ -58,7 +59,7 @@ export function GuestsStepper({
       <button
         type="button"
         onClick={inc}
-        disabled={value >= 20}
+        disabled={value >= MAX_GUESTS}
         aria-label={incrementLabel}
         className="w-8 h-8 flex items-center justify-center rounded-full border border-rule text-ink-soft transition-colors duration-[240ms] hover:bg-paper-warm disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
       >

@@ -1,25 +1,27 @@
 import { getTranslations } from 'next-intl/server';
 import { CategoryIcon } from './CategoryIcon';
 import { Link } from '@/i18n/navigation';
-import { getCategoryCounts, type StaysFilters } from '@/lib/queries/stays';
-import { STAY_CATEGORIES } from '@/lib/stays/categories';
+import { getCatalogueFacets, type StaysFilters } from '@/lib/queries/stays';
+import { STAY_TYPES, type StayType } from '@/lib/stays/filters';
 import { buildStaysQuery } from '@/lib/stays/search-params';
 
 /**
- * The category filter row.
+ * The unit-type filter row — one chip per raw unit_type, plus ALL.
  *
- * WAS: a client component with useState that highlighted a chip and did
- * nothing else — six labels, two of which (HOTELS, FARMS) matched zero units.
- * NOW: plain links to /stays, so a chip both filters and survives a refresh,
- * a shared URL and the back button. No 'use client', no state, no hydration
- * cost on the homepage.
+ * Plain links to /stays, so a chip both filters and survives a refresh, a
+ * shared URL and the back button. No 'use client', no state, no hydration cost
+ * on the homepage.
  *
- * A chip renders only when the live catalogue actually holds units of that
- * category — see getCategoryCounts. The active chip is always kept, even at
- * zero, because hiding the filter a guest is currently looking at explains
- * nothing about the empty page in front of them.
+ * Chips toggle: tapping Villa while Apartment is on shows both (unit_type IN
+ * (...)); tapping an active chip takes it back off; ALL clears the lot.
  *
- * Existing search state rides along: filtering to Villas after searching
+ * A chip renders only when the live catalogue holds units of that type — see
+ * getCatalogueFacets — so farm and bed stay hidden until the first one is
+ * listed. An active chip is always kept, even at zero, because hiding the
+ * filter a guest is currently looking at explains nothing about the empty
+ * page in front of them.
+ *
+ * Existing search state rides along: filtering to villas after searching
  * Istanbul keeps ?city=istanbul, so the two AND together. `page` is
  * deliberately dropped — page 4 of apartments is not page 4 of villas.
  */
@@ -32,17 +34,21 @@ interface CategoryChipsProps {
   filters?: StaysFilters;
 }
 
+/** English floor for a missing message — see `label` below. */
+const FALLBACK: Record<StayType, string> = {
+  apartment: 'Apartment', villa: 'Villa', studio: 'Studio', suite: 'Suite', room: 'Room',
+  cabin: 'Cabin', farm: 'Farm', bed: 'Bed', other: 'Place',
+};
+
 export async function CategoryChips({ filters = {} }: CategoryChipsProps) {
-  const [t, counts] = await Promise.all([
+  const [t, { typeCounts }] = await Promise.all([
     getTranslations('categories'),
-    getCategoryCounts(),
+    getCatalogueFacets(),
   ]);
 
-  const active = filters.category;
+  const active = new Set(filters.types ?? []);
 
-  const visible = STAY_CATEGORIES.filter(
-    ({ key }) => counts[key] > 0 || key === active,
-  );
+  const visible = STAY_TYPES.filter((type) => typeCounts[type] > 0 || active.has(type));
 
   /**
    * A label that can never be a raw key.
@@ -55,32 +61,40 @@ export async function CategoryChips({ filters = {} }: CategoryChipsProps) {
   const label = (key: string, fallback: string): string =>
     typeof t.has === 'function' && !t.has(key) ? fallback : t(key);
 
-  // Nothing to choose between — one category holding everything is not a
+  /** The same search with `type` switched on or off. */
+  const toggled = (type: StayType): string => {
+    const next = new Set(active);
+    if (next.has(type)) next.delete(type);
+    else next.add(type);
+    const types = STAY_TYPES.filter((x) => next.has(x));
+    return `/stays${buildStaysQuery({ ...filters, types: types.length ? types : undefined })}`;
+  };
+
+  // Nothing to choose between — one type holding everything is not a
   // filter, it is decoration. Law 2: every element earns its place.
   if (visible.length < 2) return null;
 
   return (
-    /* Outer scroll wrapper — only kicks in on very narrow viewports */
+    /* Scrolls sideways on a phone (eight chips do not fit 375px); centred
+       once there is room for the whole row. */
     <div className="overflow-x-auto scrollbar-none px-4 pb-2">
-      {/* Inner row — min-w keeps chips from squishing below ~336px,
-          mx-auto centers the row on wide screens               */}
       <nav
         aria-label={t('label')}
-        className="flex flex-row flex-nowrap items-center justify-evenly min-w-[336px] mx-auto max-w-2xl"
+        className="flex flex-row flex-nowrap items-center gap-1 sm:gap-3 w-max mx-auto"
       >
         <Chip
-          href={`/stays${buildStaysQuery({ ...filters, category: undefined })}`}
+          href={`/stays${buildStaysQuery({ ...filters, types: undefined })}`}
           icon="all"
           label={label('all', 'All')}
-          active={!active}
+          active={active.size === 0}
         />
-        {visible.map(({ key, fallback }) => (
+        {visible.map((type) => (
           <Chip
-            key={key}
-            href={`/stays${buildStaysQuery({ ...filters, category: key })}`}
-            icon={key}
-            label={label(key, fallback)}
-            active={active === key}
+            key={type}
+            href={toggled(type)}
+            icon={type}
+            label={label(type, FALLBACK[type])}
+            active={active.has(type)}
           />
         ))}
       </nav>
@@ -99,9 +113,9 @@ function Chip({
   return (
     <Link
       href={href}
-      aria-current={active ? 'page' : undefined}
+      aria-current={active ? 'true' : undefined}
       // py-2.5 + the 28px icon + label clears the 44px touch target.
-      className={`flex flex-col items-center gap-1.5 w-14 py-2.5 transition-colors duration-[240ms] ${
+      className={`flex flex-col items-center gap-1.5 min-w-14 px-1.5 py-2.5 transition-colors duration-[240ms] ${
         active ? 'text-stay' : 'text-mute hover:text-ink'
       }`}
     >

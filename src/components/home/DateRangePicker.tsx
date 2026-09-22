@@ -80,12 +80,17 @@ export function DateRangePicker({ selected, onSelect, locale }: Props) {
           color: #0E0E10;
         }
         .hs-rdp-root .rdp-weekday {
-          font-family: var(--font-geist-mono, monospace);
+          /* The theme token, not --font-geist-mono directly: in Arabic it
+             carries the Plex Arabic fallback (see globals.css). */
+          font-family: var(--font-mono);
           font-size: 10px;
           letter-spacing: 0.06em;
           text-transform: uppercase;
           color: #8C8881;
           opacity: 1;
+        }
+        [lang="ar"] .hs-rdp-root .rdp-weekday {
+          letter-spacing: normal;
         }
         .hs-rdp-root .rdp-day_button {
           font-size: 13px;

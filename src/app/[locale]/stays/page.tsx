@@ -7,6 +7,7 @@ import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { StaysGallery } from '@/components/stays/StaysGallery';
 import { StaysSkeleton } from '@/components/stays/StaysSkeleton';
+import { StaysToolbar } from '@/components/stays/StaysToolbar';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
 import { CategoryChips } from '@/components/home/CategoryChips';
 import { Link } from '@/i18n/navigation';
@@ -147,13 +148,19 @@ async function StaysResults({
 }) {
   const t = await getTranslations('pages.stays');
 
-  const { units, total } = await getPublicUnits(locale, filters, page);
-  const isFiltered = Object.keys(filters).length > 0;
+  const { units, total, amenityCounts } = await getPublicUnits(locale, filters, page);
+  const isFiltered = Object.values(filters).some((v) => v !== undefined);
+
+  const toolbar = (
+    <StaysToolbar locale={locale} filters={filters} total={total} amenityCounts={amenityCounts} />
+  );
 
   if (units.length === 0) {
     // A search that matched nothing is not the same as an empty catalogue:
     // offering "become a host" here would answer a question nobody asked.
     return isFiltered ? (
+      <>
+      {toolbar}
       <div className="px-4 py-20 text-center max-w-md mx-auto">
         <h2 className="text-lg font-medium text-ink mb-2 tracking-[-0.015em]">
           {t('searchEmpty.title')}
@@ -166,6 +173,7 @@ async function StaysResults({
           {t('searchEmpty.cta')}
         </Link>
       </div>
+      </>
     ) : (
       <div className="px-4 py-20 text-center max-w-md mx-auto">
         <h2 className="text-lg font-medium text-ink mb-2 tracking-[-0.015em]">
@@ -187,6 +195,7 @@ async function StaysResults({
 
   return (
     <>
+      {toolbar}
       <StaysGallery units={units} searchQuery={unitSearchQuery(filters, page)} />
       {totalPages > 1 && (
         <Pagination filters={filters} page={page} totalPages={totalPages} t={t} />
