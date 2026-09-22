@@ -5,6 +5,13 @@
 -- Russian support for place names is decided. Until then the site falls back
 -- to name_en for Russian visitors (see src/lib/geo/localize.ts).
 --
+-- WHY IT LIVES IN supabase/pending/, NOT supabase/migrations/
+--   A Supabase GitHub integration, if one is ever enabled for this repo,
+--   applies whatever sits in supabase/migrations/ when it lands on main. This
+--   file must not run by accident, so it is parked outside that folder. To
+--   apply it: move it into supabase/migrations/ in the same change that is
+--   meant to run it (or run it by hand in the SQL editor), never before.
+--
 -- Additive and nullable: no existing reader breaks, and a NULL name_ru keeps
 -- the English fallback working for any row not yet translated. The shared
 -- STAY database is also read by the mobile app — neither table is changed in
