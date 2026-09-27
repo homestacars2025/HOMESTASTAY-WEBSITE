@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
+import { PAYMENT_MODE_NAME_KEY } from '@/lib/booking/payment-mode';
 import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
 
 /**
@@ -21,16 +22,31 @@ import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
  * guessed or nightly-rate number. Every figure comes from quote_payment_modes.
  */
 export function PaymentModesDialog({
+  modes,
   quote,
   onContinue,
   onClose,
 }: {
+  /**
+   * What this unit offers, from its own allow_* columns.
+   *
+   * ⚠️ NOT DERIVED FROM `quote`. The quote is null until dates are picked, and
+   * the mobile "Reserve" button opens this dialog long before that — which is
+   * how a unit offering three modes announced "Two ways to book" with two
+   * bullets. What is on offer is a property of the unit; what it costs is a
+   * property of the dates.
+   */
+  modes: { fullPrepay: boolean; deposit: boolean; payAtArrival: boolean };
   /** Priced modes for the chosen dates, or null when no dates are picked. */
   quote: PaymentModeQuote | null;
   onContinue: () => void;
   onClose: () => void;
 }) {
   const t = useTranslations('unit.booking.explain');
+  // The same name each mode carries on the chooser and the booking.
+  const tMode = useTranslations('booking.mode');
+  const name = (mode: 'full_prepay' | 'deposit' | 'pay_at_arrival') =>
+    tMode(PAYMENT_MODE_NAME_KEY[mode]);
   const locale = useLocale();
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -54,11 +70,7 @@ export function PaymentModesDialog({
   // needs the split checks for it itself.
   const priced = quote !== null && quote.totalUsd !== null;
 
-  const modeCount = [
-    quote?.allowFullPrepay !== false,
-    quote?.allowDeposit !== false,
-    quote?.allowPayAtArrival === true,
-  ].filter(Boolean).length;
+  const modeCount = [modes.fullPrepay, modes.deposit, modes.payAtArrival].filter(Boolean).length;
 
   return (
     <dialog
@@ -89,28 +101,28 @@ export function PaymentModesDialog({
         </div>
 
         <ul className="flex flex-col gap-3 mb-4">
-          {quote?.allowFullPrepay !== false && (
+          {modes.fullPrepay && (
             <Bullet
               text={priced
-                ? t('fullWithAmount', { total: usd(quote!.totalUsd as number) })
-                : t('full')}
+                ? t('fullWithAmount', { name: name('full_prepay'),  total: usd(quote!.totalUsd as number) })
+                : t('full', { name: name('full_prepay') })}
             />
           )}
-          {quote?.allowDeposit !== false && (
+          {modes.deposit && (
             <Bullet
               text={priced && quote?.depositUsd != null && quote?.balanceDueUsd != null
-                ? t('depositWithAmounts', {
+                ? t('depositWithAmounts', { name: name('deposit'), 
                     deposit: usd(quote.depositUsd),
                     balance: usd(quote.balanceDueUsd),
                   })
-                : t('deposit')}
+                : t('deposit', { name: name('deposit') })}
             />
           )}
-          {quote?.allowPayAtArrival && (
+          {modes.payAtArrival && (
             <Bullet
               text={priced
-                ? t('arrivalWithAmount', { total: usd(quote.totalUsd as number) })
-                : t('arrival')}
+                ? t('arrivalWithAmount', { name: name('pay_at_arrival'),  total: usd(quote.totalUsd as number) })
+                : t('arrival', { name: name('pay_at_arrival') })}
             />
           )}
         </ul>

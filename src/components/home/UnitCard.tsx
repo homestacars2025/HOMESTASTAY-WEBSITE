@@ -80,12 +80,14 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
           )}
           <SaveButton unitId={unit.id} />
 
-          {/* Deposit badge — a fact about this unit's terms, placed on the
-              photo where a guest scanning results will see it. No figures: the
-              split depends on the dates, which this card does not price. */}
-          {unit.allow_deposit && (
+          {/* Pay-on-arrival badge — the one term that is still unusual, on
+              the photo where a guest scanning results will see it. The deposit
+              badge is gone: every unit takes a deposit now, so it marked
+              nothing out. No figures either — the split depends on dates this
+              card does not price. */}
+          {unit.allow_pay_at_arrival && (
             <span className="absolute bottom-2 start-2 inline-flex items-center rounded-[999px] bg-white/95 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-stay shadow-sm">
-              {tMode('name.deposit')}
+              {tMode('name.pay_at_arrival')}
             </span>
           )}
         </div>

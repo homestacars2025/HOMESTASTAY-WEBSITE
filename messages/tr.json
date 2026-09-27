@@ -420,15 +420,15 @@
       "depositTeaser": "Ya da şimdi yalnızca {amount} ödeyin — kalanı girişte",
       "explain": {
         "title": "İki rezervasyon seçeneği",
-        "fullWithAmount": "Tam ödeme: Şimdi {total} online ödeyin, girişte ödemeniz gereken bir şey kalmaz.",
-        "full": "Tam ödeme: Konaklamanın tamamını online ödeyin, girişte ödemeniz gereken bir şey kalmaz.",
-        "depositWithAmounts": "Kapora: Rezervasyonunuzu kesinleştirmek için şimdi yalnızca {deposit} ödeyin, kalan {balance} tutarını girişte ev sahibine nakit ödeyin.",
-        "deposit": "Kapora: Rezervasyonunuzu kesinleştirmek için şimdi küçük bir tutar ödeyin, kalanını girişte ev sahibine nakit ödeyin.",
+        "fullWithAmount": "{name}: şimdi {total} online ödeyin, girişte ödemeniz gereken bir şey kalmaz.",
+        "full": "{name}: konaklamanın tamamını online ödeyin, girişte ödemeniz gereken bir şey kalmaz.",
+        "depositWithAmounts": "{name}: rezervasyonunuzu kesinleştirmek için şimdi yalnızca {deposit} ödeyin, kalan {balance} tutarını girişte ev sahibine nakit ödeyin.",
+        "deposit": "{name}: rezervasyonunuzu kesinleştirmek için şimdi küçük bir tutar ödeyin, kalanını girişte ev sahibine nakit ödeyin.",
         "note": "Size uygun seçeneği bir sonraki adımda seçersiniz.",
         "continue": "Devam et",
         "close": "Kapat",
-        "arrivalWithAmount": "Girişte ödeme: şimdi hiçbir ödeme yok — girişte ev sahibine nakit {total}.",
-        "arrival": "Girişte ödeme: şimdi hiçbir ödeme yok — konaklamanın tamamı girişte ev sahibine nakit.",
+        "arrivalWithAmount": "{name}: şimdi hiçbir ödeme yok — girişte ev sahibine nakit {total}.",
+        "arrival": "{name}: şimdi hiçbir ödeme yok — konaklamanın tamamı girişte ev sahibine nakit.",
         "titleThree": "Üç rezervasyon seçeneği"
       }
     },

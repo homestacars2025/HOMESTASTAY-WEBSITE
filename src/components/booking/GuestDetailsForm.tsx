@@ -215,6 +215,21 @@ export function GuestDetailsForm({
       noValidate
       className="flex flex-col gap-5"
     >
+      {/* How to pay comes FIRST: it decides what the guest is about to be
+          charged, and choosing it after typing a name and a phone number
+          reads as an afterthought to a decision already made. Details, then
+          the acceptance, then the button. */}
+      {showModeChoice && (
+        <div className="pb-1">
+          <PaymentModeChoice
+            quote={modeQuote}
+            value={paymentMode}
+            onChange={setPaymentMode}
+            disabled={pending}
+          />
+        </div>
+      )}
+
       {/* Name — two fields, one row on anything above 375px */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -324,19 +339,6 @@ export function GuestDetailsForm({
           <p className="mt-2 text-xs text-mute">{t('fields.maxGuests', { count: maxGuests })}</p>
         )}
       </div>
-
-      {/* How to pay — before the legal acceptance, because the contract the
-          guest is about to accept covers the amount charged online. */}
-      {showModeChoice && (
-        <div className="border-t border-rule pt-5">
-          <PaymentModeChoice
-            quote={modeQuote}
-            value={paymentMode}
-            onChange={setPaymentMode}
-            disabled={pending}
-          />
-        </div>
-      )}
 
       {/* Distance-selling acceptance — mandatory before payment under Turkish law */}
       <div className="border-t border-rule pt-5">

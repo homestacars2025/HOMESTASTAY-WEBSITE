@@ -319,6 +319,11 @@ export function BookingCard({
 
       {explainOpen && (
         <PaymentModesDialog
+          modes={{
+            fullPrepay: allowFullPrepay !== false,
+            deposit: allowDeposit === true,
+            payAtArrival: allowPayAtArrival === true,
+          }}
           quote={modeQuote}
           onContinue={() => setModalOpen(true)}
           onClose={() => setExplainOpen(false)}
