@@ -58,6 +58,11 @@ export type HoldResult =
       holdExpiresAt: string | null;
       /** The mode the booking now carries — what the DB confirmed, not what was asked for. */
       paymentMode: PaymentMode;
+      /**
+       * pay_at_arrival only: the request has already been sent to the owner,
+       * in this same submit. There is no payment step to come back for.
+       */
+      requestSent: boolean;
       /** Deposit bookings only: charged online now, and cash due at arrival. */
       prepayAmountTry: number | null;
       balanceDueTry: number | null;
@@ -78,6 +83,8 @@ export type HoldResult =
   | { ok: false; status: 'phone_taken' }
   /** The unit no longer offers the chosen mode, or it cannot apply here. */
   | { ok: false; status: 'mode_rejected' }
+  /** pay_at_arrival: the hold exists but the request could not be sent. */
+  | { ok: false; status: 'commit_failed' }
   | { ok: false; status: 'error' };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -223,6 +230,16 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
       const mode = await applyPaymentMode(supabase, row.booking_id, requestedMode);
       if (mode.status === 'rejected') return { ok: false, status: 'mode_rejected' };
 
+      // ── pay_at_arrival finishes HERE, in this one submit ─────────────────
+      // There is no payment step, so a 30-minute hold and a "reserved for
+      // you" screen would be a waiting room with nothing on the other side.
+      // The request goes to the owner now, and the guest lands on a booking
+      // that is already under review.
+      if (mode.paymentMode === 'pay_at_arrival') {
+        const sent = await commitArrival(supabase, row.booking_id);
+        if (!sent) return { ok: false, status: 'commit_failed' };
+      }
+
       return {
         ok: true,
         status: row.status,
@@ -233,6 +250,7 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
         holdExpiresAt: row.hold_expires_at ?? null,
         // The amounts the DATABASE locked, never a figure derived here.
         paymentMode:     mode.paymentMode,
+        requestSent:     mode.paymentMode === 'pay_at_arrival',
         prepayAmountTry: mode.prepayAmountTry,
         balanceDueTry:   mode.balanceDueTry,
         balanceDueUsd:   mode.balanceDueUsd,
@@ -263,6 +281,37 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
     case 'invalid':      return { ok: false, status: 'invalid', fields: [] };
     default:             return { ok: false, status: 'error' };
   }
+}
+
+/**
+ * Send a pay-at-arrival booking to its owner — commit_pay_at_arrival.
+ *
+ * RETRIED ONCE, AND ONLY ONCE. A hold now exists: if the commit is lost to a
+ * blip, the guest is left holding dates nobody will ever be asked about,
+ * which is the one outcome worth a second attempt. It is safe to repeat —
+ * the RPC answers 'already_committed' for a request that did land, and that
+ * counts as sent. Beyond one retry the honest answer is the error message.
+ */
+async function commitArrival(
+  supabase: SupabaseClient,
+  bookingId: string,
+  attempt = 1,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('commit_pay_at_arrival', {
+    p_booking_id: bookingId,
+  });
+
+  const payload = (Array.isArray(data) ? data[0] : data) as { status?: unknown } | null;
+  const status = String(payload?.status ?? '');
+
+  if (!error && (status === 'ok' || status === 'already_committed')) return true;
+
+  console.error('[createHold] commit_pay_at_arrival failed', {
+    bookingId, attempt, status, message: error?.message, code: error?.code,
+  });
+
+  if (attempt === 1) return commitArrival(supabase, bookingId, 2);
+  return false;
 }
 
 /**

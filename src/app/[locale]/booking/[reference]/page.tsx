@@ -478,16 +478,16 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                 : t('underReviewBody')}
             />
           ) : (
+            /* RECOVERY ONLY. The request is sent in the same submit that
+               creates the booking, so an uncommitted arrival booking means
+               that call failed after the hold was taken — rare, and the guest
+               is normally told on the checkout page. Reaching this booking
+               later must still offer a way forward rather than a page that
+               does nothing. */
             <>
               <div className="border border-rule rounded-[14px] p-5 mb-6">
-                <p className="text-[15px] font-medium text-ink mb-1">{t('arrivalRequestTitle')}</p>
-                <p className="text-[13px] text-ink-soft leading-relaxed">{t('arrivalRequestBody')}</p>
-                {totalUsd !== null && (
-                  <p className="mt-3 text-[1.5rem] font-semibold text-stay tabular-nums leading-none">
-                    {usd.format(totalUsd)}
-                  </p>
-                )}
-                <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">{t('balanceCurrency')}</p>
+                <p className="text-[15px] font-medium text-ink mb-1">{t('arrivalNotSentTitle')}</p>
+                <p className="text-[13px] text-ink-soft leading-relaxed">{t('arrivalNotSentBody')}</p>
               </div>
               <ArrivalRequestForm />
             </>

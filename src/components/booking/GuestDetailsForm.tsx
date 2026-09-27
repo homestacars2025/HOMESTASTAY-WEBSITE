@@ -106,6 +106,8 @@ export function GuestDetailsForm({
     modes[0] ?? DEFAULT_PAYMENT_MODE,
   );
   const showModeChoice = modes.length > 1 && modeQuote !== null;
+  // No payment step for this one: the submit sends the request to the owner.
+  const isArrival = paymentMode === 'pay_at_arrival';
 
   const [fieldErrors, setFieldErrors] = useState<Set<HoldFieldError>>(new Set());
   const [pageError,   setPageError]   = useState<string | null>(null);
@@ -175,6 +177,12 @@ export function GuestDetailsForm({
         case 'rate_unavailable':
           // We refused to sell rather than charge an unverifiable rate.
           setPageError(t('errors.rateUnavailable'));
+          break;
+        case 'commit_failed':
+          // The dates are held but the owner was never asked. Staying on this
+          // page with the reason is better than a booking page that would
+          // claim a request is under review when it is not.
+          setPageError(t('errors.commitFailed'));
           break;
         case 'mode_rejected':
           // The unit stopped offering this mode between the page load and the
@@ -400,10 +408,14 @@ export function GuestDetailsForm({
         type="submit" disabled={pending}
         className="w-full bg-stay text-white rounded-[999px] py-4 text-sm font-semibold min-h-[44px] transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {pending ? t('submitting') : t('submit')}
+        {pending
+          ? t(isArrival ? 'sendingRequest' : 'submitting')
+          : t(isArrival ? 'submitArrival' : 'submit')}
       </button>
 
-      <p className="text-center text-xs text-mute">{t('noChargeYet')}</p>
+      <p className="text-center text-xs text-mute">
+        {isArrival ? t('result.arrivalRequestBody') : t('noChargeYet')}
+      </p>
     </form>
   );
 }

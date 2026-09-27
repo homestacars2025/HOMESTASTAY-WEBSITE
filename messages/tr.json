@@ -820,7 +820,8 @@
       "generic": "Tarafımızda bir sorun oluştu. Hiçbir ücret alınmadı — lütfen tekrar deneyin.",
       "minNights": "Bu yerde en az {count, plural, one {# gece} other {# gece}} konaklama şartı var. Lütfen daha uzun bir aralık seçin.",
       "phoneTaken": "Bu telefon numarası başka bir hesapta kayıtlı. Farklı bir numara kullanın veya o hesapla giriş yapın.",
-      "modeRejected": "Bu mülk artık kapora seçeneği sunmuyor. Lütfen geri dönüp tarihlerinizi yeniden seçin."
+      "modeRejected": "Bu mülk artık kapora seçeneği sunmuyor. Lütfen geri dönüp tarihlerinizi yeniden seçin.",
+      "commitFailed": "Tarihlerinizi tuttuk ancak talep ev sahibine gönderilemedi. Lütfen tekrar deneyin."
     },
     "result": {
       "referenceLabel": "Rezervasyon numarası",
@@ -872,7 +873,9 @@
       "confirmedBody": "Ev sahibi talebinizi onayladı.",
       "rejectedTitle": "Ev sahibi talebi kabul etmedi",
       "rejectedBodyPaid": "Online ödediğiniz tutarın tamamı iade edilir.",
-      "rejectedBodyArrival": "Hiçbir tahsilat yapılmadı. Dilerseniz başka bir yer rezerve edebilirsiniz."
+      "rejectedBodyArrival": "Hiçbir tahsilat yapılmadı. Dilerseniz başka bir yer rezerve edebilirsiniz.",
+      "arrivalNotSentTitle": "Talebiniz gönderilmedi",
+      "arrivalNotSentBody": "Tarihleriniz tutuluyor ama ev sahibine henüz sorulmadı. Devam etmek için talebi gönderin."
     },
     "legal": {
       "versionLabel": "Belge sürümü",
@@ -959,7 +962,9 @@
         "amount_too_small": "Bu tutar, kart ağınızın kabul ettiği alt sınırın altında. Lütfen bizimle iletişime geçin; ödemeyi başka bir yolla alalım."
       },
       "refundAssuranceLyd": "Tutarın tamamı, ödeme yaptığınız Libya kanalı üzerinden iade edilir. Ekibimiz bu iadeyi elle işler ve tamamlamak için sizinle iletişime geçer — rezervasyon numaranızı hazır bulundurun."
-    }
+    },
+    "submitArrival": "Rezervasyon talebini gönder",
+    "sendingRequest": "Talebiniz gönderiliyor…"
   },
   "careers": {
     "department": "Departman",

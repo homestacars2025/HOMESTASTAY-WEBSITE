@@ -820,7 +820,8 @@
       "generic": "Something went wrong on our side. Nothing has been charged — please try again.",
       "minNights": "This place has a minimum stay of {count, plural, one {# night} other {# nights}}. Please pick a longer range.",
       "phoneTaken": "This phone number is already on another account. Use a different one, or sign in to that account.",
-      "modeRejected": "This property has stopped offering the deposit option. Please go back and choose your dates again."
+      "modeRejected": "This property has stopped offering the deposit option. Please go back and choose your dates again.",
+      "commitFailed": "We held your dates but couldn't send the request to the host. Please try again."
     },
     "result": {
       "referenceLabel": "Booking reference",
@@ -872,7 +873,9 @@
       "confirmedBody": "The host approved your request.",
       "rejectedTitle": "The host didn't accept the request",
       "rejectedBodyPaid": "The amount you paid online is refunded in full.",
-      "rejectedBodyArrival": "Nothing was charged. You're welcome to book another place."
+      "rejectedBodyArrival": "Nothing was charged. You're welcome to book another place.",
+      "arrivalNotSentTitle": "Your request wasn't sent",
+      "arrivalNotSentBody": "Your dates are held, but the host hasn't been asked yet. Send the request to continue."
     },
     "legal": {
       "versionLabel": "Document version",
@@ -959,7 +962,9 @@
         "amount_too_small": "This amount is below the minimum your card network accepts. Please contact us and we’ll take the payment another way."
       },
       "refundAssuranceLyd": "Your money is being returned in full through the same Libyan payment channel you paid with. Our team issues this by hand and will contact you to complete it — please have your booking reference ready."
-    }
+    },
+    "submitArrival": "Send booking request",
+    "sendingRequest": "Sending your request…"
   },
   "careers": {
     "department": "Department",
