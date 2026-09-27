@@ -29,11 +29,30 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const locale = str(form.get('locale')) || 'en';
 
-  const fail = (reason: string) =>
+  /**
+   * Nothing was charged, and the booking is still held — so the guest goes
+   * BACK TO THEIR BOOKING with the reason, where the payment form is still
+   * there to try again. The dead end this replaces was worse in two ways: it
+   * pointed at /booking/failed, a route that does not exist (the page is
+   * /booking-failed), so a failed payment landed on a 404; and even with the
+   * path fixed it would strand a guest on a page with no way back to a
+   * booking that is still perfectly payable.
+   *
+   * The reference is only known once start_payment_attempt has returned, so
+   * failures before that still use the standalone page.
+   */
+  const failTo = (reason: string, reference?: string) =>
     NextResponse.redirect(
-      new URL(`/${locale}/booking/failed?reason=${reason}`, request.url),
+      new URL(
+        reference
+          ? `/${locale}/booking/${encodeURIComponent(reference)}?error=${encodeURIComponent(reason)}`
+          : `/${locale}/booking-failed?reason=${encodeURIComponent(reason)}`,
+        request.url,
+      ),
       { status: 303 },
     );
+
+  const fail = (reason: string) => failTo(reason);
 
   const bookingId = await readBookingCookie();
   if (!bookingId) return fail('session');
@@ -59,8 +78,31 @@ export async function POST(request: NextRequest) {
   if (!attempt) return fail('server');
 
   if (attempt.status !== 'started') {
-    // already_paid | not_holdable | not_found — all terminal, none retryable.
+    // already_paid | not_holdable | not_found | mode_not_priced — terminal,
+    // none retryable, so these keep the standalone explanation page.
     return fail(String(attempt.status));
+  }
+
+  // From here the booking is known and still payable: every failure goes back
+  // to it rather than to a dead end.
+  const reference = String(attempt.booking_reference ?? '') || undefined;
+
+  /**
+   * An optional floor, in lira, below which we do not call the bank at all.
+   *
+   * ⚠️ UNSET BY DEFAULT, AND DELIBERATELY SO. Kuveyt Türk's own minimum is not
+   * documented anywhere we can read, and inventing one would block real
+   * payments. Set KUVEYT_MIN_TRY once the bank confirms a figure and the guest
+   * is told plainly instead of being sent to a 3DS page that rejects them.
+   */
+  const minTry = Number(process.env.KUVEYT_MIN_TRY ?? '');
+  const amountTry = Number(attempt.amount_try);
+  if (Number.isFinite(minTry) && minTry > 0 && Number.isFinite(amountTry) && amountTry < minTry) {
+    console.warn('[payment/start] below the configured card minimum', {
+      merchantOrderId: attempt.merchant_order_id, amountTry, minTry,
+    });
+    await markAttemptFailed(supabase, attempt.merchant_order_id, 'below_min_try');
+    return failTo('amount_too_small', reference);
   }
 
   // ── Guest + booking context for CardHolderData (mandatory for 3DS 2.0) ────
@@ -74,7 +116,7 @@ export async function POST(request: NextRequest) {
     | { email: string | null; phone: string | null }
     | undefined;
 
-  if (!customer?.email || !customer.phone) return fail('server');
+  if (!customer?.email || !customer.phone) return failTo('server', reference);
 
   const { cc, subscriber } = splitE164(customer.phone);
 
@@ -179,7 +221,41 @@ export async function POST(request: NextRequest) {
       merchantOrderId: attempt.merchant_order_id,
       error: err instanceof Error ? err.message : String(err),
     });
-    return fail('bank');
+    // The attempt never reached the bank, so it must not be left sitting at
+    // 'initiated' — a row in that state is indistinguishable from one still
+    // in flight, both to us and to anyone reading the table later.
+    await markAttemptFailed(supabase, attempt.merchant_order_id, 'bank_unreachable');
+    return failTo('bank', reference);
+  }
+}
+
+/**
+ * Close out an attempt that never reached the bank. No money moved: the row
+ * is the only thing that needs correcting, and leaving it 'initiated' is what
+ * made a dead payment look like a live one.
+ *
+ * Failure to write this is logged and swallowed — the guest is already being
+ * sent somewhere useful, and an unwritten status must not become a 500.
+ */
+async function markAttemptFailed(
+  supabase: ReturnType<typeof createAdminClient>,
+  merchantOrderId: string,
+  reason: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('booking_payments')
+    .update({
+      status: 'failed',
+      response_message: reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('merchant_order_id', merchantOrderId)
+    .eq('status', 'initiated');
+
+  if (error) {
+    console.error('[payment/start] could not mark the attempt failed', {
+      merchantOrderId, reason, message: error.message, code: error.code,
+    });
   }
 }
 

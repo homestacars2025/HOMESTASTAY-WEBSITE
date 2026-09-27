@@ -840,7 +840,9 @@
       "forfeitedTitle": "Bu rezervasyon kapandı",
       "forfeitedBody": "Bu konaklama için giriş yapmadınız; bu nedenle online ödenen tutar iade edilmedi. Bir yanlışlık olduğunu düşünüyorsanız bize ulaşın.",
       "approxToday": "bugün ≈ {amount}",
-      "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir."
+      "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir.",
+      "payFailedTitle": "Ödemeniz tamamlanamadı",
+      "payFailedRetry": "Hiçbir tahsilat yapılmadı ve tarihleriniz hâlâ tutuluyor. Aşağıdan tekrar deneyebilirsiniz."
     },
     "legal": {
       "versionLabel": "Belge sürümü",
@@ -923,7 +925,8 @@
         "lyd_unavailable": "Libya dinarıyla ödeme şu anda kullanılamıyor. Kartla ödeyebilir veya bize ulaşabilirsiniz.",
         "tlync_cancelled": "Ödeme tamamlanmadı. Tarihleriniz birkaç dakika daha tutuluyor; geri dönüp tekrar deneyebilirsiniz.",
         "tlync_refund_manual": "Ödemeniz alındı, ancak bu tarihler artık size tahsis edilemedi — bu nedenle tutarın tamamını iade ediyoruz. Ekibimiz ilgileniyor.",
-        "mode_not_priced": "Bu rezervasyon için kaporayı hesaplayamadık ve hiçbir tahsilat yapılmadı. Lütfen tarihlerinizi yeniden seçin veya bize ulaşın."
+        "mode_not_priced": "Bu rezervasyon için kaporayı hesaplayamadık ve hiçbir tahsilat yapılmadı. Lütfen tarihlerinizi yeniden seçin veya bize ulaşın.",
+        "amount_too_small": "Bu tutar, kart ağınızın kabul ettiği alt sınırın altında. Lütfen bizimle iletişime geçin; ödemeyi başka bir yolla alalım."
       },
       "refundAssuranceLyd": "Tutarın tamamı, ödeme yaptığınız Libya kanalı üzerinden iade edilir. Ekibimiz bu iadeyi elle işler ve tamamlamak için sizinle iletişime geçer — rezervasyon numaranızı hazır bulundurun."
     }

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Clock, ShieldCheck, Wallet } from 'lucide-react';
+import { AlertCircle, Clock, ShieldCheck, Wallet } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { Link } from '@/i18n/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -44,14 +44,23 @@ export const metadata: Metadata = {
 
 interface PageProps {
   params: Promise<{ locale: string; reference: string }>;
-  /** `pay` selects the gateway; `pending` is set by TLYNC's return redirect. */
-  searchParams: Promise<{ pay?: string; pending?: string }>;
+  /**
+   * `pay` selects the gateway; `pending` is set by TLYNC's return redirect;
+   * `error` is set when a payment attempt failed and the guest was sent back
+   * here to try again.
+   */
+  searchParams: Promise<{ pay?: string; pending?: string; error?: string }>;
 }
 
 export default async function BookingResultPage({ params, searchParams }: PageProps) {
   const { locale, reference } = await params;
-  const { pay, pending } = await searchParams;
-  const t = await getTranslations({ locale, namespace: 'booking.result' });
+  const { pay, pending, error: payError } = await searchParams;
+  const [t, tFail] = await Promise.all([
+    getTranslations({ locale, namespace: 'booking.result' }),
+    // The same sentences the standalone failure page uses — one wording for
+    // one event, wherever the guest happens to read it.
+    getTranslations({ locale, namespace: 'booking.failed' }),
+  ]);
 
   const cookieBookingId = await readBookingCookie();
   if (!cookieBookingId) notFound();
@@ -235,6 +244,29 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
         <p className="text-[clamp(1.75rem,6vw,2.5rem)] font-medium tracking-[-0.04em] text-ink leading-none mb-8 tabular-nums">
           {booking.booking_reference}
         </p>
+
+        {/* A payment that failed, reported where the booking still is — with
+            the form below it, which is the retry. Only while the booking is
+            genuinely unpaid: a stale ?error= on a paid booking would say
+            something false about money that did arrive. */}
+        {payError && paymentStatus === 'unpaid' && (
+          <div className="border border-stay rounded-[14px] p-5 mb-6 bg-white">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
+              <div>
+                <p className="text-[15px] font-medium text-ink mb-1">{t('payFailedTitle')}</p>
+                <p className="text-[13px] text-ink-soft leading-relaxed">
+                  {tFail.has(`reasons.${payError}`)
+                    ? tFail(`reasons.${payError}`)
+                    : tFail('reasons.unknown')}
+                </p>
+                <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
+                  {t('payFailedRetry')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isPaid ? (
           <>

@@ -840,7 +840,9 @@
       "forfeitedTitle": "This booking is closed",
       "forfeitedBody": "You did not check in for this stay, so the amount paid online was not refunded. Contact us if you think this is a mistake.",
       "approxToday": "≈ {amount} today",
-      "balanceCurrency": "Payable in US dollars, or the equivalent in lira or euro at the rate on the day of arrival."
+      "balanceCurrency": "Payable in US dollars, or the equivalent in lira or euro at the rate on the day of arrival.",
+      "payFailedTitle": "Your payment didn’t go through",
+      "payFailedRetry": "Nothing was charged and your dates are still held. You can try again below."
     },
     "legal": {
       "versionLabel": "Document version",
@@ -923,7 +925,8 @@
         "lyd_unavailable": "Paying in Libyan dinar isn’t available right now. You can pay by card instead, or contact us and we’ll help.",
         "tlync_cancelled": "The payment wasn’t completed. Your dates are still held for a few more minutes, so you can go back and try again.",
         "tlync_refund_manual": "Your payment went through, but the dates could no longer be given to you — so we’re refunding it in full. Our team is on it.",
-        "mode_not_priced": "We couldn’t price the deposit for this booking. No payment was taken — please choose your dates again or contact us."
+        "mode_not_priced": "We couldn’t price the deposit for this booking. No payment was taken — please choose your dates again or contact us.",
+        "amount_too_small": "This amount is below the minimum your card network accepts. Please contact us and we’ll take the payment another way."
       },
       "refundAssuranceLyd": "Your money is being returned in full through the same Libyan payment channel you paid with. Our team issues this by hand and will contact you to complete it — please have your booking reference ready."
     }
