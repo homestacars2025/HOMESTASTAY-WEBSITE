@@ -544,7 +544,8 @@ export default async function UnitDetailPage({
             initialGuests={search.guests}
             initialQuote={initialQuote}
             allowDeposit={unit.allow_deposit}
-            initialDepositUsd={initialModes?.allowDeposit ? initialModes.depositUsd : null}
+            allowFullPrepay={unit.allow_full_prepay}
+            initialModeQuote={initialModes}
           />
         </div>
       </main>

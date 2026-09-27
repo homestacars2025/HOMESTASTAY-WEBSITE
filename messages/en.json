@@ -418,7 +418,17 @@
       "nights": "{count, plural, one {# night} other {# nights}}",
       "proceed": "Continue to booking",
       "confirmReady": "Your dates are held. Review and pay to send your request to the owner.",
-      "depositTeaser": "Or book now for just {amount} — the rest on arrival"
+      "depositTeaser": "Or book now for just {amount} — the rest on arrival",
+      "explain": {
+        "title": "Two ways to book",
+        "fullWithAmount": "Pay in full: pay {total} online now — nothing left to pay on arrival.",
+        "full": "Pay in full: pay the whole stay online — nothing left to pay on arrival.",
+        "depositWithAmounts": "Deposit: pay just {deposit} now to secure your booking, and the remaining {balance} in cash to your host on arrival.",
+        "deposit": "Deposit: pay a small amount now to secure your booking, and the rest in cash to your host on arrival.",
+        "note": "You'll choose the option that suits you on the next step.",
+        "continue": "Continue",
+        "close": "Close"
+      }
     },
     "about": "About this place",
     "aiTranslatedNotice": "This description was automatically translated and may contain minor errors.",

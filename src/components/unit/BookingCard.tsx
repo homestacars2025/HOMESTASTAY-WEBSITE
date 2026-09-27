@@ -5,7 +5,9 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Calendar } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { BookingModal } from '@/components/unit/BookingModal';
+import { PaymentModesDialog } from '@/components/unit/PaymentModesDialog';
 import { quoteStay, quotePaymentModesAction } from '@/app/[locale]/stays/[slug]/actions';
+import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
 import { toISODate } from '@/lib/stays/search-params';
 import type { UnitPricing } from '@/lib/types/unit';
 import type { DateRange } from '@/components/home/DateRangePicker';
@@ -43,8 +45,11 @@ interface BookingCardProps {
   /** The owner allows a deposit here — surfaced as a line, never a figure:
    *  the split is priced by the database at checkout, not in the browser. */
   allowDeposit?:    boolean;
-  /** Deposit for the dates the page was opened with, priced server-side. */
-  initialDepositUsd?: number | null;
+  /** Both modes on offer: the only case where the explainer has two things to
+   *  explain, and therefore the only case where it appears. */
+  allowFullPrepay?: boolean;
+  /** Priced modes for the dates the page was opened with (server-side). */
+  initialModeQuote?: PaymentModeQuote | null;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -58,7 +63,7 @@ function parseISODateLocal(iso: string): Date {
 export function BookingCard({
   pricing, minNights, rating, reviewCount, unitId, unitTitle, slug,
   initialCheckIn, initialCheckOut, initialGuests, initialQuote, allowDeposit,
-  initialDepositUsd,
+  allowFullPrepay, initialModeQuote,
 }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
@@ -80,8 +85,11 @@ export function BookingCard({
   // Prices are always derived — nothing here is ever cached.
   const [quote, setQuote]      = useState<UnitPricing>(initialQuote ?? pricing);
   const [isQuoting, startQuote] = useTransition();
-  /** The deposit for the chosen dates, priced by the database. */
-  const [depositUsd, setDepositUsd] = useState<number | null>(initialDepositUsd ?? null);
+  /** The priced modes for the chosen dates. Null until there are dates. */
+  const [modeQuote, setModeQuote] = useState<PaymentModeQuote | null>(initialModeQuote ?? null);
+  /** The explainer, and whether this unit has already shown it this session. */
+  const [explainOpen, setExplainOpen] = useState(false);
+  const depositUsd = modeQuote?.allowDeposit ? modeQuote.depositUsd : null;
 
   /**
    * Re-quote for a date range. Called from event handlers rather than an
@@ -92,7 +100,7 @@ export function BookingCard({
   function refreshQuote(r: DateRange) {
     if (!r.from || !r.to) {
       setQuote(pricing);
-      setDepositUsd(null);
+      setModeQuote(null);
       return;
     }
     const from = toISODate(r.from);
@@ -105,8 +113,42 @@ export function BookingCard({
         allowDeposit ? quotePaymentModesAction(unitId, from, to) : Promise.resolve(null),
       ]);
       setQuote(q ?? { ...pricing, total_usd: null, nights: null });
-      setDepositUsd(modes?.allowDeposit ? modes.depositUsd : null);
+      setModeQuote(modes);
     });
+  }
+
+  /**
+   * Reserve was pressed.
+   *
+   * A unit offering BOTH modes explains itself once per session before the
+   * booking flow opens; every other unit goes straight through, exactly as
+   * before. "Once per unit, per session" is sessionStorage: a guest who comes
+   * back to the same listing five minutes later has already read it, and a new
+   * tab or a new visit is a new conversation.
+   *
+   * Storage can throw (private mode, blocked site data), so a failure to
+   * remember degrades to showing it again — never to blocking the booking.
+   */
+  const explainKey = `homesta:modes-explained:${unitId}`;
+
+  function handleReserve() {
+    if (!(allowFullPrepay && allowDeposit)) {
+      setModalOpen(true);
+      return;
+    }
+    let seen = false;
+    try {
+      seen = window.sessionStorage.getItem(explainKey) === '1';
+    } catch { /* no session storage — show it, which is the safe direction */ }
+
+    if (seen) {
+      setModalOpen(true);
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(explainKey, '1');
+    } catch { /* not remembering is survivable; not booking is not */ }
+    setExplainOpen(true);
   }
 
   function handleDateRangeChange(r: DateRange) {
@@ -214,7 +256,7 @@ export function BookingCard({
       {/* Reserve CTA */}
       <button
         type="button"
-        onClick={() => setModalOpen(true)}
+        onClick={handleReserve}
         className="w-full bg-stay text-white rounded-[999px] py-3 text-sm font-semibold transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80"
       >
         {hasDates ? t('booking.continue') : t('reserve')}
@@ -257,7 +299,7 @@ export function BookingCard({
         </div>
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
+          onClick={handleReserve}
           className="bg-stay text-white rounded-[999px] px-6 py-2.5 text-sm font-semibold transition-opacity duration-[240ms] hover:opacity-90 active:opacity-80 shrink-0"
         >
           {t('reserve')}
@@ -270,6 +312,14 @@ export function BookingCard({
     <>
       {desktopCard}
       {mobileBar}
+
+      {explainOpen && (
+        <PaymentModesDialog
+          quote={modeQuote}
+          onContinue={() => setModalOpen(true)}
+          onClose={() => setExplainOpen(false)}
+        />
+      )}
 
       {modalOpen && (
         <BookingModal

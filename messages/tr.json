@@ -418,7 +418,17 @@
       "nights": "{count, plural, other {# gece}}",
       "proceed": "Rezervasyona devam et",
       "confirmReady": "Tarihleriniz tutuldu. İnceleyip ödeyerek talebinizi mülk sahibine gönderin.",
-      "depositTeaser": "Ya da şimdi yalnızca {amount} ödeyin — kalanı girişte"
+      "depositTeaser": "Ya da şimdi yalnızca {amount} ödeyin — kalanı girişte",
+      "explain": {
+        "title": "İki rezervasyon seçeneği",
+        "fullWithAmount": "Tam ödeme: Şimdi {total} online ödeyin, girişte ödemeniz gereken bir şey kalmaz.",
+        "full": "Tam ödeme: Konaklamanın tamamını online ödeyin, girişte ödemeniz gereken bir şey kalmaz.",
+        "depositWithAmounts": "Kapora: Rezervasyonunuzu kesinleştirmek için şimdi yalnızca {deposit} ödeyin, kalan {balance} tutarını girişte ev sahibine nakit ödeyin.",
+        "deposit": "Kapora: Rezervasyonunuzu kesinleştirmek için şimdi küçük bir tutar ödeyin, kalanını girişte ev sahibine nakit ödeyin.",
+        "note": "Size uygun seçeneği bir sonraki adımda seçersiniz.",
+        "continue": "Devam et",
+        "close": "Kapat"
+      }
     },
     "about": "Bu yer hakkında",
     "aiTranslatedNotice": "Bu açıklama otomatik olarak çevrildi ve küçük hatalar içerebilir.",
