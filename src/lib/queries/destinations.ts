@@ -190,10 +190,12 @@ type PublishedRow = CityContent & { cityId: string; locale: Locale };
  * Rows in a language we do not serve are dropped here — routing.locales is the
  * only list of languages this site has pages for.
  *
- * Tagged 'city-content'. NOTE: no webhook drops that tag today (the editorial
- * table has no revalidate hook), so a newly published city appears within the
- * revalidate window below rather than instantly. Intended trade: this is copy
- * that changes a few times a month, not inventory.
+ * Tagged 'city-content', which /api/revalidate drops when HP-ADMIN publishes,
+ * unpublishes or edits a city page. Nothing dropped that tag until then, and
+ * the revalidate window below was the only freshness a new city page had; the
+ * window stays as the fallback for a missed webhook. Deliberately a different
+ * tag from 'units': this is copy that changes a few times a month, and
+ * evicting the whole catalogue to refresh a paragraph would be absurd.
  */
 const cachedPublishedContent = unstable_cache(
   async (): Promise<PublishedRow[]> => {
