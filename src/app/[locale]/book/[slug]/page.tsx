@@ -117,6 +117,10 @@ export default async function BookPage({ params, searchParams }: PageProps) {
               maxGuests={unit.specifications.max_guests}
               minNights={unit.min_nights}
               modeQuote={modeQuote}
+              /* Resolved for this locale by the same query that loaded the
+                 unit — no second lookup, and never a different wording than
+                 the listing page showed. */
+              policy={unit.cancellation_policy}
             />
           </div>
 

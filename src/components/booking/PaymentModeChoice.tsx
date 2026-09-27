@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { Check } from 'lucide-react';
 import type { PaymentMode, PaymentModeQuote } from '@/lib/booking/payment-mode';
+import type { UnitCancellationPolicy } from '@/lib/types/unit';
 
 /**
  * Pay in full now, or pay a deposit now and the rest in cash at arrival.
@@ -14,17 +15,27 @@ import type { PaymentMode, PaymentModeQuote } from '@/lib/booking/payment-mode';
  *
  * Renders nothing when only one mode is offerable — a chooser with one choice
  * is clutter (Law 2), and the single mode is simply used.
+ *
+ * THE CANCELLATION TERMS UNDER THE DEPOSIT CARD ARE THE UNIT'S OWN, verbatim
+ * from unit_cancellation_policy in the guest's language. A deposit is governed
+ * by exactly the same policy as a full prepayment, and those descriptions
+ * already state what happens on a no-show — so nothing is written here. A
+ * sentence composed in this file could only drift from the policy the guest
+ * actually agreed to.
  */
 export function PaymentModeChoice({
   quote,
   value,
   onChange,
   disabled,
+  policy,
 }: {
   quote: PaymentModeQuote;
   value: PaymentMode;
   onChange: (mode: PaymentMode) => void;
   disabled?: boolean;
+  /** The unit's cancellation policy, already resolved for this locale. */
+  policy: UnitCancellationPolicy | null;
 }) {
   const t = useTranslations('booking.mode');
   const locale = useLocale();
@@ -60,9 +71,8 @@ export function PaymentModeChoice({
             balance: amount(quote.balanceDueTry as number),
           })}
           body={t('depositBody')}
-          /* Stated on the card, not in a tooltip or a later screen: this is
-             the term a guest is most likely to be surprised by. */
-          warning={t('depositWarning')}
+          /* The unit's policy, named and quoted — not a term invented here. */
+          warning={policy ? `${policy.name} — ${policy.description}` : undefined}
         />
       </div>
     </fieldset>

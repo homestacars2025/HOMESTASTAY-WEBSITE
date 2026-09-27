@@ -755,8 +755,7 @@
       "fullTitle": "Tamamını şimdi ödeyin: {amount}",
       "fullBody": "Konaklamanızın tamamı online ödenir. Girişte ödeyeceğiniz bir tutar kalmaz.",
       "depositTitle": "Rezervasyonu kesinleştirmek için şimdi {deposit} ödeyin — girişte nakit {balance}",
-      "depositBody": "Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödersiniz.",
-      "depositWarning": "Konaklamaya gelmemeniz hâlinde online ödenen tutar iade edilmez."
+      "depositBody": "Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödersiniz."
     },
     "summary": {
       "title": "Konaklamanız",
@@ -823,7 +822,7 @@
       "balanceLabel": "Girişte nakit",
       "balanceBody": "Bu tutarı girişte doğrudan ev sahibine nakit ödeyin. Homesta bu tutarı tahsil etmez.",
       "balanceNote": "Girişte ev sahibine nakit {amount} ödeyeceksiniz.",
-      "refundBodyDeposit": "Ev sahibi onaylamazsa online ödediğiniz tutarın tamamı iade edilir. Konaklamaya gelmemeniz hâlinde iade edilmez.",
+      "refundBodyDeposit": "Ev sahibi onaylamazsa online ödediğiniz tutarın tamamı aynı kartınıza iade edilir; bankanıza bağlı olarak hesabınıza yansıması 3–10 iş günü sürebilir.",
       "forfeitedTitle": "Bu rezervasyon kapandı",
       "forfeitedBody": "Bu konaklama için giriş yapmadınız; bu nedenle online ödenen tutar iade edilmedi. Bir yanlışlık olduğunu düşünüyorsanız bize ulaşın."
     },

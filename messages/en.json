@@ -755,8 +755,7 @@
       "fullTitle": "Pay the full amount now: {amount}",
       "fullBody": "Your stay is paid for in full online. Nothing to pay on arrival.",
       "depositTitle": "Pay {deposit} now to secure the booking — {balance} in cash on arrival",
-      "depositBody": "You pay the rest in cash directly to the host when you arrive.",
-      "depositWarning": "The amount paid online is not refunded if you do not show up."
+      "depositBody": "You pay the rest in cash directly to the host when you arrive."
     },
     "summary": {
       "title": "Your stay",
@@ -823,7 +822,7 @@
       "balanceLabel": "Cash at arrival",
       "balanceBody": "Pay this amount in cash directly to the host when you arrive. Homesta does not collect it.",
       "balanceNote": "You will then pay {amount} in cash to the host on arrival.",
-      "refundBodyDeposit": "If the owner declines, the amount you paid online is refunded in full. If you do not show up, it is not refunded.",
+      "refundBodyDeposit": "If the owner declines, the amount you paid online is refunded in full to the same card. It can take 3–10 business days to appear, depending on your bank.",
       "forfeitedTitle": "This booking is closed",
       "forfeitedBody": "You did not check in for this stay, so the amount paid online was not refunded. Contact us if you think this is a mistake."
     },

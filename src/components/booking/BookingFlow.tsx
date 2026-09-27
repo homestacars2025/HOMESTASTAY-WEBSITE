@@ -5,6 +5,7 @@ import { GuestDetailsForm } from '@/components/booking/GuestDetailsForm';
 import type { HoldResult } from '@/app/[locale]/book/[slug]/actions';
 import type { BookingAccount } from '@/lib/booking/account';
 import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
+import type { UnitCancellationPolicy } from '@/lib/types/unit';
 
 /**
  * Thin client shell around the details form.
@@ -30,6 +31,8 @@ interface BookingFlowProps {
   minNights:     number;
   /** Priced payment modes for these dates; null when they could not be read. */
   modeQuote:     PaymentModeQuote | null;
+  /** The unit's cancellation policy, resolved for this locale. */
+  policy:        UnitCancellationPolicy | null;
 }
 
 export function BookingFlow({
@@ -41,6 +44,7 @@ export function BookingFlow({
   maxGuests,
   minNights,
   modeQuote,
+  policy,
 }: BookingFlowProps) {
   const router = useRouter();
 
@@ -61,6 +65,7 @@ export function BookingFlow({
       maxGuests={maxGuests}
       minNights={minNights}
       modeQuote={modeQuote}
+      policy={policy}
       onHeld={handleHeld}
     />
   );

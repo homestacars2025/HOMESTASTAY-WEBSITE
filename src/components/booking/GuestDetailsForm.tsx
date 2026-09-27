@@ -11,6 +11,7 @@ import { PaymentModeChoice } from '@/components/booking/PaymentModeChoice';
 import { createHoldAction } from '@/app/[locale]/book/[slug]/actions';
 import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/actions';
 import type { BookingAccount } from '@/lib/booking/account';
+import type { UnitCancellationPolicy } from '@/lib/types/unit';
 import {
   DEFAULT_PAYMENT_MODE,
   offerableModes,
@@ -41,6 +42,8 @@ interface GuestDetailsFormProps {
   minNights:   number;
   /** Priced payment modes for this stay; null when they could not be read. */
   modeQuote:   PaymentModeQuote | null;
+  /** The unit's cancellation policy, shown with the deposit option. */
+  policy:      UnitCancellationPolicy | null;
   onHeld:      (result: Extract<HoldResult, { ok: true }>) => void;
 }
 
@@ -62,6 +65,7 @@ export function GuestDetailsForm({
   maxGuests,
   minNights,
   modeQuote,
+  policy,
   onHeld,
 }: GuestDetailsFormProps) {
   const t = useTranslations('booking');
@@ -329,6 +333,7 @@ export function GuestDetailsForm({
             value={paymentMode}
             onChange={setPaymentMode}
             disabled={pending}
+            policy={policy}
           />
         </div>
       )}
