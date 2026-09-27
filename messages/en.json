@@ -761,7 +761,7 @@
   "booking": {
     "backToListing": "Back to the listing",
     "heading": "Your details",
-    "submit": "Continue to payment",
+    "submit": "Continue booking",
     "submitting": "Holding your dates…",
     "noChargeYet": "You won’t be charged yet. We’ll hold these dates while you review the payment step.",
     "mode": {
@@ -865,7 +865,14 @@
         "wrong_mode": "This booking isn't set to pay on arrival. Please refresh the page.",
         "not_holdable": "This booking is no longer being held. Please start a new booking.",
         "generic": "Something went wrong and your request wasn't sent. Please try again."
-      }
+      },
+      "underReviewTitle": "Under review",
+      "underReviewBody": "Waiting for the host's approval. We'll notify you as soon as they reply.",
+      "confirmedTitle": "Your booking is confirmed",
+      "confirmedBody": "The host approved your request.",
+      "rejectedTitle": "The host didn't accept the request",
+      "rejectedBodyPaid": "The amount you paid online is refunded in full.",
+      "rejectedBodyArrival": "Nothing was charged. You're welcome to book another place."
     },
     "legal": {
       "versionLabel": "Document version",

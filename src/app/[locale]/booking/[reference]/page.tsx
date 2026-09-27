@@ -81,7 +81,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // PostgREST returns them only when named explicitly. The status is the
     // one answer to "is this paid?" — paid_at alone cannot tell a deposit
     // booking (money in, cash still due) from a fully paid one.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
+    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, owner_decision, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -115,6 +115,19 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // means "not sent yet", which is why this is read from the column and not
   // inferred from the status.
   const requestSent = Boolean(booking.committed_at);
+
+  // ── Has the OWNER answered? ──────────────────────────────────────────────
+  // bookings.status is the authority on that, and booking_payment_status only
+  // says where the money is. A pay-at-arrival booking reaches
+  // 'due_at_arrival' the moment it is committed — money-wise there is nothing
+  // left to do online — which is NOT the same as an owner having said yes.
+  // Reading the payment status as approval is what showed "your booking is
+  // confirmed" to a guest whose request was still sitting with the owner.
+  const bookingStatus = String(booking.status ?? '');
+  // Both spellings appear in this column's history.
+  const isCanceled = bookingStatus === 'canceled' || bookingStatus === 'cancelled';
+  const ownerApproved = bookingStatus === 'confirmed' || bookingStatus === 'completed';
+  const ownerRejected = isCanceled && booking.owner_decision === 'rejected';
   // Anything owed ONLINE. For a deposit that is the deposit alone; the balance
   // is cash the owner collects and must never reach a payment form here.
   const dueNowUsd = isDeposit
@@ -289,20 +302,18 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
 
         {isPaid ? (
           <>
-            {/* Status — deliberately NOT "confirmed" */}
-            <div className="border border-rule rounded-[14px] p-5 mb-4">
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
-                <div>
-                  <p className="text-[15px] font-medium text-ink mb-1">
-                    {t('awaitingApproval')}
-                  </p>
-                  <p className="text-[13px] text-ink-soft leading-relaxed">
-                    {t('awaitingApprovalBody')}
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Paid, but "paid" is not "confirmed": only the owner's answer
+                decides that, and it lives on bookings.status. */}
+            <OwnerStateBlock
+              approved={ownerApproved}
+              rejected={ownerRejected}
+              title={ownerApproved ? t('confirmedTitle')
+                : ownerRejected ? t('rejectedTitle')
+                : t('underReviewTitle')}
+              body={ownerApproved ? t('confirmedBody')
+                : ownerRejected ? t('rejectedBodyPaid')
+                : t('underReviewBody')}
+            />
 
             {/* Amount actually charged, with the USD equivalent beside it.
                 A guest who paid in dinar must never be shown a lira figure —
@@ -379,7 +390,10 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               </div>
             )}
 
-            {/* Refund terms — stated before they have to ask */}
+            {/* Refund terms — stated before they have to ask, and only while
+                the owner's answer is still open. Once they have decided, the
+                block above says what happened. */}
+            {!ownerApproved && !ownerRejected && (
             <div className="border border-rule rounded-[14px] p-5">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 mt-[2px] shrink-0 text-ink-soft" aria-hidden />
@@ -407,22 +421,25 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                 </div>
               </div>
             </div>
+            )}
           </>
         ) : paymentStatus === 'due_at_arrival' ? (
-          /* The owner approved and nothing is owed to us: the whole sum is
-             handed to the host in cash on the day. */
+          /* Committed, with nothing owed to us. Whether it is CONFIRMED is a
+             separate question, answered by the owner on bookings.status. */
           <>
-            <div className="border border-rule rounded-[14px] p-5 mb-4">
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
-                <div>
-                  <p className="text-[15px] font-medium text-ink mb-1">{t('arrivalConfirmedTitle')}</p>
-                  <p className="text-[13px] text-ink-soft leading-relaxed">{t('arrivalConfirmedBody')}</p>
-                </div>
-              </div>
-            </div>
+            <OwnerStateBlock
+              approved={ownerApproved}
+              rejected={ownerRejected}
+              title={ownerApproved ? t('arrivalConfirmedTitle')
+                : ownerRejected ? t('rejectedTitle')
+                : t('underReviewTitle')}
+              body={ownerApproved ? t('arrivalConfirmedBody')
+                : ownerRejected ? t('rejectedBodyArrival')
+                : t('underReviewBody')}
+            />
 
-            {totalUsd !== null && (
+            {/* What to bring, once there is a stay to bring it to. */}
+            {ownerApproved && totalUsd !== null && (
               <div className="border border-rule rounded-[14px] p-5">
                 <p className="font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal text-mute mb-3">
                   {t('balanceLabel')}
@@ -450,15 +467,16 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
              has not been sent yet — the one button on this page — or it has,
              and the guest is waiting exactly as a paid guest would. */
           requestSent ? (
-            <div className="border border-rule rounded-[14px] p-5">
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
-                <div>
-                  <p className="text-[15px] font-medium text-ink mb-1">{t('awaitingApproval')}</p>
-                  <p className="text-[13px] text-ink-soft leading-relaxed">{t('awaitingApprovalBody')}</p>
-                </div>
-              </div>
-            </div>
+            <OwnerStateBlock
+              approved={ownerApproved}
+              rejected={ownerRejected}
+              title={ownerApproved ? t('arrivalConfirmedTitle')
+                : ownerRejected ? t('rejectedTitle')
+                : t('underReviewTitle')}
+              body={ownerApproved ? t('arrivalConfirmedBody')
+                : ownerRejected ? t('rejectedBodyArrival')
+                : t('underReviewBody')}
+            />
           ) : (
             <>
               <div className="border border-rule rounded-[14px] p-5 mb-6">
@@ -601,6 +619,38 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
           </Link>
         </div>
       </main>
+    </div>
+  );
+}
+
+/**
+ * The owner's answer, in one box: waiting, approved or declined.
+ *
+ * Shared by all three payment modes so they cannot drift into saying
+ * different things about the same event — the icon follows the state rather
+ * than the mode.
+ */
+function OwnerStateBlock({
+  approved, rejected, title, body,
+}: {
+  approved: boolean;
+  rejected: boolean;
+  title: string;
+  body: string;
+}) {
+  const Icon = approved ? ShieldCheck : rejected ? AlertCircle : Clock;
+  return (
+    <div className="border border-rule rounded-[14px] p-5 mb-4">
+      <div className="flex items-start gap-3">
+        <Icon
+          className={`w-5 h-5 mt-[2px] shrink-0 ${rejected ? 'text-ink-soft' : 'text-stay'}`}
+          aria-hidden
+        />
+        <div>
+          <p className="text-[15px] font-medium text-ink mb-1">{title}</p>
+          <p className="text-[13px] text-ink-soft leading-relaxed">{body}</p>
+        </div>
+      </div>
     </div>
   );
 }

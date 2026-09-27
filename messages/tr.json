@@ -761,7 +761,7 @@
   "booking": {
     "backToListing": "İlana geri dön",
     "heading": "Bilgileriniz",
-    "submit": "Ödemeye devam et",
+    "submit": "Rezervasyona devam et",
     "submitting": "Tarihleriniz tutuluyor…",
     "noChargeYet": "Henüz ücret alınmayacak. Ödeme adımını incelerken bu tarihleri sizin için tutuyoruz.",
     "mode": {
@@ -865,7 +865,14 @@
         "wrong_mode": "Bu rezervasyon girişte ödeme olarak ayarlı değil. Lütfen sayfayı yenileyin.",
         "not_holdable": "Bu rezervasyon artık tutulmuyor. Lütfen yeni bir rezervasyon başlatın.",
         "generic": "Bir şeyler ters gitti ve talebiniz gönderilemedi. Lütfen tekrar deneyin."
-      }
+      },
+      "underReviewTitle": "İnceleniyor",
+      "underReviewBody": "Ev sahibinin onayı bekleniyor. Yanıt verdiğinde sizi bilgilendireceğiz.",
+      "confirmedTitle": "Rezervasyonunuz kesinleşti",
+      "confirmedBody": "Ev sahibi talebinizi onayladı.",
+      "rejectedTitle": "Ev sahibi talebi kabul etmedi",
+      "rejectedBodyPaid": "Online ödediğiniz tutarın tamamı iade edilir.",
+      "rejectedBodyArrival": "Hiçbir tahsilat yapılmadı. Dilerseniz başka bir yer rezerve edebilirsiniz."
     },
     "legal": {
       "versionLabel": "Belge sürümü",
