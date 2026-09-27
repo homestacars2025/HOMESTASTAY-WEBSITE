@@ -101,8 +101,7 @@
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
       "beds": "{count, plural, one {# bed} other {# beds}}",
       "bathrooms": "{count, plural, one {# bath} other {# baths}}"
-    },
-    "depositBadge": "Book with a deposit"
+    }
   },
   "pages": {
     "home": {
@@ -767,17 +766,16 @@
     "noChargeYet": "You won’t be charged yet. We’ll hold these dates while you review the payment step.",
     "mode": {
       "title": "How would you like to pay?",
-      "fullTitle": "Pay the full amount now: {amount}",
-      "fullBody": "Your stay is paid for in full online. Nothing to pay on arrival.",
-      "depositTitle": "Pay {deposit} now to secure the booking — {balance} in cash on arrival",
-      "depositBody": "You pay the rest in cash directly to the host when you arrive.",
       "chargedNow": "≈ {amount} charged now",
-      "balanceCurrency": "Payable in US dollars, or the equivalent in lira or euro at the rate on the day of arrival (≈ {amount} today).",
-      "arrivalTitle": "Pay nothing now — {total} in cash on arrival",
-      "arrivalBody": "We send your request to the host. Once they approve, your booking is confirmed and you pay the whole amount in cash when you arrive.",
-      "arrivalTag": "Most likely to get you a booking",
-      "depositTag": "Hosts prefer this one",
-      "balanceCurrencyPlain": "Payable in US dollars, or the equivalent in lira or euro at the rate on the day of arrival."
+      "name": {
+        "full_prepay": "Full payment",
+        "deposit": "Book with deposit",
+        "pay_at_arrival": "Pay on arrival"
+      },
+      "lineFull": "Pay {total} now — nothing to pay on arrival.",
+      "lineDeposit": "Pay {deposit} now, and {balance} in cash on arrival.",
+      "lineArrival": "Pay nothing now — {total} in cash on arrival, once the host approves.",
+      "cashNote": "Cash amounts are paid in USD or the equivalent in TRY/EUR at the day's rate."
     },
     "summary": {
       "title": "Your stay",
@@ -807,7 +805,9 @@
       "nationalityPlaceholder": "Select your nationality"
     },
     "documents": {
-      "label": "I have read and accept the <pre>Pre-Information Form</pre> and the <contract>Distance Sales Contract</contract>."
+      "label": "I have read and accept the <pre>Pre-Information Form</pre> and the <contract>Distance Sales Contract</contract>.",
+      "consent": "I have read the <pre>Pre-Information Form</pre> and the <contract>Distance Selling Agreement</contract>, and I accept this unit's cancellation policy: {policy}",
+      "policyInfo": "Show the cancellation policy"
     },
     "errors": {
       "email": "Please enter a valid email address.",

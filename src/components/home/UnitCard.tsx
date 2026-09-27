@@ -19,6 +19,9 @@ interface UnitCardProps {
 
 export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
   const t = useTranslations('card');
+  // The badge names a payment mode, so it uses the one name that mode has
+  // everywhere else rather than a wording of its own.
+  const tMode = useTranslations('booking.mode');
   const locale = useLocale();
 
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
@@ -82,7 +85,7 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
               split depends on the dates, which this card does not price. */}
           {unit.allow_deposit && (
             <span className="absolute bottom-2 start-2 inline-flex items-center rounded-[999px] bg-white/95 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-stay shadow-sm">
-              {t('depositBadge')}
+              {tMode('name.deposit')}
             </span>
           )}
         </div>

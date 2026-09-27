@@ -8,6 +8,7 @@ import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { CountrySelect } from '@/components/booking/CountrySelect';
 import { PaymentModeChoice } from '@/components/booking/PaymentModeChoice';
+import { PolicyInfo } from '@/components/booking/PolicyInfo';
 import { createHoldAction } from '@/app/[locale]/book/[slug]/actions';
 import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/actions';
 import type { BookingAccount } from '@/lib/booking/account';
@@ -333,7 +334,6 @@ export function GuestDetailsForm({
             value={paymentMode}
             onChange={setPaymentMode}
             disabled={pending}
-            policy={policy}
           />
         </div>
       )}
@@ -348,20 +348,41 @@ export function GuestDetailsForm({
             className="mt-[3px] w-[18px] h-[18px] shrink-0 accent-[var(--stay)] cursor-pointer"
           />
           <span className={`text-[13px] leading-relaxed ${invalid('documents') ? 'text-stay' : 'text-ink-soft'}`}>
-            {t.rich('documents.label', {
-              pre: (chunks) => (
-                <Link href="/on-bilgilendirme" target="_blank"
-                      className="underline underline-offset-2 hover:text-ink">
-                  {chunks}
-                </Link>
-              ),
-              contract: (chunks) => (
-                <Link href="/mesafeli-satis" target="_blank"
-                      className="underline underline-offset-2 hover:text-ink">
-                  {chunks}
-                </Link>
-              ),
-            })}
+            {/* The cancellation policy is named where it is agreed to, rather
+                than inside a payment card the guest may not have read. Its
+                full wording is one tap away (PolicyInfo). Without a policy on
+                the unit the original sentence stands unchanged. */}
+            {policy
+              ? t.rich('documents.consent', {
+                  policy: policy.name,
+                  pre: (chunks) => (
+                    <Link href="/on-bilgilendirme" target="_blank"
+                          className="underline underline-offset-2 hover:text-ink">
+                      {chunks}
+                    </Link>
+                  ),
+                  contract: (chunks) => (
+                    <Link href="/mesafeli-satis" target="_blank"
+                          className="underline underline-offset-2 hover:text-ink">
+                      {chunks}
+                    </Link>
+                  ),
+                })
+              : t.rich('documents.label', {
+                  pre: (chunks) => (
+                    <Link href="/on-bilgilendirme" target="_blank"
+                          className="underline underline-offset-2 hover:text-ink">
+                      {chunks}
+                    </Link>
+                  ),
+                  contract: (chunks) => (
+                    <Link href="/mesafeli-satis" target="_blank"
+                          className="underline underline-offset-2 hover:text-ink">
+                      {chunks}
+                    </Link>
+                  ),
+                })}
+            {policy && <PolicyInfo policy={policy} />}
           </span>
         </label>
       </div>

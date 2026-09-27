@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import {
   hasPaidOnline,
   isBookingPaymentStatus,
+  isPaymentMode,
+  PAYMENT_MODE_NAME_KEY,
   type BookingPaymentStatus,
 } from '@/lib/booking/payment-mode';
 import { createClient as createSessionClient } from '@/lib/supabase/server';
@@ -56,8 +58,9 @@ interface PageProps {
 export default async function BookingResultPage({ params, searchParams }: PageProps) {
   const { locale, reference } = await params;
   const { pay, pending, error: payError } = await searchParams;
-  const [t, tFail] = await Promise.all([
+  const [t, tMode, tFail] = await Promise.all([
     getTranslations({ locale, namespace: 'booking.result' }),
+    getTranslations({ locale, namespace: 'booking.mode' }),
     // The same sentences the standalone failure page uses — one wording for
     // one event, wherever the guest happens to read it.
     getTranslations({ locale, namespace: 'booking.failed' }),
@@ -249,9 +252,17 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
         <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-mute mb-3">
           {t('referenceLabel')}
         </p>
-        <p className="text-[clamp(1.75rem,6vw,2.5rem)] font-medium tracking-[-0.04em] text-ink leading-none mb-8 tabular-nums">
+        <p className="text-[clamp(1.75rem,6vw,2.5rem)] font-medium tracking-[-0.04em] text-ink leading-none mb-3 tabular-nums">
           {booking.booking_reference}
         </p>
+
+        {/* Which way this booking is being paid, in the same words the guest
+            chose it by. */}
+        {isPaymentMode(booking.payment_mode) && (
+          <p className="mb-8 font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal rtl:font-sans text-mute">
+            {tMode(PAYMENT_MODE_NAME_KEY[booking.payment_mode])}
+          </p>
+        )}
 
         {/* A payment that failed, reported where the booking still is — with
             the form below it, which is the retry. Only while the booking is

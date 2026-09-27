@@ -35,6 +35,19 @@ export type BookingPaymentStatus =
   /** The guest never arrived. */
   | 'no_show';
 
+/**
+ * The message key naming each mode, under booking.mode.name.
+ *
+ * ONE NAME PER MODE, USED WHEREVER A MODE IS NAMED — the chooser, the booking
+ * details, anywhere a badge appears. Spelled once so the surfaces cannot drift
+ * into three different words for the same thing.
+ */
+export const PAYMENT_MODE_NAME_KEY: Record<PaymentMode, string> = {
+  full_prepay:    'name.full_prepay',
+  deposit:        'name.deposit',
+  pay_at_arrival: 'name.pay_at_arrival',
+};
+
 /** What create_booking_hold produces before any mode is chosen. */
 export const DEFAULT_PAYMENT_MODE: PaymentMode = 'full_prepay';
 

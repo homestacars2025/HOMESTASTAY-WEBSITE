@@ -101,8 +101,7 @@
       "bedrooms": "{count, plural, other {# yatak odası}}",
       "beds": "{count, plural, other {# yatak}}",
       "bathrooms": "{count, plural, other {# banyo}}"
-    },
-    "depositBadge": "Kaporayla rezervasyon"
+    }
   },
   "pages": {
     "home": {
@@ -767,17 +766,16 @@
     "noChargeYet": "Henüz ücret alınmayacak. Ödeme adımını incelerken bu tarihleri sizin için tutuyoruz.",
     "mode": {
       "title": "Nasıl ödemek istersiniz?",
-      "fullTitle": "Tamamını şimdi ödeyin: {amount}",
-      "fullBody": "Konaklamanızın tamamı online ödenir. Girişte ödeyeceğiniz bir tutar kalmaz.",
-      "depositTitle": "Rezervasyonu kesinleştirmek için şimdi {deposit} ödeyin — girişte nakit {balance}",
-      "depositBody": "Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödersiniz.",
       "chargedNow": "≈ {amount} şimdi tahsil edilir",
-      "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir (bugün ≈ {amount}).",
-      "arrivalTitle": "Şimdi ödeme yok — girişte nakit {total}",
-      "arrivalBody": "Talebinizi ev sahibine iletiriz; onayladığında rezervasyonunuz kesinleşir ve tutarın tamamını girişte nakit ödersiniz.",
-      "arrivalTag": "Rezervasyon alma ihtimali en yüksek",
-      "depositTag": "Ev sahiplerinin tercihi",
-      "balanceCurrencyPlain": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir."
+      "name": {
+        "full_prepay": "Tam ödeme",
+        "deposit": "Kaporalı rezervasyon",
+        "pay_at_arrival": "Girişte ödeme"
+      },
+      "lineFull": "Şimdi {total} ödeyin, girişte ödeme yok.",
+      "lineDeposit": "Şimdi {deposit} ödeyin, kalan {balance} girişte nakit.",
+      "lineArrival": "Şimdi ödeme yok, ev sahibi onaylayınca girişte {total} nakit ödeyin.",
+      "cashNote": "Nakit tutarlar USD veya günün kurundan TL/EUR karşılığı olarak ödenir."
     },
     "summary": {
       "title": "Konaklamanız",
@@ -807,7 +805,9 @@
       "nationalityPlaceholder": "Uyruğunuzu seçin"
     },
     "documents": {
-      "label": "<pre>Ön Bilgilendirme Formu</pre>’nu ve <contract>Mesafeli Satış Sözleşmesi</contract>’ni okudum, kabul ediyorum."
+      "label": "<pre>Ön Bilgilendirme Formu</pre>’nu ve <contract>Mesafeli Satış Sözleşmesi</contract>’ni okudum, kabul ediyorum.",
+      "consent": "<pre>Ön Bilgilendirme Formu</pre>'nu ve <contract>Mesafeli Satış Sözleşmesi</contract>'ni okudum, bu birimin iptal politikasını kabul ediyorum: {policy}",
+      "policyInfo": "İptal politikasını göster"
     },
     "errors": {
       "email": "Lütfen geçerli bir e-posta adresi girin.",
