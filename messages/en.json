@@ -525,7 +525,8 @@
       "twitter": "X (Twitter)",
       "telegram": "Telegram",
       "email": "Email"
-    }
+    },
+    "depositAvailable": "You can pay a deposit now and the rest in cash at arrival."
   },
   "auth": {
     "signIn": {
@@ -749,6 +750,14 @@
     "submit": "Continue to payment",
     "submitting": "Holding your dates…",
     "noChargeYet": "You won’t be charged yet. We’ll hold these dates while you review the payment step.",
+    "mode": {
+      "title": "How would you like to pay?",
+      "fullTitle": "Pay the full amount now: {amount}",
+      "fullBody": "Your stay is paid for in full online. Nothing to pay on arrival.",
+      "depositTitle": "Pay {deposit} now to secure the booking — {balance} in cash on arrival",
+      "depositBody": "You pay the rest in cash directly to the host when you arrive.",
+      "depositWarning": "The amount paid online is not refunded if you do not show up."
+    },
     "summary": {
       "title": "Your stay",
       "checkIn": "Check-in",
@@ -789,7 +798,8 @@
       "rateUnavailable": "We couldn’t confirm today’s exchange rate, so we stopped rather than charge you the wrong amount. Please try again shortly.",
       "generic": "Something went wrong on our side. Nothing has been charged — please try again.",
       "minNights": "This place has a minimum stay of {count, plural, one {# night} other {# nights}}. Please pick a longer range.",
-      "phoneTaken": "This phone number is already on another account. Use a different one, or sign in to that account."
+      "phoneTaken": "This phone number is already on another account. Use a different one, or sign in to that account.",
+      "modeRejected": "This property has stopped offering the deposit option. Please go back and choose your dates again."
     },
     "result": {
       "referenceLabel": "Booking reference",
@@ -807,7 +817,15 @@
       "refundBodyWallet": "The amount returns to your wallet balance, ready to use on another stay.",
       "confirmingTitle": "Confirming your payment",
       "confirmingBody": "You’ve returned from TLYNC and we’re confirming the payment with them now. This usually takes under a minute — refresh this page shortly. Please don’t pay again.",
-      "paidFromWallet": "Paid from your wallet balance"
+      "paidFromWallet": "Paid from your wallet balance",
+      "depositPaidLabel": "Paid online to secure your booking.",
+      "depositPaidFromWallet": "Deposit paid from your wallet balance",
+      "balanceLabel": "Cash at arrival",
+      "balanceBody": "Pay this amount in cash directly to the host when you arrive. Homesta does not collect it.",
+      "balanceNote": "You will then pay {amount} in cash to the host on arrival.",
+      "refundBodyDeposit": "If the owner declines, the amount you paid online is refunded in full. If you do not show up, it is not refunded.",
+      "forfeitedTitle": "This booking is closed",
+      "forfeitedBody": "You did not check in for this stay, so the amount paid online was not refunded. Contact us if you think this is a mistake."
     },
     "legal": {
       "versionLabel": "Document version",
@@ -889,7 +907,8 @@
         "gateway": "We couldn’t reach the Libyan payment provider. No payment was taken — please try again in a moment.",
         "lyd_unavailable": "Paying in Libyan dinar isn’t available right now. You can pay by card instead, or contact us and we’ll help.",
         "tlync_cancelled": "The payment wasn’t completed. Your dates are still held for a few more minutes, so you can go back and try again.",
-        "tlync_refund_manual": "Your payment went through, but the dates could no longer be given to you — so we’re refunding it in full. Our team is on it."
+        "tlync_refund_manual": "Your payment went through, but the dates could no longer be given to you — so we’re refunding it in full. Our team is on it.",
+        "mode_not_priced": "We couldn’t price the deposit for this booking. No payment was taken — please choose your dates again or contact us."
       },
       "refundAssuranceLyd": "Your money is being returned in full through the same Libyan payment channel you paid with. Our team issues this by hand and will contact you to complete it — please have your booking reference ready."
     }

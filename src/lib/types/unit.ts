@@ -150,6 +150,13 @@ export interface UnitListing {
   unit_style: UnitStyleEnum | null;
   business_model: BusinessModelEnum | null;
   min_nights: number;
+  /**
+   * Which payment modes the OWNER enabled for this unit (units.allow_*).
+   * The database guarantees at least one is true. A unit that offers both is
+   * the only case where a guest is asked to choose.
+   */
+  allow_full_prepay: boolean;
+  allow_deposit: boolean;
   currency: 'USD';
 
   // ── Resolved at read time (quote_units RPC) ──────────────────────────────

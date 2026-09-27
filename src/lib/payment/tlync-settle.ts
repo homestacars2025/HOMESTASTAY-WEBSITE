@@ -257,7 +257,7 @@ export async function settleTlyncPayment(
   // ── The booking ───────────────────────────────────────────────────────────
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, booking_reference, status, paid_at, cancelled_reason, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, customers(email)')
+    .select('id, booking_reference, status, paid_at, cancelled_reason, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, payment_mode, prepay_amount_try, balance_due_try, customers(email)')
     .eq('id', attempt.booking_id)
     .maybeSingle();
 
@@ -374,9 +374,13 @@ export async function settleTlyncPayment(
         checkOut:         booking.check_out as string,
         guests:           booking.guests_count as number,
         totalUsd:         num(booking.total_amount_usd),
-        amountChargedTry: num(booking.amount_charged_try),
+        amountChargedTry: booking.payment_mode === 'deposit'
+          ? num(booking.prepay_amount_try) ?? num(booking.amount_charged_try)
+          : num(booking.amount_charged_try),
         gateway:          'tlync',
         amountChargedLyd: settledLyd,
+        paymentMode:      booking.payment_mode === 'deposit' ? 'deposit' : 'full_prepay',
+        balanceDueTry:    num(booking.balance_due_try),
       });
     });
   } else {

@@ -1,7 +1,10 @@
 'use server';
 
+import { after } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { readBookingCookie } from '@/lib/booking/cookie';
+import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
 
 /**
  * Pays a held booking from the guest's wallet balance.
@@ -107,6 +110,14 @@ export async function payBookingFromWalletAction(): Promise<WalletPayResult> {
       console.log('[booking/wallet-pay] settled from wallet', {
         bookingId, status: payload.status, entryNumber: payload.entry_number,
       });
+      // The card and dinar paths email from their callbacks; this path had no
+      // callback and so had been sending nothing at all — a guest who paid
+      // from their balance got no confirmation and no contract documents,
+      // which Madde 8 requires be delivered after payment. 'already_paid' is a
+      // double submit and deliberately does not re-send.
+      if (payload.status === 'paid') {
+        after(() => sendWalletConfirmation(bookingId));
+      }
       return {
         ok: true,
         status: payload.status,
@@ -139,6 +150,59 @@ export async function payBookingFromWalletAction(): Promise<WalletPayResult> {
       });
       return { ok: false, status: 'error' };
   }
+}
+
+/**
+ * The confirmation email for a wallet payment.
+ *
+ * Reads with the ADMIN client: this runs after the response in after(), where
+ * the request's session client is no longer the right tool, and the row it
+ * needs (figures + the guest's email) is not one the session may read in full.
+ * sendBookingConfirmation swallows its own errors — a missing email must never
+ * look like a failed payment, because the money has already moved.
+ */
+async function sendWalletConfirmation(bookingId: string): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: b, error } = await admin
+    .from('bookings')
+    .select('booking_reference, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, payment_mode, prepay_amount_try, prepay_amount_usd, balance_due_try, customers(email)')
+    .eq('id', bookingId)
+    .maybeSingle();
+
+  const email = (one(b?.customers) as { email?: string | null } | undefined)?.email;
+  if (error || !b || !email) {
+    console.error('[booking/wallet-pay] paid but no email to confirm to', {
+      bookingId, message: error?.message,
+    });
+    return;
+  }
+
+  await sendBookingConfirmation({
+    reference: b.booking_reference as string,
+    email,
+    checkIn:  b.check_in as string,
+    checkOut: b.check_out as string,
+    guests:   b.guests_count as number,
+    totalUsd: num(b.total_amount_usd),
+    // A wallet payment is in USD. amount_charged_try on this path is the
+    // placeholder the function writes (amount_try = amount_usd), so no lira
+    // figure is passed and the email shows the dollar total — the only
+    // currency this guest ever saw.
+    amountChargedTry: null,
+    // The deposit when that is what was debited, the stay's total otherwise.
+    amountChargedUsd: b.payment_mode === 'deposit'
+      ? num(b.prepay_amount_usd) ?? num(b.total_amount_usd)
+      : num(b.total_amount_usd),
+    gateway: 'wallet',
+    paymentMode: b.payment_mode === 'deposit' ? 'deposit' : 'full_prepay',
+    balanceDueTry: num(b.balance_due_try),
+  });
+}
+
+/** PostgREST returns an embedded to-one as either an object or a 1-element array. */
+function one(value: unknown): unknown {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 /** PostgREST hands `numeric` back as a string; coerce once, here. */

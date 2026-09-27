@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
       after(async () => {
         const { data: b } = await supabase
           .from('bookings')
-          .select('booking_reference, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, customers(email)')
+          .select('booking_reference, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, payment_mode, prepay_amount_try, balance_due_try, customers(email)')
           .eq('id', completed.booking_id)
           .maybeSingle();
 
@@ -274,7 +274,13 @@ export async function POST(request: NextRequest) {
           checkOut:         b.check_out,
           guests:           b.guests_count,
           totalUsd:         numOrNull(b.total_amount_usd),
-          amountChargedTry: numOrNull(b.amount_charged_try),
+          // On a deposit booking the charged figure is the deposit, not the
+          // booking's total — the email must state what actually left the card.
+          amountChargedTry: b.payment_mode === 'deposit'
+            ? numOrNull(b.prepay_amount_try) ?? numOrNull(b.amount_charged_try)
+            : numOrNull(b.amount_charged_try),
+          paymentMode:      b.payment_mode === 'deposit' ? 'deposit' : 'full_prepay',
+          balanceDueTry:    numOrNull(b.balance_due_try),
         });
       });
       return NextResponse.redirect(

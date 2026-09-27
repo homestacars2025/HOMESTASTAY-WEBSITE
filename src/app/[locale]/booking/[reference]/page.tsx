@@ -5,6 +5,11 @@ import { Clock, ShieldCheck, Wallet } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { Link } from '@/i18n/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  hasPaidOnline,
+  isBookingPaymentStatus,
+  type BookingPaymentStatus,
+} from '@/lib/booking/payment-mode';
 import { createClient as createSessionClient } from '@/lib/supabase/server';
 import { readBookingCookie } from '@/lib/booking/cookie';
 import { getWalletBalanceUsd } from '@/lib/queries/wallet';
@@ -59,7 +64,11 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // time, so they are already present before this page can ever be reached.
     // customers(email) rides along for the wallet offer below — the same
     // identity pay_booking_from_wallet checks, asked once, in this query.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, customers(email, nationality, phone)')
+    // booking_payment_status / booking_payment_label are COMPUTED fields:
+    // PostgREST returns them only when named explicitly. The status is the
+    // one answer to "is this paid?" — paid_at alone cannot tell a deposit
+    // booking (money in, cash still due) from a fully paid one.
+    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, payment_mode, prepay_amount_try, prepay_amount_usd, balance_due_try, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -77,14 +86,37 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     .eq('status', 'paid')
     .maybeSingle();
 
-  const isPaid = Boolean(booking.paid_at);
+  // ── The payment state ────────────────────────────────────────────────────
+  // Computed by the database. An unrecognised value (an enum added there and
+  // not yet known here) degrades by paid_at: money in means no payment form,
+  // which is the safe direction — never charging twice.
+  const paymentStatus: BookingPaymentStatus = isBookingPaymentStatus(booking.booking_payment_status)
+    ? booking.booking_payment_status
+    : booking.paid_at ? 'paid_full' : 'unpaid';
+
+  const isDeposit = booking.payment_mode === 'deposit';
+  // Anything owed ONLINE. For a deposit that is the deposit alone; the balance
+  // is cash the owner collects and must never reach a payment form here.
+  const dueNowUsd = isDeposit
+    ? num(booking.prepay_amount_usd) ?? num(booking.total_amount_usd)
+    : num(booking.total_amount_usd);
+  const dueNowTry = isDeposit
+    ? num(booking.prepay_amount_try) ?? num(booking.amount_charged_try)
+    : num(booking.amount_charged_try);
+  const balanceDueTry = num(booking.balance_due_try);
+
+  // Kept so the rest of this page reads the same as before: true whenever
+  // money has arrived online, which is what every "hide the form" test meant.
+  const isPaid = hasPaidOnline(paymentStatus);
 
   // ── The LYD option ────────────────────────────────────────────────────────
   // Priced here, not in the form, so the figure the guest consents to is the
   // one the server derives. Unavailable when TLYNC is unconfigured or no
   // USD→LYD rate exists — the option then does not render at all, because
   // offering a payment we cannot price is worse than offering one fewer.
-  const totalUsdForLyd = num(booking.total_amount_usd);
+  // What the dinar rail must charge: the amount due ONLINE, which on a deposit
+  // booking is the deposit — not the whole stay.
+  const totalUsdForLyd = dueNowUsd;
   const lydFx =
     !isPaid && isTlyncConfigured() && totalUsdForLyd !== null && totalUsdForLyd > 0
       ? await usdToLydRate(supabase)
@@ -131,7 +163,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     const balanceUsd = await getWalletBalanceUsd(user.id);
     if (balanceUsd === null) return null;
 
-    return { balanceUsd, totalUsd: totalUsdForLyd };
+    return { balanceUsd, totalUsd: totalUsdForLyd };  // totalUsd = due online now
   }
 
   const walletSufficient =
@@ -239,10 +271,14 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                     will never find it. */}
                 <p className="mt-2 flex items-center gap-1.5 text-[13px] text-mute">
                   <Wallet className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                  {t('paidFromWallet')}
+                  {isDeposit ? t('depositPaidFromWallet') : t('paidFromWallet')}
                 </p>
               </div>
             ) : (paidLyd !== null || amountTry !== null) && (
+              /* Paid by card or dinar. On a deposit booking this is the
+                 deposit, and the cash still owed is stated right under it —
+                 a guest must never leave this page thinking they are done
+                 paying when the owner is expecting cash at the door. */
               <div className="border border-rule rounded-[14px] p-5 mb-4">
                 <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3">
                   {t('chargedLabel')}
@@ -252,11 +288,30 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                     ? lydFmt.format(paidLyd)
                     : tryFmt.format(amountTry as number)}
                 </p>
-                {totalUsd !== null && (
+                {isDeposit ? (
+                  <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">
+                    {t('depositPaidLabel')}
+                  </p>
+                ) : totalUsd !== null && (
                   <p className="mt-2 text-[13px] text-mute">
                     {t('usdEquivalent', { amount: usd.format(totalUsd) })}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Cash still due to the owner — its own block, not a footnote. */}
+            {isDeposit && balanceDueTry !== null && (
+              <div className="border border-rule rounded-[14px] p-5 mb-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3">
+                  {t('balanceLabel')}
+                </p>
+                <p className="text-[1.5rem] font-semibold text-ink tabular-nums leading-none">
+                  {tryFmt.format(balanceDueTry)}
+                </p>
+                <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">
+                  {t('balanceBody')}
+                </p>
               </div>
             )}
 
@@ -280,7 +335,8 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                       something this codebase can see. A number of days here
                       would be a promise made on an assumption. */}
                   <p className="text-[13px] text-ink-soft leading-relaxed">
-                    {paidViaWallet ? t('refundBodyWallet')
+                    {isDeposit ? t('refundBodyDeposit')
+                      : paidViaWallet ? t('refundBodyWallet')
                       : paidViaTlync ? t('refundBodyLyd')
                       : t('refundBody')}
                   </p>
@@ -288,6 +344,23 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               </div>
             </div>
           </>
+        ) : paymentStatus === 'deposit_forfeited' ? (
+          /* The guest did not arrive and the deposit was kept. No payment
+             form: there is nothing left to pay online, and the booking is
+             over. Stated plainly rather than left as a blank page. */
+          <div className="border border-rule rounded-[14px] p-5">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 mt-[2px] shrink-0 text-ink-soft" aria-hidden />
+              <div>
+                <p className="text-[15px] font-medium text-ink mb-1">
+                  {t('forfeitedTitle')}
+                </p>
+                <p className="text-[13px] text-ink-soft leading-relaxed">
+                  {t('forfeitedBody')}
+                </p>
+              </div>
+            </div>
+          </div>
         ) : pending === 'tlync' ? (
           /* Back from TLYNC, paid there but not yet confirmed here.
              DELIBERATELY NO PAYMENT FORM: only the server-to-server callback
@@ -322,16 +395,24 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                   that is what leaves their account — so on the LYD path this
                   lira block gives way to the dinar figure on the form below,
                   rather than showing two amounts and no clarity. */}
-              {selectedMethod === 'card' && lockedTry !== null && (
+              {selectedMethod === 'card' && dueNowTry !== null && (
                 <p className="mt-3 flex flex-wrap items-baseline gap-2">
                   <span className="text-[1.5rem] font-semibold text-stay tabular-nums leading-none">
-                    {tryFmt.format(lockedTry)}
+                    {tryFmt.format(dueNowTry)}
                   </span>
                   {totalUsd !== null && (
                     <span className="text-[13px] text-mute tabular-nums">
                       ({usd.format(totalUsd)})
                     </span>
                   )}
+                </p>
+              )}
+              {/* A deposit booking says, before payment, exactly what is being
+                  charged now AND what will be owed in cash — the same two
+                  figures the chooser showed, now locked by the database. */}
+              {isDeposit && balanceDueTry !== null && (
+                <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">
+                  {t('balanceNote', { amount: tryFmt.format(balanceDueTry) })}
                 </p>
               )}
               {selectedMethod === 'card' &&
@@ -375,7 +456,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
             ) : (
               <CardPaymentForm
                 locale={locale}
-                amountLabel={lockedTry !== null ? tryFmt.format(lockedTry) : ''}
+                amountLabel={dueNowTry !== null ? tryFmt.format(dueNowTry) : ''}
               />
             )}
           </>

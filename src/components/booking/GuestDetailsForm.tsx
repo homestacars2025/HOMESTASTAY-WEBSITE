@@ -7,9 +7,16 @@ import { Link } from '@/i18n/navigation';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { CountrySelect } from '@/components/booking/CountrySelect';
+import { PaymentModeChoice } from '@/components/booking/PaymentModeChoice';
 import { createHoldAction } from '@/app/[locale]/book/[slug]/actions';
 import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/actions';
 import type { BookingAccount } from '@/lib/booking/account';
+import {
+  DEFAULT_PAYMENT_MODE,
+  offerableModes,
+  type PaymentMode,
+  type PaymentModeQuote,
+} from '@/lib/booking/payment-mode';
 
 /**
  * Lead guest only. Accompanying guests are captured at check-in, so asking for
@@ -32,6 +39,8 @@ interface GuestDetailsFormProps {
   /** Minimum stay. The RPC returns a bare 'invalid' for a short stay with no
    *  reason attached, so this is surfaced as a field-level message here. */
   minNights:   number;
+  /** Priced payment modes for this stay; null when they could not be read. */
+  modeQuote:   PaymentModeQuote | null;
   onHeld:      (result: Extract<HoldResult, { ok: true }>) => void;
 }
 
@@ -52,6 +61,7 @@ export function GuestDetailsForm({
   initialGuests,
   maxGuests,
   minNights,
+  modeQuote,
   onHeld,
 }: GuestDetailsFormProps) {
   const t = useTranslations('booking');
@@ -81,6 +91,16 @@ export function GuestDetailsForm({
   const [nationality, setNationality] = useState('');
   const [guests,      setGuests]      = useState(initialGuests);
   const [accepted,    setAccepted]    = useState(false);
+
+  // ── Payment mode ─────────────────────────────────────────────────────────
+  // Only the modes the owner enabled AND the database could price. One mode
+  // means no chooser: the guest simply books it, which is how every unit
+  // behaved before deposits existed.
+  const modes = offerableModes(modeQuote);
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>(
+    modes[0] ?? DEFAULT_PAYMENT_MODE,
+  );
+  const showModeChoice = modes.length > 1 && modeQuote !== null;
 
   const [fieldErrors, setFieldErrors] = useState<Set<HoldFieldError>>(new Set());
   const [pageError,   setPageError]   = useState<string | null>(null);
@@ -119,6 +139,9 @@ export function GuestDetailsForm({
         unitId, checkIn, checkOut, guests,
         firstName, lastName, email, phone, nationality,
         documentsAccepted: accepted,
+        // What the guest picked, or the only mode on offer. The RPC re-checks
+        // it against the unit either way.
+        paymentMode,
       });
 
       if (result.ok) { onHeld(result); return; }
@@ -147,6 +170,12 @@ export function GuestDetailsForm({
         case 'rate_unavailable':
           // We refused to sell rather than charge an unverifiable rate.
           setPageError(t('errors.rateUnavailable'));
+          break;
+        case 'mode_rejected':
+          // The unit stopped offering this mode between the page load and the
+          // submit (the owner can change it at any time). The booking exists
+          // and is priced for full prepayment — say so rather than failing.
+          setPageError(t('errors.modeRejected'));
           break;
         case 'phone_taken':
           // profiles.phone is UNIQUE. Field-level, not page-level: there is
@@ -290,6 +319,19 @@ export function GuestDetailsForm({
           <p className="mt-2 text-xs text-mute">{t('fields.maxGuests', { count: maxGuests })}</p>
         )}
       </div>
+
+      {/* How to pay — before the legal acceptance, because the contract the
+          guest is about to accept covers the amount charged online. */}
+      {showModeChoice && (
+        <div className="border-t border-rule pt-5">
+          <PaymentModeChoice
+            quote={modeQuote}
+            value={paymentMode}
+            onChange={setPaymentMode}
+            disabled={pending}
+          />
+        </div>
+      )}
 
       {/* Distance-selling acceptance — mandatory before payment under Turkish law */}
       <div className="border-t border-rule pt-5">

@@ -9,6 +9,7 @@ import { getPublicUnitBySlug } from '@/lib/queries/stays';
 import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { isRealDate } from '@/lib/stays/search-params';
 import { getBookingAccount } from '@/lib/booking/account';
+import { quotePaymentModes } from '@/lib/queries/payment-modes';
 
 /**
  * Checkout — details form, then payment.
@@ -67,7 +68,14 @@ export default async function BookPage({ params, searchParams }: PageProps) {
   // Live quote — the same resolver that will price the booking, so what the
   // guest reads here and what create_booking_hold derives cannot disagree.
   // Never a nightly rate multiplied by nights.
-  const quote = await quoteStay(unit.id, checkIn, checkOut);
+  //
+  // Alongside it: which payment modes this unit offers and what each one costs
+  // in lira. Both are one round trip each and independent, so they run
+  // together rather than in sequence.
+  const [quote, modeQuote] = await Promise.all([
+    quoteStay(unit.id, checkIn, checkOut),
+    quotePaymentModes(unit.id, checkIn, checkOut),
+  ]);
 
   const title = unit.ad_title ?? unit.unit_name ?? slug;
   const nights = quote?.nights ?? null;
@@ -108,6 +116,7 @@ export default async function BookPage({ params, searchParams }: PageProps) {
               initialGuests={initialGuests}
               maxGuests={unit.specifications.max_guests}
               minNights={unit.min_nights}
+              modeQuote={modeQuote}
             />
           </div>
 

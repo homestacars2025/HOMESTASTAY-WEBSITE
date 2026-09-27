@@ -34,9 +34,21 @@ export interface BookingConfirmationData {
   totalUsd:       number | null;
   amountChargedTry: number | null;
   /** Absent means Kuveyt — the original path, unchanged in every respect. */
-  gateway?:         'kuveyt' | 'tlync';
+  gateway?:         'kuveyt' | 'tlync' | 'wallet';
   /** TLYNC only: what the guest actually paid, in Libyan dinar. */
   amountChargedLyd?: number | null;
+  /**
+   * Wallet payments only: what was actually taken from the balance, in USD.
+   * The wallet path has no lira figure at all (the payment row's amount_try is
+   * a placeholder equal to amount_usd), and on a deposit booking the stay's
+   * total is NOT what was charged — so the charged figure must be passed
+   * explicitly rather than inferred from totalUsd.
+   */
+  amountChargedUsd?: number | null;
+  /** Absent means full prepayment — the original path. */
+  paymentMode?:     'full_prepay' | 'deposit';
+  /** Deposit bookings only: cash still owed to the owner at arrival, in lira. */
+  balanceDueTry?:   number | null;
 }
 
 /** "59.924,37 TL" — never the ₺ glyph: Geist has no glyph for it (tofu in PDF). */
@@ -110,13 +122,28 @@ export async function sendBookingConfirmation(
         ? data.amountChargedLyd
         : null;
 
+    // On a deposit booking the row above is the DEPOSIT, so it is labelled as
+    // one and the cash still owed is stated beside it. The annex is the
+    // contract's EK-1: it has to show the whole price, what was paid online,
+    // and what is due at the door — or it describes a different sale.
+    const isDeposit = data.paymentMode === 'deposit';
+    const paidLabel = isDeposit ? 'Online ödenen kapora' : 'Tahsil edilen tutar';
+
     if (chargedLyd !== null) {
-      annex.push({ label: 'Tahsil edilen tutar', value: formatLyd(chargedLyd) });
+      annex.push({ label: paidLabel, value: formatLyd(chargedLyd) });
     } else if (data.amountChargedTry !== null) {
-      annex.push({ label: 'Tahsil edilen tutar', value: formatTry(data.amountChargedTry) });
+      annex.push({ label: paidLabel, value: formatTry(data.amountChargedTry) });
+    } else if (data.amountChargedUsd != null) {
+      annex.push({ label: paidLabel, value: formatUsd(data.amountChargedUsd) });
+    }
+    if (isDeposit && data.balanceDueTry != null) {
+      annex.push({ label: 'Girişte nakit ödenecek', value: formatTry(data.balanceDueTry) });
     }
     if (data.totalUsd !== null) {
-      annex.push({ label: 'ABD doları karşılığı', value: formatUsd(data.totalUsd) });
+      annex.push({
+        label: isDeposit ? 'Toplam bedel (ABD doları)' : 'ABD doları karşılığı',
+        value: formatUsd(data.totalUsd),
+      });
     }
 
     const [preInfoPdf, contractPdf] = await Promise.all([
@@ -133,6 +160,8 @@ export async function sendBookingConfirmation(
         : data.amountChargedTry !== null
         ? formatTry(data.amountChargedTry) +
           (data.totalUsd !== null ? ` (${formatUsd(data.totalUsd)})` : '')
+        : data.amountChargedUsd != null
+        ? formatUsd(data.amountChargedUsd)
         : data.totalUsd !== null ? formatUsd(data.totalUsd) : '';
 
     await resend.emails.send({
@@ -182,8 +211,18 @@ function confirmationHtml(data: BookingConfirmationData, amountLine: string): st
     </p>
 
     ${amountLine ? `<div style="border:1px solid #E2DED4;border-radius:10px;padding:16px;margin-bottom:20px;">
-      <p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#8C8881;">Tahsil edilen · Charged</p>
+      <p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#8C8881;">${
+        data.paymentMode === 'deposit'
+          ? 'Online ödenen kapora · Deposit paid online'
+          : 'Tahsil edilen · Charged'
+      }</p>
       <p style="margin:0;font-size:20px;font-weight:600;color:#0E0E10;">${esc(amountLine)}</p>
+      ${data.paymentMode === 'deposit' && data.balanceDueTry != null
+        ? `<p style="margin:12px 0 0;padding-top:12px;border-top:1px solid #E2DED4;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#8C8881;">Girişte nakit · Cash at arrival</p>
+      <p style="margin:0;font-size:20px;font-weight:600;color:#0E0E10;">${esc(formatTry(data.balanceDueTry))}</p>
+      <p style="margin:8px 0 0;font-size:13px;color:#45454B;line-height:1.6;">Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödeyeceksiniz.</p>
+      <p style="margin:2px 0 0;font-size:12px;color:#8C8881;line-height:1.6;">You’ll pay the remaining amount in cash directly to the host at arrival.</p>`
+        : ''}
     </div>` : ''}
 
     ${data.gateway === 'tlync'

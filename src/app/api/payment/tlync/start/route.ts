@@ -73,9 +73,28 @@ export async function POST(request: NextRequest) {
   if (attempt.status !== 'started') return fail(String(attempt.status));
 
   // ── Price it in LYD ───────────────────────────────────────────────────────
-  const totalUsd = num(attempt.total_usd);
+  // What is due ONLINE, which on a deposit booking is the deposit — not the
+  // stay. attempt.total_usd is the whole stay in both modes, so a deposit
+  // booking priced from it would charge the dinar guest the full amount while
+  // the card guest paid only the deposit.
+  //
+  // prepay_amount_usd is the database's own figure (set_booking_payment_mode
+  // locked it); nothing here derives a split.
+  const { data: modeRow } = await supabase
+    .from('bookings')
+    .select('payment_mode, prepay_amount_usd')
+    .eq('id', bookingId)
+    .maybeSingle();
+
+  const totalUsd =
+    modeRow?.payment_mode === 'deposit'
+      ? num(modeRow.prepay_amount_usd)
+      : num(attempt.total_usd);
+
   if (totalUsd === null || totalUsd <= 0) {
-    console.error('[tlync/start] booking has no USD total to convert', { bookingId });
+    console.error('[tlync/start] no USD amount to convert', {
+      bookingId, mode: modeRow?.payment_mode ?? null,
+    });
     return fail('server');
   }
 

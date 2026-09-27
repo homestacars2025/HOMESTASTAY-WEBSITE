@@ -4,6 +4,7 @@ import { useRouter } from '@/i18n/navigation';
 import { GuestDetailsForm } from '@/components/booking/GuestDetailsForm';
 import type { HoldResult } from '@/app/[locale]/book/[slug]/actions';
 import type { BookingAccount } from '@/lib/booking/account';
+import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
 
 /**
  * Thin client shell around the details form.
@@ -27,6 +28,8 @@ interface BookingFlowProps {
   initialGuests: number;
   maxGuests:     number | null;
   minNights:     number;
+  /** Priced payment modes for these dates; null when they could not be read. */
+  modeQuote:     PaymentModeQuote | null;
 }
 
 export function BookingFlow({
@@ -37,6 +40,7 @@ export function BookingFlow({
   initialGuests,
   maxGuests,
   minNights,
+  modeQuote,
 }: BookingFlowProps) {
   const router = useRouter();
 
@@ -56,6 +60,7 @@ export function BookingFlow({
       initialGuests={initialGuests}
       maxGuests={maxGuests}
       minNights={minNights}
+      modeQuote={modeQuote}
       onHeld={handleHeld}
     />
   );

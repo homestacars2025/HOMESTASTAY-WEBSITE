@@ -536,6 +536,7 @@ export default async function UnitDetailPage({
             initialCheckOut={search.checkOut}
             initialGuests={search.guests}
             initialQuote={initialQuote}
+            allowDeposit={unit.allow_deposit}
           />
         </div>
       </main>

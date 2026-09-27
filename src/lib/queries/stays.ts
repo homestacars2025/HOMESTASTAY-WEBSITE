@@ -52,6 +52,9 @@ const LISTING_SELECT = [
   // of cost x (1 + commission) and goes stale whenever the owner changes a
   // commission. Prices come from the quote_units RPC instead (see fetchQuotes).
   'id,slug,unit_type,unit_name,status,unit_style,business_model,min_nights,currency,cancellation_policy_id',
+  // Payment terms the owner set. Customer-facing (they decide what the guest
+  // is asked to pay now), and granted to anon — no cost or commission here.
+  'allow_full_prepay,allow_deposit',
   // full_address and google_maps_url are deliberately not selected: both pin the
   // exact property, and anything selected here reaches the browser in the RSC
   // payload. Public surfaces get the blurred point from approximateCoords only.
@@ -79,6 +82,7 @@ const LISTING_SELECT = [
 // source only (via the embedded language filter), not all four locales.
 const CARD_SELECT = [
   'id,slug,unit_type,unit_name,status,min_nights,currency,cancellation_policy_id',
+  'allow_full_prepay,allow_deposit',
   // ad_description + latitude/longitude dropped: the card shows neither.
   'unit_info!inner(ad_title,city,region,municipality)',
   // FOUR of the ten spec columns, for the card's "2 bedrooms · 2 beds · 1 bath"
@@ -388,6 +392,10 @@ function mapRow(
     unit_style: (row.unit_style ?? null) as UnitStyleEnum | null,
     business_model: (row.business_model ?? null) as BusinessModelEnum | null,
     min_nights: typeof row.min_nights === 'number' ? row.min_nights : 1,
+    // Defaults match the database's: prepayment always available unless the
+    // owner turned it off, deposit only where it was turned on.
+    allow_full_prepay: row.allow_full_prepay !== false,
+    allow_deposit: row.allow_deposit === true,
     currency: 'USD',
     pricing,
 

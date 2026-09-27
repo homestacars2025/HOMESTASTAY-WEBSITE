@@ -40,6 +40,9 @@ interface BookingCardProps {
   /** Server-resolved quote for the initial dates (date-aware total), so the
    *  price is correct on first paint without a client round-trip. */
   initialQuote?:    UnitPricing | null;
+  /** The owner allows a deposit here — surfaced as a line, never a figure:
+   *  the split is priced by the database at checkout, not in the browser. */
+  allowDeposit?:    boolean;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -52,7 +55,7 @@ function parseISODateLocal(iso: string): Date {
 
 export function BookingCard({
   pricing, minNights, rating, reviewCount, unitId, unitTitle, slug,
-  initialCheckIn, initialCheckOut, initialGuests, initialQuote,
+  initialCheckIn, initialCheckOut, initialGuests, initialQuote, allowDeposit,
 }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
@@ -129,10 +132,19 @@ export function BookingCard({
 
       {/* Price — live-resolved; dims while a new quote is in flight */}
       {nightlyUsd !== null && (
-        <p className={`mb-5 transition-opacity duration-[240ms] ${isQuoting ? 'opacity-50' : ''}`}>
+        <p className={`mb-1 transition-opacity duration-[240ms] ${isQuoting ? 'opacity-50' : ''}`}>
           <span className="text-2xl font-semibold text-stay">${nightlyUsd}</span>
           <span className="text-mute text-sm ms-1.5">{t('perNight')}</span>
         </p>
+      )}
+
+      {/* The deposit option, stated where the price is — but with no figures:
+          the split is the database's to price at checkout, and this card has
+          no dates yet in the common case. */}
+      {allowDeposit ? (
+        <p className="mb-5 text-xs text-ink-soft leading-relaxed">{t('depositAvailable')}</p>
+      ) : (
+        <div className="mb-5" />
       )}
 
       {/* Summary display — clicking opens the modal */}

@@ -35,6 +35,9 @@ const KNOWN = new Set([
   'session', 'server', 'card', 'bank', 'declined', 'unknown',
   'pending', 'duplicate_payment', 'booking_canceled',
   'already_paid', 'not_holdable', 'not_found',
+  // The booking asks for a deposit the database could not price — it cannot
+  // be charged until the mode is re-chosen, and no money moved.
+  'mode_not_priced',
   // TLYNC (Libya). None of these are money-moved: 'tlync_cancelled' means the
   // guest left TLYNC's page without completing, confirmed by a receipt call.
   'gateway', 'lyd_unavailable', 'tlync_cancelled', 'tlync_refund_manual',

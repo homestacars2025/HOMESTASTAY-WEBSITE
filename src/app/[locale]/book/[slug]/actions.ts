@@ -9,6 +9,11 @@ import {
   LEGAL_DOCUMENT_IDS,
 } from '@/lib/booking/documents';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  DEFAULT_PAYMENT_MODE,
+  isPaymentMode,
+  type PaymentMode,
+} from '@/lib/booking/payment-mode';
 
 /**
  * The details-form Server Action. Wraps create_booking_hold, which is
@@ -36,6 +41,8 @@ export type HoldFormData = {
   nationality: string;
   /** Ön Bilgilendirme Formu + Mesafeli Satış Sözleşmesi ticked. */
   documentsAccepted: boolean;
+  /** Pay online in full, or a deposit now and cash to the owner at arrival. */
+  paymentMode?: PaymentMode;
 };
 
 /** Field keys the form can highlight without a page-level error. */
@@ -48,7 +55,12 @@ export type HoldResult =
   | { ok: true; status: 'created' | 'resumed';
       reference: string; totalUsd: number | null;
       amountTry: number | null; fxRate: number | null;
-      holdExpiresAt: string | null }
+      holdExpiresAt: string | null;
+      /** The mode the booking now carries — what the DB confirmed, not what was asked for. */
+      paymentMode: PaymentMode;
+      /** Deposit bookings only: charged online now, and cash due at arrival. */
+      prepayAmountTry: number | null;
+      balanceDueTry: number | null }
   /** This guest already holds this unit on overlapping, different dates. */
   | { ok: false; status: 'own_hold'; reference: string;
       checkIn: string | null; checkOut: string | null }
@@ -62,6 +74,8 @@ export type HoldResult =
   | { ok: false; status: 'rate_unavailable' }
   /** profiles.phone is UNIQUE and this number is on another account. */
   | { ok: false; status: 'phone_taken' }
+  /** The unit no longer offers the chosen mode, or it cannot apply here. */
+  | { ok: false; status: 'mode_rejected' }
   | { ok: false; status: 'error' };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -84,6 +98,11 @@ function isRealDate(value: string): boolean {
 
 export async function createHoldAction(data: HoldFormData): Promise<HoldResult> {
   const nationality = data.nationality.trim();
+  // An unknown value degrades to full prepayment rather than failing: the
+  // mode is a payment TERM, and the safe default is the one every unit allows.
+  const requestedMode: PaymentMode = isPaymentMode(data.paymentMode)
+    ? data.paymentMode
+    : DEFAULT_PAYMENT_MODE;
 
   // ── Identity comes from the ACCOUNT when there is one ────────────────────
   // A signed-in guest books as themselves, full stop. The form fields are a
@@ -196,6 +215,12 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
       // distance-selling law an unrecorded acceptance is the same as no
       // acceptance, so this must not be deferred to the callback.
       await recordDocumentAcceptance(supabase, row.booking_id);
+
+      // The mode, written immediately after the hold and before any payment
+      // can start — start_payment_attempt reads it to decide what to charge.
+      const mode = await applyPaymentMode(supabase, row.booking_id, requestedMode);
+      if (mode.status === 'rejected') return { ok: false, status: 'mode_rejected' };
+
       return {
         ok: true,
         status: row.status,
@@ -204,6 +229,10 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
         amountTry:     num(row.amount_try),
         fxRate:        num(row.fx_rate),
         holdExpiresAt: row.hold_expires_at ?? null,
+        // The amounts the DATABASE locked, never a figure derived here.
+        paymentMode:     mode.paymentMode,
+        prepayAmountTry: mode.prepayAmountTry,
+        balanceDueTry:   mode.balanceDueTry,
       };
     }
 
@@ -231,6 +260,70 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
     case 'invalid':      return { ok: false, status: 'invalid', fields: [] };
     default:             return { ok: false, status: 'error' };
   }
+}
+
+/**
+ * Write the payment mode onto a fresh hold — set_booking_payment_mode.
+ *
+ * The RPC is the authority on whether the mode may apply: it re-checks the
+ * unit's allow_* flags, that the booking is still holdable, and that nothing
+ * has been paid yet. This never second-guesses it, and never computes a split.
+ *
+ * WHY 'full_prepay' FALLS BACK RATHER THAN FAILING
+ *   A hold already exists by the time this runs. Refusing the whole booking
+ *   because the default mode could not be re-stated would throw away a live
+ *   hold over a no-op — the booking is already full-prepay. A DEPOSIT that is
+ *   refused is different: the guest chose to pay less now, and silently
+ *   charging them the full amount instead is the one outcome we must not
+ *   produce, so that returns 'rejected' and the form says so.
+ */
+async function applyPaymentMode(
+  supabase: SupabaseClient,
+  bookingId: string,
+  mode: PaymentMode,
+): Promise<
+  | { status: 'ok' | 'fallback'; paymentMode: PaymentMode;
+      prepayAmountTry: number | null; balanceDueTry: number | null }
+  | { status: 'rejected' }
+> {
+  const fullPrepay = {
+    status: 'fallback' as const,
+    paymentMode: DEFAULT_PAYMENT_MODE,
+    prepayAmountTry: null,
+    balanceDueTry: null,
+  };
+
+  const { data, error } = await supabase.rpc('set_booking_payment_mode', {
+    p_booking_id: bookingId,
+    p_mode: mode,
+  });
+
+  if (error) {
+    console.error('[createHold] set_booking_payment_mode failed', {
+      bookingId, mode,
+      message: error.message, code: error.code,
+      details: error.details, hint: error.hint,
+    });
+    return mode === 'deposit' ? { status: 'rejected' } : fullPrepay;
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined;
+  const status = String(row?.status ?? '');
+
+  if (status !== 'ok') {
+    // invalid_mode | not_found | not_holdable | mode_not_allowed | mode_locked
+    // | deposit_not_applicable — all of them mean "not this mode".
+    console.warn('[createHold] payment mode not applied', { bookingId, mode, status });
+    return mode === 'deposit' ? { status: 'rejected' } : fullPrepay;
+  }
+
+  const applied = row?.payment_mode;
+  return {
+    status: 'ok',
+    paymentMode: isPaymentMode(applied) ? applied : DEFAULT_PAYMENT_MODE,
+    prepayAmountTry: num(row?.prepay_amount_try),
+    balanceDueTry:   num(row?.balance_due_try),
+  };
 }
 
 /**
