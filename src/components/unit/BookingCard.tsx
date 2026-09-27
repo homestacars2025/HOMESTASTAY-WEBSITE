@@ -45,9 +45,10 @@ interface BookingCardProps {
   /** The owner allows a deposit here — surfaced as a line, never a figure:
    *  the split is priced by the database at checkout, not in the browser. */
   allowDeposit?:    boolean;
-  /** Both modes on offer: the only case where the explainer has two things to
-   *  explain, and therefore the only case where it appears. */
+  /** More than one mode on offer is the only case where the explainer has
+   *  anything to explain, and therefore the only case where it appears. */
   allowFullPrepay?: boolean;
+  allowPayAtArrival?: boolean;
   /** Priced modes for the dates the page was opened with (server-side). */
   initialModeQuote?: PaymentModeQuote | null;
 }
@@ -63,7 +64,7 @@ function parseISODateLocal(iso: string): Date {
 export function BookingCard({
   pricing, minNights, rating, reviewCount, unitId, unitTitle, slug,
   initialCheckIn, initialCheckOut, initialGuests, initialQuote, allowDeposit,
-  allowFullPrepay, initialModeQuote,
+  allowFullPrepay, allowPayAtArrival, initialModeQuote,
 }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
@@ -110,7 +111,9 @@ export function BookingCard({
       // The deposit is only asked for where the owner offers it.
       const [q, modes] = await Promise.all([
         quoteStay(unitId, from, to),
-        allowDeposit ? quotePaymentModesAction(unitId, from, to) : Promise.resolve(null),
+        allowDeposit || allowPayAtArrival
+          ? quotePaymentModesAction(unitId, from, to)
+          : Promise.resolve(null),
       ]);
       setQuote(q ?? { ...pricing, total_usd: null, nights: null });
       setModeQuote(modes);
@@ -132,7 +135,8 @@ export function BookingCard({
   const explainKey = `homesta:modes-explained:${unitId}`;
 
   function handleReserve() {
-    if (!(allowFullPrepay && allowDeposit)) {
+    const offered = [allowFullPrepay, allowDeposit, allowPayAtArrival].filter(Boolean).length;
+    if (offered < 2) {
       setModalOpen(true);
       return;
     }

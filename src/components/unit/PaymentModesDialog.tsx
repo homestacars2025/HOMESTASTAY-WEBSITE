@@ -50,11 +50,15 @@ export function PaymentModesDialog({
 
   // Amounts only when all three are priced: a bullet with one figure missing
   // would describe a split we cannot state.
-  const priced =
-    quote !== null &&
-    quote.totalUsd !== null &&
-    quote.depositUsd !== null &&
-    quote.balanceDueUsd !== null;
+  // The stay's total is the one figure every mode needs; a bullet that also
+  // needs the split checks for it itself.
+  const priced = quote !== null && quote.totalUsd !== null;
+
+  const modeCount = [
+    quote?.allowFullPrepay !== false,
+    quote?.allowDeposit !== false,
+    quote?.allowPayAtArrival === true,
+  ].filter(Boolean).length;
 
   return (
     <dialog
@@ -70,7 +74,9 @@ export function PaymentModesDialog({
       <div className="p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <h2 id="modes-explain-title" className="text-[17px] font-medium tracking-[-0.015em] leading-snug">
-            {t('title')}
+            {/* Two modes or three — the heading counts what is actually on the
+                card below it, rather than promising a number that is wrong. */}
+            {modeCount >= 3 ? t('titleThree') : t('title')}
           </h2>
           <button
             type="button"
@@ -83,19 +89,30 @@ export function PaymentModesDialog({
         </div>
 
         <ul className="flex flex-col gap-3 mb-4">
-          <Bullet
-            text={priced
-              ? t('fullWithAmount', { total: usd(quote.totalUsd as number) })
-              : t('full')}
-          />
-          <Bullet
-            text={priced
-              ? t('depositWithAmounts', {
-                  deposit: usd(quote.depositUsd as number),
-                  balance: usd(quote.balanceDueUsd as number),
-                })
-              : t('deposit')}
-          />
+          {quote?.allowFullPrepay !== false && (
+            <Bullet
+              text={priced
+                ? t('fullWithAmount', { total: usd(quote!.totalUsd as number) })
+                : t('full')}
+            />
+          )}
+          {quote?.allowDeposit !== false && (
+            <Bullet
+              text={priced && quote?.depositUsd != null && quote?.balanceDueUsd != null
+                ? t('depositWithAmounts', {
+                    deposit: usd(quote.depositUsd),
+                    balance: usd(quote.balanceDueUsd),
+                  })
+                : t('deposit')}
+            />
+          )}
+          {quote?.allowPayAtArrival && (
+            <Bullet
+              text={priced
+                ? t('arrivalWithAmount', { total: usd(quote.totalUsd as number) })
+                : t('arrival')}
+            />
+          )}
         </ul>
 
         <p className="text-[13px] text-mute leading-relaxed mb-6">{t('note')}</p>

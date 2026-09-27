@@ -54,7 +54,7 @@ const LISTING_SELECT = [
   'id,slug,unit_type,unit_name,status,unit_style,business_model,min_nights,currency,cancellation_policy_id',
   // Payment terms the owner set. Customer-facing (they decide what the guest
   // is asked to pay now), and granted to anon — no cost or commission here.
-  'allow_full_prepay,allow_deposit',
+  'allow_full_prepay,allow_deposit,allow_pay_at_arrival',
   // full_address and google_maps_url are deliberately not selected: both pin the
   // exact property, and anything selected here reaches the browser in the RSC
   // payload. Public surfaces get the blurred point from approximateCoords only.
@@ -82,7 +82,7 @@ const LISTING_SELECT = [
 // source only (via the embedded language filter), not all four locales.
 const CARD_SELECT = [
   'id,slug,unit_type,unit_name,status,min_nights,currency,cancellation_policy_id',
-  'allow_full_prepay,allow_deposit',
+  'allow_full_prepay,allow_deposit,allow_pay_at_arrival',
   // ad_description + latitude/longitude dropped: the card shows neither.
   'unit_info!inner(ad_title,city,region,municipality)',
   // FOUR of the ten spec columns, for the card's "2 bedrooms · 2 beds · 1 bath"
@@ -396,6 +396,7 @@ function mapRow(
     // owner turned it off, deposit only where it was turned on.
     allow_full_prepay: row.allow_full_prepay !== false,
     allow_deposit: row.allow_deposit === true,
+    allow_pay_at_arrival: row.allow_pay_at_arrival === true,
     currency: 'USD',
     pricing,
 

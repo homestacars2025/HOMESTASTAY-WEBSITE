@@ -212,3 +212,85 @@ function num(value: unknown): number | null {
   const n = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(n) ? n : null;
 }
+
+// ── Pay at arrival ───────────────────────────────────────────────────────────
+
+export type CommitArrivalResult =
+  | { ok: true; ownerDecisionDueAt: string | null }
+  | {
+      ok: false;
+      status:
+        | 'unauthorized'
+        | 'not_found'
+        | 'wrong_mode'
+        | 'already_committed'
+        | 'not_holdable'
+        | 'error';
+    };
+
+/**
+ * Send a pay-at-arrival booking to its owner — commit_pay_at_arrival.
+ *
+ * This is what "paying" is for this mode: no card, no gateway, no money. The
+ * RPC commits the booking and sets the owner's decision deadline, which is
+ * the same edge a paid booking reaches — from there the flows are identical.
+ *
+ * IDENTITY IS THE COOKIE, AS IT IS ON THE PAYMENT ROUTES. A pay-at-arrival
+ * booking can be made anonymously, so there is no session to check; the
+ * signed httpOnly cookie is what proves this visitor started this booking,
+ * and nothing in the request body can name a different one.
+ *
+ * 'already_committed' is NOT an error for the guest: a double tap means the
+ * request is with the owner, which is exactly what they asked for. It is
+ * reported so the page can say so rather than pretend to send a second one.
+ */
+export async function commitPayAtArrivalAction(): Promise<CommitArrivalResult> {
+  const bookingId = await readBookingCookie();
+  if (!bookingId) return { ok: false, status: 'unauthorized' };
+
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc('commit_pay_at_arrival', {
+    p_booking_id: bookingId,
+  });
+
+  if (error) {
+    console.error('[booking/commit-arrival] rpc failed', {
+      bookingId,
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+    return { ok: false, status: 'error' };
+  }
+
+  const payload = (Array.isArray(data) ? data[0] : data) as
+    | { status?: unknown; owner_decision_due_at?: unknown }
+    | null;
+
+  const status = String(payload?.status ?? '');
+
+  if (status === 'ok' || status === 'already_committed') {
+    if (status === 'already_committed') {
+      console.warn('[booking/commit-arrival] already committed', { bookingId });
+    }
+    return {
+      ok: true,
+      ownerDecisionDueAt:
+        typeof payload?.owner_decision_due_at === 'string'
+          ? payload.owner_decision_due_at
+          : null,
+    };
+  }
+
+  console.error('[booking/commit-arrival] refused', { bookingId, status });
+  switch (status) {
+    case 'not_found':
+    case 'wrong_mode':
+    case 'not_holdable':
+      return { ok: false, status };
+    default:
+      return { ok: false, status: 'error' };
+  }
+}

@@ -427,7 +427,10 @@
         "deposit": "Kapora: Rezervasyonunuzu kesinleştirmek için şimdi küçük bir tutar ödeyin, kalanını girişte ev sahibine nakit ödeyin.",
         "note": "Size uygun seçeneği bir sonraki adımda seçersiniz.",
         "continue": "Devam et",
-        "close": "Kapat"
+        "close": "Kapat",
+        "arrivalWithAmount": "Girişte ödeme: şimdi hiçbir ödeme yok — girişte ev sahibine nakit {total}.",
+        "arrival": "Girişte ödeme: şimdi hiçbir ödeme yok — konaklamanın tamamı girişte ev sahibine nakit.",
+        "titleThree": "Üç rezervasyon seçeneği"
       }
     },
     "about": "Bu yer hakkında",
@@ -769,7 +772,12 @@
       "depositTitle": "Rezervasyonu kesinleştirmek için şimdi {deposit} ödeyin — girişte nakit {balance}",
       "depositBody": "Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödersiniz.",
       "chargedNow": "≈ {amount} şimdi tahsil edilir",
-      "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir (bugün ≈ {amount})."
+      "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir (bugün ≈ {amount}).",
+      "arrivalTitle": "Şimdi ödeme yok — girişte nakit {total}",
+      "arrivalBody": "Talebinizi ev sahibine iletiriz; onayladığında rezervasyonunuz kesinleşir ve tutarın tamamını girişte nakit ödersiniz.",
+      "arrivalTag": "Rezervasyon alma ihtimali en yüksek",
+      "depositTag": "Ev sahiplerinin tercihi",
+      "balanceCurrencyPlain": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir."
     },
     "summary": {
       "title": "Konaklamanız",
@@ -842,7 +850,22 @@
       "approxToday": "bugün ≈ {amount}",
       "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir.",
       "payFailedTitle": "Ödemeniz tamamlanamadı",
-      "payFailedRetry": "Hiçbir tahsilat yapılmadı ve tarihleriniz hâlâ tutuluyor. Aşağıdan tekrar deneyebilirsiniz."
+      "payFailedRetry": "Hiçbir tahsilat yapılmadı ve tarihleriniz hâlâ tutuluyor. Aşağıdan tekrar deneyebilirsiniz.",
+      "arrivalRequestTitle": "Rezervasyon talebinizi gönderin",
+      "arrivalRequestBody": "Şimdi hiçbir tahsilat yapılmaz. Talebi ev sahibine iletiriz; yanıtlamak için 12 saati vardır.",
+      "arrivalRequestSubmit": "Rezervasyon talebi gönder",
+      "arrivalRequestSending": "Gönderiliyor…",
+      "arrivalConfirmedTitle": "Rezervasyonunuz kesinleşti",
+      "arrivalConfirmedBody": "Ev sahibi talebinizi onayladı. Tutarın tamamını girişte nakit ödeyin.",
+      "noShowTitle": "Bu rezervasyon kapandı",
+      "noShowBody": "Bu konaklama için giriş yapmadınız. Bir yanlışlık olduğunu düşünüyorsanız bize ulaşın.",
+      "arrivalRequestError": {
+        "unauthorized": "Rezervasyon oturumunuzu bulamadık. Lütfen tarihlerinizi yeniden seçin.",
+        "not_found": "Bu rezervasyonu bulamadık.",
+        "wrong_mode": "Bu rezervasyon girişte ödeme olarak ayarlı değil. Lütfen sayfayı yenileyin.",
+        "not_holdable": "Bu rezervasyon artık tutulmuyor. Lütfen yeni bir rezervasyon başlatın.",
+        "generic": "Bir şeyler ters gitti ve talebiniz gönderilemedi. Lütfen tekrar deneyin."
+      }
     },
     "legal": {
       "versionLabel": "Belge sürümü",

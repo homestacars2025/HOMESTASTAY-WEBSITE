@@ -61,6 +61,7 @@ export function PaymentModeChoice({
       </legend>
 
       <div className="flex flex-col gap-3">
+        {quote.allowFullPrepay && quote.totalTry !== null && quote.totalUsd !== null && (
         <ModeCard
           selected={value === 'full_prepay'}
           onSelect={() => onChange('full_prepay')}
@@ -68,8 +69,11 @@ export function PaymentModeChoice({
           approx={t('chargedNow', { amount: lira(quote.totalTry as number) })}
           body={t('fullBody')}
         />
+        )}
 
+        {quote.allowDeposit && quote.depositUsd !== null && quote.balanceDueUsd !== null && (
         <ModeCard
+          tag={t('depositTag')}
           selected={value === 'deposit'}
           onSelect={() => onChange('deposit')}
           title={t('depositTitle', {
@@ -85,21 +89,40 @@ export function PaymentModeChoice({
           /* The unit's policy, named and quoted — not a term invented here. */
           warning={policy ? `${policy.name} — ${policy.description}` : undefined}
         />
+        )}
+
+        {/* Nothing online at all: the request goes to the owner, and the whole
+            sum is handed over in cash on arrival. No lira line — no card is
+            charged, so there is no lira amount to state. */}
+        {quote.allowPayAtArrival && quote.totalUsd !== null && (
+          <ModeCard
+            tag={t('arrivalTag')}
+            selected={value === 'pay_at_arrival'}
+            onSelect={() => onChange('pay_at_arrival')}
+            title={t('arrivalTitle', { total: usd(quote.totalUsd) })}
+            body={t('arrivalBody')}
+            note={t('balanceCurrencyPlain')}
+            warning={policy ? `${policy.name} — ${policy.description}` : undefined}
+          />
+        )}
       </div>
     </fieldset>
   );
 }
 
 function ModeCard({
-  selected, onSelect, title, approx, body, note, warning,
+  selected, onSelect, title, approx, body, note, warning, tag,
 }: {
   selected: boolean;
   onSelect: () => void;
   title: string;
-  approx: string;
+  /** What leaves the card today. Absent when nothing is charged online. */
+  approx?: string;
   body: string;
   note?: string;
   warning?: string;
+  /** A short badge — why guests or owners tend to pick this one. */
+  tag?: string;
 }) {
   return (
     <label
@@ -126,10 +149,15 @@ function ModeCard({
       </span>
 
       <span className="flex-1">
+        {tag && (
+          <span className="inline-flex mb-1.5 rounded-[999px] bg-paper-warm px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-ink-soft">
+            {tag}
+          </span>
+        )}
         <span className={`block text-[15px] font-medium leading-snug ${selected ? 'text-stay' : 'text-ink'}`}>
           {title}
         </span>
-        <span className="block text-[12px] text-mute tabular-nums mt-0.5">{approx}</span>
+        {approx && <span className="block text-[12px] text-mute tabular-nums mt-0.5">{approx}</span>}
         <span className="block text-[13px] text-ink-soft leading-relaxed mt-1">{body}</span>
         {note && (
           <span className="block text-[12px] text-ink-soft leading-relaxed mt-1">{note}</span>

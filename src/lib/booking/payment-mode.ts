@@ -15,7 +15,7 @@
  */
 
 /** bookings.payment_mode */
-export type PaymentMode = 'full_prepay' | 'deposit';
+export type PaymentMode = 'full_prepay' | 'deposit' | 'pay_at_arrival';
 
 /**
  * The computed field booking_payment_status, and the one answer to "is this
@@ -29,19 +29,24 @@ export type BookingPaymentStatus =
   | 'unpaid'
   | 'paid_full'
   | 'deposit_paid'
-  | 'deposit_forfeited';
+  | 'deposit_forfeited'
+  /** pay_at_arrival: the owner approved, the whole sum is due in cash on arrival. */
+  | 'due_at_arrival'
+  /** The guest never arrived. */
+  | 'no_show';
 
 /** What create_booking_hold produces before any mode is chosen. */
 export const DEFAULT_PAYMENT_MODE: PaymentMode = 'full_prepay';
 
 export function isPaymentMode(value: unknown): value is PaymentMode {
-  return value === 'full_prepay' || value === 'deposit';
+  return value === 'full_prepay' || value === 'deposit' || value === 'pay_at_arrival';
 }
 
 export function isBookingPaymentStatus(value: unknown): value is BookingPaymentStatus {
   return (
     value === 'unpaid' || value === 'paid_full' ||
-    value === 'deposit_paid' || value === 'deposit_forfeited'
+    value === 'deposit_paid' || value === 'deposit_forfeited' ||
+    value === 'due_at_arrival' || value === 'no_show'
   );
 }
 
@@ -55,9 +60,24 @@ export function awaitsOnlinePayment(status: BookingPaymentStatus): boolean {
   return status === 'unpaid';
 }
 
+/**
+ * pay_at_arrival takes NO money online, ever — the database refuses a payment
+ * attempt on such a booking. So a payment form must never render for it, no
+ * matter what the status says, and the 'unpaid' it starts in means "the
+ * request has not been sent to the owner yet", not "waiting to be charged".
+ */
+export function takesOnlinePayment(mode: PaymentMode | null | undefined): boolean {
+  return mode !== 'pay_at_arrival';
+}
+
 /** A booking that has been paid for in some way — deposit or in full. */
 export function hasPaidOnline(status: BookingPaymentStatus): boolean {
   return status === 'paid_full' || status === 'deposit_paid';
+}
+
+/** Committed and with the owner (or past them) — not a booking to pay for now. */
+export function isCommitted(status: BookingPaymentStatus): boolean {
+  return hasPaidOnline(status) || status === 'due_at_arrival';
 }
 
 // ── Pre-hold pricing ─────────────────────────────────────────────────────────
@@ -79,6 +99,7 @@ export function hasPaidOnline(status: BookingPaymentStatus): boolean {
 export interface PaymentModeQuote {
   allowFullPrepay: boolean;
   allowDeposit: boolean;
+  allowPayAtArrival: boolean;
   totalTry: number | null;
   totalUsd: number | null;
   depositTry: number | null;
@@ -108,6 +129,10 @@ export function offerableModes(quote: PaymentModeQuote | null): PaymentMode[] {
     quote.balanceDueTry !== null && quote.balanceDueUsd !== null
   ) {
     modes.push('deposit');
+  }
+  // Nothing is charged online, so only the stay's own total has to be priced.
+  if (quote.allowPayAtArrival && quote.totalUsd !== null) {
+    modes.push('pay_at_arrival');
   }
   return modes;
 }

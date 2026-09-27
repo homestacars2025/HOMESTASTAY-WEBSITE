@@ -17,6 +17,7 @@ import { CardPaymentForm } from '@/components/booking/CardPaymentForm';
 import { LydPaymentForm } from '@/components/booking/LydPaymentForm';
 import { WalletPaymentForm } from '@/components/booking/WalletPaymentForm';
 import { PaymentMethodChoice } from '@/components/booking/PaymentMethodChoice';
+import { ArrivalRequestForm } from '@/components/booking/ArrivalRequestForm';
 import { isTlyncConfigured, parseAmountNote } from '@/lib/payment/tlync';
 import { usdToLydRate, convertUsdToLyd } from '@/lib/payment/lyd-fx';
 import { isLibyaEligible } from '@/lib/payment/libya';
@@ -77,7 +78,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // PostgREST returns them only when named explicitly. The status is the
     // one answer to "is this paid?" — paid_at alone cannot tell a deposit
     // booking (money in, cash still due) from a fully paid one.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, payment_mode, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
+    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -104,6 +105,13 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     : booking.paid_at ? 'paid_full' : 'unpaid';
 
   const isDeposit = booking.payment_mode === 'deposit';
+  // Nothing is ever charged online for this one — the database refuses a
+  // payment attempt on it — so no form, no gateway chooser, no wallet offer.
+  const isArrival = booking.payment_mode === 'pay_at_arrival';
+  // The request has been sent to the owner. 'unpaid' on an arrival booking
+  // means "not sent yet", which is why this is read from the column and not
+  // inferred from the status.
+  const requestSent = Boolean(booking.committed_at);
   // Anything owed ONLINE. For a deposit that is the deposit alone; the balance
   // is cash the owner collects and must never reach a payment form here.
   const dueNowUsd = isDeposit
@@ -160,7 +168,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // anything. The signed cookie proves the visitor started this booking; it
   // does NOT prove whose wallet is on screen, and a booking made anonymously
   // must never be payable from whichever wallet happens to be signed in.
-  const walletOffer = !isPaid ? await resolveWalletOffer() : null;
+  const walletOffer = !isPaid && !isArrival ? await resolveWalletOffer() : null;
 
   async function resolveWalletOffer() {
     const customerEmail = customer?.email;
@@ -249,7 +257,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
             the form below it, which is the retry. Only while the booking is
             genuinely unpaid: a stale ?error= on a paid booking would say
             something false about money that did arrive. */}
-        {payError && paymentStatus === 'unpaid' && (
+        {payError && paymentStatus === 'unpaid' && !isArrival && (
           <div className="border border-stay rounded-[14px] p-5 mb-6 bg-white">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
@@ -389,6 +397,72 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               </div>
             </div>
           </>
+        ) : paymentStatus === 'due_at_arrival' ? (
+          /* The owner approved and nothing is owed to us: the whole sum is
+             handed to the host in cash on the day. */
+          <>
+            <div className="border border-rule rounded-[14px] p-5 mb-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
+                <div>
+                  <p className="text-[15px] font-medium text-ink mb-1">{t('arrivalConfirmedTitle')}</p>
+                  <p className="text-[13px] text-ink-soft leading-relaxed">{t('arrivalConfirmedBody')}</p>
+                </div>
+              </div>
+            </div>
+
+            {totalUsd !== null && (
+              <div className="border border-rule rounded-[14px] p-5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal text-mute mb-3">
+                  {t('balanceLabel')}
+                </p>
+                <p className="text-[1.5rem] font-semibold text-ink tabular-nums leading-none">
+                  {usd.format(totalUsd)}
+                </p>
+                <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">{t('balanceBody')}</p>
+                <p className="mt-1 text-[13px] text-ink-soft leading-relaxed">{t('balanceCurrency')}</p>
+              </div>
+            )}
+          </>
+        ) : paymentStatus === 'no_show' ? (
+          <div className="border border-rule rounded-[14px] p-5">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 mt-[2px] shrink-0 text-ink-soft" aria-hidden />
+              <div>
+                <p className="text-[15px] font-medium text-ink mb-1">{t('noShowTitle')}</p>
+                <p className="text-[13px] text-ink-soft leading-relaxed">{t('noShowBody')}</p>
+              </div>
+            </div>
+          </div>
+        ) : isArrival ? (
+          /* Pay at arrival, before the owner has answered. Either the request
+             has not been sent yet — the one button on this page — or it has,
+             and the guest is waiting exactly as a paid guest would. */
+          requestSent ? (
+            <div className="border border-rule rounded-[14px] p-5">
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 mt-[2px] shrink-0 text-stay" aria-hidden />
+                <div>
+                  <p className="text-[15px] font-medium text-ink mb-1">{t('awaitingApproval')}</p>
+                  <p className="text-[13px] text-ink-soft leading-relaxed">{t('awaitingApprovalBody')}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="border border-rule rounded-[14px] p-5 mb-6">
+                <p className="text-[15px] font-medium text-ink mb-1">{t('arrivalRequestTitle')}</p>
+                <p className="text-[13px] text-ink-soft leading-relaxed">{t('arrivalRequestBody')}</p>
+                {totalUsd !== null && (
+                  <p className="mt-3 text-[1.5rem] font-semibold text-stay tabular-nums leading-none">
+                    {usd.format(totalUsd)}
+                  </p>
+                )}
+                <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">{t('balanceCurrency')}</p>
+              </div>
+              <ArrivalRequestForm />
+            </>
+          )
         ) : paymentStatus === 'deposit_forfeited' ? (
           /* The guest did not arrive and the deposit was kept. No payment
              form: there is nothing left to pay online, and the booking is

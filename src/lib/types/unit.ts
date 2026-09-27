@@ -157,6 +157,7 @@ export interface UnitListing {
    */
   allow_full_prepay: boolean;
   allow_deposit: boolean;
+  allow_pay_at_arrival: boolean;
   currency: 'USD';
 
   // ── Resolved at read time (quote_units RPC) ──────────────────────────────

@@ -50,6 +50,7 @@ export async function quotePaymentModes(
   return {
     allowFullPrepay: row.allow_full_prepay !== false,
     allowDeposit:    row.allow_deposit === true,
+    allowPayAtArrival: row.allow_pay_at_arrival === true,
     totalTry:        num(row.total_try),
     totalUsd:        num(row.total_usd),
     depositTry:      num(row.deposit_try),

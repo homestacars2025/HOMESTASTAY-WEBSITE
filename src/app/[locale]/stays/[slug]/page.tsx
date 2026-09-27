@@ -197,7 +197,7 @@ export default async function UnitDetailPage({
   const priceable = Boolean(search.checkIn && search.checkOut);
   const [initialQuote, initialModes] = await Promise.all([
     priceable ? quoteStay(unit.id, search.checkIn!, search.checkOut!) : null,
-    priceable && unit.allow_deposit
+    priceable && (unit.allow_deposit || unit.allow_pay_at_arrival)
       ? quotePaymentModes(unit.id, search.checkIn!, search.checkOut!)
       : null,
   ]);
@@ -545,6 +545,7 @@ export default async function UnitDetailPage({
             initialQuote={initialQuote}
             allowDeposit={unit.allow_deposit}
             allowFullPrepay={unit.allow_full_prepay}
+            allowPayAtArrival={unit.allow_pay_at_arrival}
             initialModeQuote={initialModes}
           />
         </div>
