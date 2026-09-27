@@ -22,6 +22,14 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
   // The badge names a payment mode, so it uses the one name that mode has
   // everywhere else rather than a wording of its own.
   const tMode = useTranslations('booking.mode');
+
+  // Priority, not a list: arrival beats deposit, and full prepayment alone
+  // earns no badge.
+  const badge = unit.allow_pay_at_arrival
+    ? 'name.pay_at_arrival'
+    : unit.allow_deposit
+      ? 'name.deposit'
+      : null;
   const locale = useLocale();
 
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
@@ -80,14 +88,19 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
           )}
           <SaveButton unitId={unit.id} />
 
-          {/* Pay-on-arrival badge — the one term that is still unusual, on
-              the photo where a guest scanning results will see it. The deposit
-              badge is gone: every unit takes a deposit now, so it marked
-              nothing out. No figures either — the split depends on dates this
-              card does not price. */}
-          {unit.allow_pay_at_arrival && (
+          {/* ONE badge at most, naming the easiest terms this unit offers:
+              pay on arrival if it is there, otherwise a deposit, otherwise
+              nothing — full prepayment is the norm and needs no label.
+              Two badges would make a guest compare terms in a grid instead of
+              looking at the place.
+
+              Both flags arrive on the card's own row (CARD_SELECT), so the
+              badge is there in the first paint — no second query, no label
+              appearing a moment late. No figures: the split depends on dates
+              this card does not price. */}
+          {badge && (
             <span className="absolute bottom-2 start-2 inline-flex items-center rounded-[999px] bg-white/95 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-stay shadow-sm">
-              {tMode('name.pay_at_arrival')}
+              {tMode(badge)}
             </span>
           )}
         </div>
