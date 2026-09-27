@@ -31,6 +31,7 @@ import {
   buildStaysQueryWithPage,
 } from '@/lib/stays/search-params';
 import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
+import { quotePaymentModes } from '@/lib/queries/payment-modes';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
 import { cardVersion } from '@/lib/seo/card-store';
@@ -190,10 +191,16 @@ export default async function UnitDetailPage({
   // card shows the right total on first paint (no client round-trip).
   const rawSearch = await searchParams;
   const search = parseStaysSearchParams(rawSearch);
-  const initialQuote =
-    search.checkIn && search.checkOut
-      ? await quoteStay(unit.id, search.checkIn, search.checkOut)
-      : null;
+  // Priced for the dates the guest arrived with, so the total AND the deposit
+  // are right on first paint — the deposit line is otherwise only drawn after
+  // a date change, which never happens when the dates came in the URL.
+  const priceable = Boolean(search.checkIn && search.checkOut);
+  const [initialQuote, initialModes] = await Promise.all([
+    priceable ? quoteStay(unit.id, search.checkIn!, search.checkOut!) : null,
+    priceable && unit.allow_deposit
+      ? quotePaymentModes(unit.id, search.checkIn!, search.checkOut!)
+      : null,
+  ]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const title = unit.ad_title ?? unit.unit_name ?? '—';
@@ -537,6 +544,7 @@ export default async function UnitDetailPage({
             initialGuests={search.guests}
             initialQuote={initialQuote}
             allowDeposit={unit.allow_deposit}
+            initialDepositUsd={initialModes?.allowDeposit ? initialModes.depositUsd : null}
           />
         </div>
       </main>

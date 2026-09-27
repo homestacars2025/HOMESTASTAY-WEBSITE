@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Calendar } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { BookingModal } from '@/components/unit/BookingModal';
-import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
+import { quoteStay, quotePaymentModesAction } from '@/app/[locale]/stays/[slug]/actions';
 import { toISODate } from '@/lib/stays/search-params';
 import type { UnitPricing } from '@/lib/types/unit';
 import type { DateRange } from '@/components/home/DateRangePicker';
@@ -43,6 +43,8 @@ interface BookingCardProps {
   /** The owner allows a deposit here — surfaced as a line, never a figure:
    *  the split is priced by the database at checkout, not in the browser. */
   allowDeposit?:    boolean;
+  /** Deposit for the dates the page was opened with, priced server-side. */
+  initialDepositUsd?: number | null;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -56,6 +58,7 @@ function parseISODateLocal(iso: string): Date {
 export function BookingCard({
   pricing, minNights, rating, reviewCount, unitId, unitTitle, slug,
   initialCheckIn, initialCheckOut, initialGuests, initialQuote, allowDeposit,
+  initialDepositUsd,
 }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
@@ -77,6 +80,8 @@ export function BookingCard({
   // Prices are always derived — nothing here is ever cached.
   const [quote, setQuote]      = useState<UnitPricing>(initialQuote ?? pricing);
   const [isQuoting, startQuote] = useTransition();
+  /** The deposit for the chosen dates, priced by the database. */
+  const [depositUsd, setDepositUsd] = useState<number | null>(initialDepositUsd ?? null);
 
   /**
    * Re-quote for a date range. Called from event handlers rather than an
@@ -87,13 +92,20 @@ export function BookingCard({
   function refreshQuote(r: DateRange) {
     if (!r.from || !r.to) {
       setQuote(pricing);
+      setDepositUsd(null);
       return;
     }
     const from = toISODate(r.from);
     const to   = toISODate(r.to);
     startQuote(async () => {
-      const q = await quoteStay(unitId, from, to);
+      // Both prices for the same dates, in one round trip's worth of waiting.
+      // The deposit is only asked for where the owner offers it.
+      const [q, modes] = await Promise.all([
+        quoteStay(unitId, from, to),
+        allowDeposit ? quotePaymentModesAction(unitId, from, to) : Promise.resolve(null),
+      ]);
       setQuote(q ?? { ...pricing, total_usd: null, nights: null });
+      setDepositUsd(modes?.allowDeposit ? modes.depositUsd : null);
     });
   }
 
@@ -187,6 +199,15 @@ export function BookingCard({
       {showMinNote && (
         <p className={`text-xs mb-3 ps-1 ${isBelowMin ? 'text-stay' : 'text-mute'}`}>
           {minNightsText}
+        </p>
+      )}
+
+      {/* The deposit, once there are dates to price it for. A tempter, not a
+          control: the reserve button is unchanged and the choice itself is
+          made at checkout, where the full split and the policy are shown. */}
+      {depositUsd !== null && (
+        <p className="mb-3 ps-1 text-[13px] font-medium text-stay leading-snug">
+          {t('booking.depositTeaser', { amount: `\u2066$${depositUsd.toFixed(2)}\u2069` })}
         </p>
       )}
 

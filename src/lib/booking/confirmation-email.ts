@@ -47,7 +47,13 @@ export interface BookingConfirmationData {
   amountChargedUsd?: number | null;
   /** Absent means full prepayment — the original path. */
   paymentMode?:     'full_prepay' | 'deposit';
-  /** Deposit bookings only: cash still owed to the owner at arrival, in lira. */
+  /**
+   * Deposit bookings only: the cash still owed to the owner at arrival.
+   * USD is what is owed (the host's price); the lira figure is the equivalent
+   * at today's rate and is shown as such, because the guest may hand over
+   * dollars, lira or euro on the day.
+   */
+  balanceDueUsd?:   number | null;
   balanceDueTry?:   number | null;
 }
 
@@ -136,8 +142,18 @@ export async function sendBookingConfirmation(
     } else if (data.amountChargedUsd != null) {
       annex.push({ label: paidLabel, value: formatUsd(data.amountChargedUsd) });
     }
-    if (isDeposit && data.balanceDueTry != null) {
-      annex.push({ label: 'Girişte nakit ödenecek', value: formatTry(data.balanceDueTry) });
+    if (isDeposit && (data.balanceDueUsd != null || data.balanceDueTry != null)) {
+      annex.push({
+        label: 'Girişte nakit ödenecek',
+        value: data.balanceDueUsd != null
+          ? formatUsd(data.balanceDueUsd) +
+            (data.balanceDueTry != null ? ` (≈ ${formatTry(data.balanceDueTry)})` : '')
+          : formatTry(data.balanceDueTry as number),
+      });
+      annex.push({
+        label: 'Kalan tutarın para birimi',
+        value: 'ABD doları veya giriş günündeki kur ile lira/euro karşılığı',
+      });
     }
     if (data.totalUsd !== null) {
       annex.push({
@@ -217,11 +233,15 @@ function confirmationHtml(data: BookingConfirmationData, amountLine: string): st
           : 'Tahsil edilen · Charged'
       }</p>
       <p style="margin:0;font-size:20px;font-weight:600;color:#0E0E10;">${esc(amountLine)}</p>
-      ${data.paymentMode === 'deposit' && data.balanceDueTry != null
+      ${data.paymentMode === 'deposit' && (data.balanceDueUsd != null || data.balanceDueTry != null)
         ? `<p style="margin:12px 0 0;padding-top:12px;border-top:1px solid #E2DED4;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#8C8881;">Girişte nakit · Cash at arrival</p>
-      <p style="margin:0;font-size:20px;font-weight:600;color:#0E0E10;">${esc(formatTry(data.balanceDueTry))}</p>
-      <p style="margin:8px 0 0;font-size:13px;color:#45454B;line-height:1.6;">Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödeyeceksiniz.</p>
-      <p style="margin:2px 0 0;font-size:12px;color:#8C8881;line-height:1.6;">You’ll pay the remaining amount in cash directly to the host at arrival.</p>`
+      <p style="margin:0;font-size:20px;font-weight:600;color:#0E0E10;">${esc(
+        data.balanceDueUsd != null ? formatUsd(data.balanceDueUsd) : formatTry(data.balanceDueTry as number),
+      )}</p>
+      ${data.balanceDueUsd != null && data.balanceDueTry != null
+        ? `<p style="margin:2px 0 0;font-size:12px;color:#8C8881;">≈ ${esc(formatTry(data.balanceDueTry))}</p>` : ''}
+      <p style="margin:8px 0 0;font-size:13px;color:#45454B;line-height:1.6;">Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödeyeceksiniz — ABD doları ya da giriş günündeki kur ile lira/euro karşılığı.</p>
+      <p style="margin:2px 0 0;font-size:12px;color:#8C8881;line-height:1.6;">You’ll pay the rest in cash directly to the host at arrival, in US dollars or the equivalent in lira or euro at the rate on the day.</p>`
         : ''}
     </div>` : ''}
 

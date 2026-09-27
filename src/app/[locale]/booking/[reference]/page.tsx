@@ -68,7 +68,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // PostgREST returns them only when named explicitly. The status is the
     // one answer to "is this paid?" — paid_at alone cannot tell a deposit
     // booking (money in, cash still due) from a fully paid one.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, payment_mode, prepay_amount_try, prepay_amount_usd, balance_due_try, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
+    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, payment_mode, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -103,7 +103,10 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   const dueNowTry = isDeposit
     ? num(booking.prepay_amount_try) ?? num(booking.amount_charged_try)
     : num(booking.amount_charged_try);
+  // The balance is owed in DOLLARS (the host's price) and settled in cash on
+  // the day; the lira figure is today's approximation, never the amount owed.
   const balanceDueTry = num(booking.balance_due_try);
+  const balanceDueUsd = num(booking.balance_due_usd);
 
   // Kept so the rest of this page reads the same as before: true whenever
   // money has arrived online, which is what every "hide the form" test meant.
@@ -300,17 +303,27 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               </div>
             )}
 
-            {/* Cash still due to the owner — its own block, not a footnote. */}
-            {isDeposit && balanceDueTry !== null && (
+            {/* Cash still due to the owner — its own block, not a footnote.
+                Dollars lead: that is the sum owed. The lira line is today's
+                equivalent, and says so. */}
+            {isDeposit && balanceDueUsd !== null && (
               <div className="border border-rule rounded-[14px] p-5 mb-4">
-                <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal text-mute mb-3">
                   {t('balanceLabel')}
                 </p>
                 <p className="text-[1.5rem] font-semibold text-ink tabular-nums leading-none">
-                  {tryFmt.format(balanceDueTry)}
+                  {usd.format(balanceDueUsd)}
                 </p>
+                {balanceDueTry !== null && (
+                  <p className="mt-1 text-[12px] text-mute tabular-nums">
+                    {t('approxToday', { amount: tryFmt.format(balanceDueTry) })}
+                  </p>
+                )}
                 <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">
                   {t('balanceBody')}
+                </p>
+                <p className="mt-1 text-[13px] text-ink-soft leading-relaxed">
+                  {t('balanceCurrency')}
                 </p>
               </div>
             )}
@@ -410,9 +423,9 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               {/* A deposit booking says, before payment, exactly what is being
                   charged now AND what will be owed in cash — the same two
                   figures the chooser showed, now locked by the database. */}
-              {isDeposit && balanceDueTry !== null && (
+              {isDeposit && balanceDueUsd !== null && (
                 <p className="mt-2 text-[13px] text-ink-soft leading-relaxed">
-                  {t('balanceNote', { amount: tryFmt.format(balanceDueTry) })}
+                  {t('balanceNote', { amount: usd.format(balanceDueUsd) })}
                 </p>
               )}
               {selectedMethod === 'card' &&

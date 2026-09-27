@@ -101,7 +101,8 @@
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
       "beds": "{count, plural, one {# bed} other {# beds}}",
       "bathrooms": "{count, plural, one {# bath} other {# baths}}"
-    }
+    },
+    "depositBadge": "Book with a deposit"
   },
   "pages": {
     "home": {
@@ -416,7 +417,8 @@
       "done": "Got it",
       "nights": "{count, plural, one {# night} other {# nights}}",
       "proceed": "Continue to booking",
-      "confirmReady": "Your dates are held. Review and pay to send your request to the owner."
+      "confirmReady": "Your dates are held. Review and pay to send your request to the owner.",
+      "depositTeaser": "Or book now for just {amount} — the rest on arrival"
     },
     "about": "About this place",
     "aiTranslatedNotice": "This description was automatically translated and may contain minor errors.",
@@ -755,7 +757,9 @@
       "fullTitle": "Pay the full amount now: {amount}",
       "fullBody": "Your stay is paid for in full online. Nothing to pay on arrival.",
       "depositTitle": "Pay {deposit} now to secure the booking — {balance} in cash on arrival",
-      "depositBody": "You pay the rest in cash directly to the host when you arrive."
+      "depositBody": "You pay the rest in cash directly to the host when you arrive.",
+      "chargedNow": "≈ {amount} charged now",
+      "balanceCurrency": "Payable in US dollars, or the equivalent in lira or euro at the rate on the day of arrival (≈ {amount} today)."
     },
     "summary": {
       "title": "Your stay",
@@ -824,7 +828,9 @@
       "balanceNote": "You will then pay {amount} in cash to the host on arrival.",
       "refundBodyDeposit": "If the owner declines, the amount you paid online is refunded in full to the same card. It can take 3–10 business days to appear, depending on your bank.",
       "forfeitedTitle": "This booking is closed",
-      "forfeitedBody": "You did not check in for this stay, so the amount paid online was not refunded. Contact us if you think this is a mistake."
+      "forfeitedBody": "You did not check in for this stay, so the amount paid online was not refunded. Contact us if you think this is a mistake.",
+      "approxToday": "≈ {amount} today",
+      "balanceCurrency": "Payable in US dollars, or the equivalent in lira or euro at the rate on the day of arrival."
     },
     "legal": {
       "versionLabel": "Document version",

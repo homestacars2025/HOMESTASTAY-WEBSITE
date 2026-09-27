@@ -60,7 +60,9 @@ export type HoldResult =
       paymentMode: PaymentMode;
       /** Deposit bookings only: charged online now, and cash due at arrival. */
       prepayAmountTry: number | null;
-      balanceDueTry: number | null }
+      balanceDueTry: number | null;
+      /** The balance in the currency it is actually owed in. */
+      balanceDueUsd: number | null }
   /** This guest already holds this unit on overlapping, different dates. */
   | { ok: false; status: 'own_hold'; reference: string;
       checkIn: string | null; checkOut: string | null }
@@ -233,6 +235,7 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
         paymentMode:     mode.paymentMode,
         prepayAmountTry: mode.prepayAmountTry,
         balanceDueTry:   mode.balanceDueTry,
+        balanceDueUsd:   mode.balanceDueUsd,
       };
     }
 
@@ -283,7 +286,8 @@ async function applyPaymentMode(
   mode: PaymentMode,
 ): Promise<
   | { status: 'ok' | 'fallback'; paymentMode: PaymentMode;
-      prepayAmountTry: number | null; balanceDueTry: number | null }
+      prepayAmountTry: number | null; balanceDueTry: number | null;
+      balanceDueUsd: number | null }
   | { status: 'rejected' }
 > {
   const fullPrepay = {
@@ -291,6 +295,7 @@ async function applyPaymentMode(
     paymentMode: DEFAULT_PAYMENT_MODE,
     prepayAmountTry: null,
     balanceDueTry: null,
+    balanceDueUsd: null,
   };
 
   const { data, error } = await supabase.rpc('set_booking_payment_mode', {
@@ -323,6 +328,7 @@ async function applyPaymentMode(
     paymentMode: isPaymentMode(applied) ? applied : DEFAULT_PAYMENT_MODE,
     prepayAmountTry: num(row?.prepay_amount_try),
     balanceDueTry:   num(row?.balance_due_try),
+    balanceDueUsd:   num(row?.balance_due_usd),
   };
 }
 

@@ -101,7 +101,8 @@
       "bedrooms": "{count, plural, other {# yatak odası}}",
       "beds": "{count, plural, other {# yatak}}",
       "bathrooms": "{count, plural, other {# banyo}}"
-    }
+    },
+    "depositBadge": "Kaporayla rezervasyon"
   },
   "pages": {
     "home": {
@@ -416,7 +417,8 @@
       "done": "Anladım",
       "nights": "{count, plural, other {# gece}}",
       "proceed": "Rezervasyona devam et",
-      "confirmReady": "Tarihleriniz tutuldu. İnceleyip ödeyerek talebinizi mülk sahibine gönderin."
+      "confirmReady": "Tarihleriniz tutuldu. İnceleyip ödeyerek talebinizi mülk sahibine gönderin.",
+      "depositTeaser": "Ya da şimdi yalnızca {amount} ödeyin — kalanı girişte"
     },
     "about": "Bu yer hakkında",
     "aiTranslatedNotice": "Bu açıklama otomatik olarak çevrildi ve küçük hatalar içerebilir.",
@@ -755,7 +757,9 @@
       "fullTitle": "Tamamını şimdi ödeyin: {amount}",
       "fullBody": "Konaklamanızın tamamı online ödenir. Girişte ödeyeceğiniz bir tutar kalmaz.",
       "depositTitle": "Rezervasyonu kesinleştirmek için şimdi {deposit} ödeyin — girişte nakit {balance}",
-      "depositBody": "Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödersiniz."
+      "depositBody": "Kalan tutarı girişte doğrudan ev sahibine nakit olarak ödersiniz.",
+      "chargedNow": "≈ {amount} şimdi tahsil edilir",
+      "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir (bugün ≈ {amount})."
     },
     "summary": {
       "title": "Konaklamanız",
@@ -824,7 +828,9 @@
       "balanceNote": "Girişte ev sahibine nakit {amount} ödeyeceksiniz.",
       "refundBodyDeposit": "Ev sahibi onaylamazsa online ödediğiniz tutarın tamamı aynı kartınıza iade edilir; bankanıza bağlı olarak hesabınıza yansıması 3–10 iş günü sürebilir.",
       "forfeitedTitle": "Bu rezervasyon kapandı",
-      "forfeitedBody": "Bu konaklama için giriş yapmadınız; bu nedenle online ödenen tutar iade edilmedi. Bir yanlışlık olduğunu düşünüyorsanız bize ulaşın."
+      "forfeitedBody": "Bu konaklama için giriş yapmadınız; bu nedenle online ödenen tutar iade edilmedi. Bir yanlışlık olduğunu düşünüyorsanız bize ulaşın.",
+      "approxToday": "bugün ≈ {amount}",
+      "balanceCurrency": "ABD doları ya da giriş günündeki kur ile lira veya euro karşılığı olarak ödenir."
     },
     "legal": {
       "versionLabel": "Belge sürümü",

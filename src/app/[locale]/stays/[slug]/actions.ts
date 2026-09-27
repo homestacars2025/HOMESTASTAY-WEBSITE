@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { isRealDate } from '@/lib/stays/search-params';
 import type { UnitPricing } from '@/lib/types/unit';
+import { quotePaymentModes } from '@/lib/queries/payment-modes';
+import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -61,4 +63,23 @@ export async function quoteStay(
     total_usd:   num(row.total_usd),
     nights:      num(row.nights),
   };
+}
+
+/**
+ * The deposit figure for a set of dates, for the listing page's price box.
+ *
+ * Same validation as quoteStay — these three values cross the boundary from a
+ * Client Component — and the same degradation: null means the card simply
+ * says nothing about deposits rather than guessing a number.
+ */
+export async function quotePaymentModesAction(
+  unitId: string,
+  checkIn: string,
+  checkOut: string,
+): Promise<PaymentModeQuote | null> {
+  if (!UUID_RE.test(unitId)) return null;
+  if (!isRealDate(checkIn) || !isRealDate(checkOut)) return null;
+  if (checkIn >= checkOut) return null;
+
+  return quotePaymentModes(unitId, checkIn, checkOut);
 }

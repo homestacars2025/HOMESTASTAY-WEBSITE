@@ -51,8 +51,11 @@ export async function quotePaymentModes(
     allowFullPrepay: row.allow_full_prepay !== false,
     allowDeposit:    row.allow_deposit === true,
     totalTry:        num(row.total_try),
+    totalUsd:        num(row.total_usd),
     depositTry:      num(row.deposit_try),
+    depositUsd:      num(row.deposit_usd),
     balanceDueTry:   num(row.balance_due_try),
+    balanceDueUsd:   num(row.balance_due_usd),
     fxRate:          num(row.fx_rate),
   };
 }

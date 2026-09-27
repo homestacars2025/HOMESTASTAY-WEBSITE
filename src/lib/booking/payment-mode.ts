@@ -69,13 +69,22 @@ export function hasPaidOnline(status: BookingPaymentStatus): boolean {
  * bank is asked for agree.
  *
  * deposit / balance are null whenever allowDeposit is false.
+ *
+ * USD IS THE REFERENCE CURRENCY, LIRA IS THE CHARGE. The deposit is Homesta's
+ * commission in dollars and the balance is the host's price in dollars — that
+ * is what the guest owes. The lira figure is what the card is actually
+ * charged today, at today's locked rate, so it is shown as an approximation
+ * beside the dollar figure and is the only currency the bank page ever sees.
  */
 export interface PaymentModeQuote {
   allowFullPrepay: boolean;
   allowDeposit: boolean;
   totalTry: number | null;
+  totalUsd: number | null;
   depositTry: number | null;
+  depositUsd: number | null;
   balanceDueTry: number | null;
+  balanceDueUsd: number | null;
   fxRate: number | null;
 }
 
@@ -87,8 +96,17 @@ export interface PaymentModeQuote {
 export function offerableModes(quote: PaymentModeQuote | null): PaymentMode[] {
   if (!quote) return [];
   const modes: PaymentMode[] = [];
-  if (quote.allowFullPrepay && quote.totalTry !== null) modes.push('full_prepay');
-  if (quote.allowDeposit && quote.depositTry !== null && quote.balanceDueTry !== null) {
+  // Both currencies are required: the dollar figure is what the card states,
+  // the lira figure is what gets charged. A mode missing either cannot be
+  // described honestly, so it is not offered.
+  if (quote.allowFullPrepay && quote.totalTry !== null && quote.totalUsd !== null) {
+    modes.push('full_prepay');
+  }
+  if (
+    quote.allowDeposit &&
+    quote.depositTry !== null && quote.depositUsd !== null &&
+    quote.balanceDueTry !== null && quote.balanceDueUsd !== null
+  ) {
     modes.push('deposit');
   }
   return modes;

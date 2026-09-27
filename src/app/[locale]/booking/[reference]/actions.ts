@@ -166,7 +166,7 @@ async function sendWalletConfirmation(bookingId: string): Promise<void> {
 
   const { data: b, error } = await admin
     .from('bookings')
-    .select('booking_reference, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, payment_mode, prepay_amount_try, prepay_amount_usd, balance_due_try, customers(email)')
+    .select('booking_reference, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, payment_mode, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, customers(email)')
     .eq('id', bookingId)
     .maybeSingle();
 
@@ -197,6 +197,7 @@ async function sendWalletConfirmation(bookingId: string): Promise<void> {
     gateway: 'wallet',
     paymentMode: b.payment_mode === 'deposit' ? 'deposit' : 'full_prepay',
     balanceDueTry: num(b.balance_due_try),
+    balanceDueUsd: num(b.balance_due_usd),
   });
 }
 

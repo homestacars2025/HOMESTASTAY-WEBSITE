@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
       after(async () => {
         const { data: b } = await supabase
           .from('bookings')
-          .select('booking_reference, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, payment_mode, prepay_amount_try, balance_due_try, customers(email)')
+          .select('booking_reference, check_in, check_out, guests_count, total_amount_usd, amount_charged_try, payment_mode, prepay_amount_try, balance_due_try, balance_due_usd, customers(email)')
           .eq('id', completed.booking_id)
           .maybeSingle();
 
@@ -281,6 +281,7 @@ export async function POST(request: NextRequest) {
             : numOrNull(b.amount_charged_try),
           paymentMode:      b.payment_mode === 'deposit' ? 'deposit' : 'full_prepay',
           balanceDueTry:    numOrNull(b.balance_due_try),
+          balanceDueUsd:    numOrNull(b.balance_due_usd),
         });
       });
       return NextResponse.redirect(
