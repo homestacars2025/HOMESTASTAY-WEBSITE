@@ -1,6 +1,8 @@
 'use server';
 
 import { headers } from 'next/headers';
+import { getLocale } from 'next-intl/server';
+import { routing } from '@/i18n/routing';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getBookingAccount } from '@/lib/booking/account';
 import { setBookingCookie } from '@/lib/booking/cookie';
@@ -220,6 +222,15 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
       // booking id reaches the payment step.
       await setBookingCookie(row.booking_id);
 
+      // The language the guest is booking in, recorded on the booking so the
+      // WhatsApp messages they receive later are written in it.
+      //
+      // AWAITED, NOT DEFERRED. On the pay-at-arrival path the very next call
+      // commits the booking, and committing is what puts messages in flight —
+      // a locale written after that would arrive too late to choose the
+      // language of the message it was meant for.
+      await setGuestLocale(supabase, row.booking_id);
+
       // Acceptance is recorded BEFORE payment can start. Under Turkish
       // distance-selling law an unrecorded acceptance is the same as no
       // acceptance, so this must not be deferred to the callback.
@@ -280,6 +291,48 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
     case 'not_bookable': return { ok: false, status: 'not_bookable' };
     case 'invalid':      return { ok: false, status: 'invalid', fields: [] };
     default:             return { ok: false, status: 'error' };
+  }
+}
+
+/**
+ * Record the booking's language — set_booking_guest_locale.
+ *
+ * The locale comes from next-intl's server context, which is the prefix in
+ * the URL the guest is actually reading, rather than anything the form sends.
+ * It is checked against the locales this site routes before being written, so
+ * a value the RPC would reject as invalid never reaches it.
+ *
+ * NEVER FATAL. A booking that exists with no language on it still works —
+ * the messages fall back — and losing a real booking over a translation
+ * preference would be the wrong trade by a wide margin. Failures are logged
+ * and swallowed.
+ */
+async function setGuestLocale(supabase: SupabaseClient, bookingId: string): Promise<void> {
+  try {
+    const locale = await getLocale();
+    if (!(routing.locales as readonly string[]).includes(locale)) {
+      console.warn('[createHold] unroutable locale, not recorded', { bookingId, locale });
+      return;
+    }
+
+    const { data, error } = await supabase.rpc('set_booking_guest_locale', {
+      p_booking_id: bookingId,
+      p_locale: locale,
+    });
+
+    const status = String(
+      ((Array.isArray(data) ? data[0] : data) as { status?: unknown } | null)?.status ?? '',
+    );
+
+    if (error || status !== 'ok') {
+      console.error('[createHold] set_booking_guest_locale failed', {
+        bookingId, locale, status, message: error?.message, code: error?.code,
+      });
+    }
+  } catch (err) {
+    console.error('[createHold] set_booking_guest_locale threw', {
+      bookingId, error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
