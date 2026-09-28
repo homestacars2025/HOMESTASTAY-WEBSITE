@@ -218,6 +218,20 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   const paidViaTlync  = payment?.payment_gateway === 'tlync';
   const paidViaWallet = payment?.payment_gateway === 'wallet';
 
+  /**
+   * How the money comes back, in the words that are true for THIS channel —
+   * and the same sentence whether the owner is still deciding or has already
+   * declined. The timings differ per rail and are not ours to average: a card
+   * goes back through the issuer, a Libyan payment is returned by hand, and a
+   * wallet payment is reversed in the same database transaction.
+   *
+   * The contract's outer bound (3–10 business days, Madde 6) is unchanged;
+   * this is what actually happens, which is nearly always faster.
+   */
+  const refundText = paidViaWallet ? t('refundWallet')
+    : paidViaTlync ? t('refundLyd')
+    : t('refundCard');
+
   // ⚠️ A WALLET PAYMENT'S amount_try IS A PLACEHOLDER, NOT A LIRA FIGURE.
   // The function writes amount_try = amount_usd and fx_rate_used = 1 to satisfy
   // columns the booking path requires; the real accounting entry lives in
@@ -311,7 +325,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                 : ownerRejected ? t('rejectedTitle')
                 : t('underReviewTitle')}
               body={ownerApproved ? t('confirmedBody')
-                : ownerRejected ? t('rejectedBodyPaid')
+                : ownerRejected ? refundText
                 : t('underReviewBody')}
             />
 
@@ -412,12 +426,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                       sense, but the owner-reject path's wallet behaviour is not
                       something this codebase can see. A number of days here
                       would be a promise made on an assumption. */}
-                  <p className="text-[13px] text-ink-soft leading-relaxed">
-                    {isDeposit ? t('refundBodyDeposit')
-                      : paidViaWallet ? t('refundBodyWallet')
-                      : paidViaTlync ? t('refundBodyLyd')
-                      : t('refundBody')}
-                  </p>
+                  <p className="text-[13px] text-ink-soft leading-relaxed">{refundText}</p>
                 </div>
               </div>
             </div>
