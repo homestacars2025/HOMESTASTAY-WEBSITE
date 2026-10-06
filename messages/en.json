@@ -543,7 +543,6 @@
     "depositAvailable": "You can pay a deposit now and the rest in cash at arrival.",
     "services": {
       "title": "Extra services",
-      "required": "Required",
       "pickerTitle": "Add extras",
       "price": {
         "per_booking": "{price} / stay",
@@ -553,7 +552,6 @@
         "per_guest_night": "{price} / guest / night"
       },
       "extrasLine": "Extras",
-      "confirmedAtCheckout": "Extras are confirmed at checkout",
       "decrease": "Fewer",
       "increase": "More",
       "quantityFor": "Quantity for {name}"
@@ -801,7 +799,8 @@
       "nights": "Nights",
       "total": "Total",
       "tryNote": "Charged in Turkish lira at a rate fixed the moment you pay. The exact amount is shown before you reach your bank.",
-      "noQuote": "We couldn’t price these dates just now. Please go back and choose them again."
+      "noQuote": "We couldn’t price these dates just now. Please go back and choose them again.",
+      "stay": "Stay"
     },
     "fields": {
       "firstName": "First name",
@@ -890,7 +889,10 @@
       "arrivalNotSentBody": "Your dates are held, but the host hasn't been asked yet. Send the request to continue.",
       "refundCard": "We start the refund as soon as the host declines, back to the same card. It usually appears within 1 to 3 business days.",
       "refundLyd": "Our team returns the amount by hand through the same Libyan channel you paid with, within one business day.",
-      "refundWallet": "The amount returns to your wallet balance immediately."
+      "refundWallet": "The amount returns to your wallet balance immediately.",
+      "breakdownTitle": "Price breakdown",
+      "breakdownStay": "Stay",
+      "breakdownTotal": "Total"
     },
     "legal": {
       "versionLabel": "Document version",

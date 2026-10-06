@@ -71,7 +71,6 @@ async function queryUnitServices(unitId: string, lang: 'ar' | 'tr' | 'en'): Prom
       pricing_unit: unit,
       price_usd:    price,
       max_quantity: max !== null && max >= 1 ? Math.floor(max) : null,
-      is_required:  row.is_required === true,
     });
   }
   return services;

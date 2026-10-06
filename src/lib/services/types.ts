@@ -21,8 +21,6 @@ export interface UnitService {
   price_usd:    number;
   /** Upper bound for the quantity stepper on per_item services. */
   max_quantity: number | null;
-  /** Always included in the quote; the guest cannot untick it. */
-  is_required:  boolean;
 }
 
 /** What the guest picked: the shape quote_unit_services() takes. */

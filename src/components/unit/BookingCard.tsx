@@ -55,8 +55,6 @@ interface BookingCardProps {
   initialModeQuote?: PaymentModeQuote | null;
   /** The unit's extra services (public_unit_services). Empty hides the add-ons. */
   services?: UnitService[];
-  /** Extras quote for the initial dates (required services only), server-side. */
-  initialServicesQuote?: ServicesQuote | null;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -71,7 +69,7 @@ export function BookingCard({
   pricing, minNights, rating, reviewCount, unitId, unitTitle, slug,
   initialCheckIn, initialCheckOut, initialGuests, initialQuote, allowDeposit,
   allowFullPrepay, allowPayAtArrival, initialModeQuote,
-  services = [], initialServicesQuote = null,
+  services = [],
 }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
@@ -101,7 +99,7 @@ export function BookingCard({
 
   // ── Extras (display only — never sent to checkout yet) ─────────────────────
   const [servicesSelected, setServicesSelected] = useState<ServicesSelectionMap>({});
-  const [servicesQuote,    setServicesQuote]    = useState<ServicesQuote | null>(initialServicesQuote);
+  const [servicesQuote,    setServicesQuote]    = useState<ServicesQuote | null>(null);
   const [isQuotingServices, startServicesQuote] = useTransition();
   // Selections can change faster than quotes return; only the latest request
   // may write its answer, or a slow early reply would overwrite a newer one.
@@ -299,8 +297,8 @@ export function BookingCard({
         </p>
       )}
 
-      {/* Add-ons — selectable here, quoted live as their own line. Not part
-          of the amount checkout charges until extras are stored there. */}
+      {/* Add-ons — selectable here, quoted live as their own line, and
+          carried to checkout in the URL where the database prices them in. */}
       {services.length > 0 && (
         <div className="mb-4 border-t border-rule pt-4 flex flex-col gap-3">
           <ServicesPicker services={services} selected={servicesSelected} onChange={handleServicesChange} />

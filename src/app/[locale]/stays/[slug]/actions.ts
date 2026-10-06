@@ -6,6 +6,7 @@ import type { UnitPricing } from '@/lib/types/unit';
 import { quotePaymentModes } from '@/lib/queries/payment-modes';
 import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
 import { servicesLang, type ServiceSelection, type ServicesQuote } from '@/lib/services/types';
+import { validateSelections } from '@/lib/services/selection';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -85,20 +86,15 @@ export async function quotePaymentModesAction(
   return quotePaymentModes(unitId, checkIn, checkOut);
 }
 
-const MAX_SELECTIONS = 50;
-const MAX_QUANTITY   = 99;
-
 /**
  * The live "Extras" figure on the unit page, from quote_unit_services().
  *
- * DISPLAY ONLY. Nothing here reaches checkout or payment: the amount charged
- * is still create_booking_hold's, and extras are confirmed at checkout until
- * that path stores them (booking_services) and prices them in.
+ * A quote only: the booking's extras are priced again by create_booking_hold
+ * from the ids and quantities checkout passes, never from this figure.
  *
  * Every argument crosses the boundary from a Client Component, so each is
- * validated; unknown service ids are ignored by the function itself, and
- * required services are included by it whatever is sent. Null on any failure —
- * the card then shows no extras figure rather than a guessed one.
+ * validated; unknown service ids are ignored by the function itself. Null on
+ * any failure — the card then shows no extras figure rather than a guess.
  */
 export async function quoteUnitServicesAction(
   unitId: string,
@@ -111,14 +107,8 @@ export async function quoteUnitServicesAction(
   if (!UUID_RE.test(unitId)) return null;
   if (!isRealDate(checkIn) || !isRealDate(checkOut) || checkIn >= checkOut) return null;
   if (!Number.isInteger(guests) || guests < 1 || guests > 50) return null;
-  if (!Array.isArray(selections) || selections.length > MAX_SELECTIONS) return null;
-
-  const clean: ServiceSelection[] = [];
-  for (const s of selections) {
-    if (!s || typeof s.unit_service_id !== 'string' || !UUID_RE.test(s.unit_service_id)) return null;
-    if (!Number.isInteger(s.quantity) || s.quantity < 1 || s.quantity > MAX_QUANTITY) return null;
-    clean.push({ unit_service_id: s.unit_service_id, quantity: s.quantity });
-  }
+  const clean = validateSelections(selections);
+  if (clean === null) return null;
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('quote_unit_services', {

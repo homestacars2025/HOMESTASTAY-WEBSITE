@@ -11,6 +11,8 @@ import {
   LEGAL_DOCUMENT_IDS,
 } from '@/lib/booking/documents';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { validateSelections } from '@/lib/services/selection';
+import type { ServiceSelection } from '@/lib/services/types';
 import {
   DEFAULT_PAYMENT_MODE,
   isPaymentMode,
@@ -45,6 +47,12 @@ export type HoldFormData = {
   documentsAccepted: boolean;
   /** Pay online in full, or a deposit now and cash to the owner at arrival. */
   paymentMode?: PaymentMode;
+  /**
+   * Extras the guest picked on the listing: ids and quantities only. The
+   * database prices them, snapshots them in booking_services and adds them to
+   * total_amount_usd — no amount is ever sent from here.
+   */
+  services?: ServiceSelection[];
 };
 
 /** Field keys the form can highlight without a page-level error. */
@@ -161,6 +169,16 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
   if (fields.length > 0) return { ok: false, status: 'invalid', fields };
   if (!UUID_RE.test(data.unitId)) return { ok: false, status: 'not_bookable' };
 
+  // Same rules the checkout page applied to the URL (UUIDs, 1–20 each, no
+  // duplicates). A malformed list is refused outright rather than trimmed:
+  // booking a different set of extras than the guest was shown would be worse
+  // than asking them to try again. The UI cannot produce one.
+  const services = validateSelections(data.services);
+  if (services === null) {
+    console.warn('[createHold] malformed services selection refused', { unitId: data.unitId });
+    return { ok: false, status: 'error' };
+  }
+
   const supabase = createAdminClient();
 
   // ── A first phone number is saved to the account BEFORE the hold ─────────
@@ -190,6 +208,10 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
     // customers row by phone and keeping ITS email
     // (COALESCE(c.email, v_email) — see the migration).
     p_profile_id:  account?.profileId ?? null,
+    // NULL, not [], when there are none: NULL is the documented "no extras"
+    // (the old behaviour), so a booking without extras is byte-for-byte the
+    // call it always was.
+    p_services:    services.length > 0 ? services : null,
   });
 
   if (error) {

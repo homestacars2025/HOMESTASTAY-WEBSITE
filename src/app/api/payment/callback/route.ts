@@ -268,6 +268,7 @@ export async function POST(request: NextRequest) {
         }
 
         await sendBookingConfirmation({
+          bookingId:        completed.booking_id,
           reference:        b.booking_reference,
           email:            cust.email,
           checkIn:          b.check_in,

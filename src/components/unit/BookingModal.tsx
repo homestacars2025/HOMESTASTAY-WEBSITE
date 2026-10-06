@@ -13,7 +13,8 @@ import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import { BrandMark } from '@/components/brand/BrandMark';
 import type { UnitPricing } from '@/lib/types/unit';
 import type { DateRange } from '@/components/home/DateRangePicker';
-import { ServicesPicker, ExtrasLine, type ServicesSelectionMap } from '@/components/unit/ServicesPicker';
+import { ServicesPicker, ExtrasLine, toSelections, type ServicesSelectionMap } from '@/components/unit/ServicesPicker';
+import { formatSvcParam } from '@/lib/services/selection';
 import type { UnitService } from '@/lib/services/types';
 
 const DateRangePicker = dynamic(
@@ -97,10 +98,15 @@ export function BookingModal({
 
   // Dates live in the checkout URL so the page is shareable, resumable and
   // back-button-safe — which matters once the bank redirect enters the flow.
+  // The ticked extras ride along the same way (&svc=id:qty,…): ids and
+  // quantities only, never a price — checkout re-validates and the database
+  // prices them.
+  const svc = formatSvcParam(toSelections(servicesSelected));
   const checkoutHref =
     dateRange.from && dateRange.to
       ? `/book/${slug}?from=${toISODate(dateRange.from)}` +
-        `&to=${toISODate(dateRange.to)}&guests=${guests}`
+        `&to=${toISODate(dateRange.to)}&guests=${guests}` +
+        (svc ? `&svc=${encodeURIComponent(svc)}` : '')
       : null;
 
   function handleProceed() {

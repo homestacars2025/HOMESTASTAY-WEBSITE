@@ -10,6 +10,7 @@ import { CountrySelect } from '@/components/booking/CountrySelect';
 import { PaymentModeChoice } from '@/components/booking/PaymentModeChoice';
 import { PolicyInfo } from '@/components/booking/PolicyInfo';
 import { createHoldAction } from '@/app/[locale]/book/[slug]/actions';
+import type { ServiceSelection } from '@/lib/services/types';
 import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/actions';
 import type { BookingAccount } from '@/lib/booking/account';
 import type { UnitCancellationPolicy } from '@/lib/types/unit';
@@ -46,6 +47,10 @@ interface GuestDetailsFormProps {
   /** The unit's cancellation policy, shown with the deposit option. */
   policy:      UnitCancellationPolicy | null;
   onHeld:      (result: Extract<HoldResult, { ok: true }>) => void;
+  /** Extras picked on the listing, already checked against this unit. */
+  services?:   ServiceSelection[];
+  /** Told about every guest-count change, so per-guest extras can be re-priced. */
+  onGuestsChange?: (guests: number) => void;
 }
 
 /** Whole nights between two YYYY-MM-DD dates. */
@@ -68,6 +73,8 @@ export function GuestDetailsForm({
   modeQuote,
   policy,
   onHeld,
+  services = [],
+  onGuestsChange,
 }: GuestDetailsFormProps) {
   const t = useTranslations('booking');
 
@@ -149,6 +156,7 @@ export function GuestDetailsForm({
         // What the guest picked, or the only mode on offer. The RPC re-checks
         // it against the unit either way.
         paymentMode,
+        services,
       });
 
       if (result.ok) { onHeld(result); return; }
@@ -338,7 +346,11 @@ export function GuestDetailsForm({
         <p className={labelClass}>{t('fields.guests')}</p>
         <GuestsStepper
           value={guests}
-          onChange={(next) => setGuests(maxGuests ? Math.min(next, maxGuests) : next)}
+          onChange={(next) => {
+            const clamped = maxGuests ? Math.min(next, maxGuests) : next;
+            setGuests(clamped);
+            onGuestsChange?.(clamped);
+          }}
           decrementLabel={t('fields.guestsDecrement')}
           incrementLabel={t('fields.guestsIncrement')}
           inputLabel={t('fields.guests')}

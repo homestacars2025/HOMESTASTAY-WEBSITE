@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { AlertCircle, Clock, ShieldCheck, Wallet } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { Link } from '@/i18n/navigation';
+import { loadBookingServices } from '@/lib/booking/booking-services';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   hasPaidOnline,
@@ -81,7 +82,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // PostgREST returns them only when named explicitly. The status is the
     // one answer to "is this paid?" — paid_at alone cannot tell a deposit
     // booking (money in, cash still due) from a fully paid one.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, owner_decision, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, customers(email, nationality, phone)')
+    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, owner_decision, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, services_total_usd, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -92,12 +93,18 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // The TRY figure actually charged lives on the payment attempt, not on the
   // booking — it is the contractual amount for that specific attempt and is
   // never recomputed from the USD total (a refund must replay it exactly).
-  const { data: payment } = await supabase
-    .from('booking_payments')
-    .select('amount_try, amount_usd, fx_rate_used, paid_at, payment_gateway, amount_lyd, response_message')
-    .eq('booking_id', booking.id)
-    .eq('status', 'paid')
-    .maybeSingle();
+  //
+  // Alongside it, the extras snapshot (booking_services) — independent reads,
+  // so they share one wait.
+  const [{ data: payment }, extrasLines] = await Promise.all([
+    supabase
+      .from('booking_payments')
+      .select('amount_try, amount_usd, fx_rate_used, paid_at, payment_gateway, amount_lyd, response_message')
+      .eq('booking_id', booking.id)
+      .eq('status', 'paid')
+      .maybeSingle(),
+    loadBookingServices(supabase, booking.id as string),
+  ]);
 
   // ── The payment state ────────────────────────────────────────────────────
   // Computed by the database. An unrecognised value (an enum added there and
@@ -259,6 +266,10 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   });
 
   const totalUsd = num(booking.total_amount_usd);
+  // total_amount_usd already includes the extras (create_booking_hold adds
+  // them), so the stay alone is the total less services_total_usd.
+  const servicesTotalUsd = num(booking.services_total_usd) ?? 0;
+  const stayUsd = totalUsd !== null ? totalUsd - servicesTotalUsd : null;
 
   // Before payment: the locked figure on the booking. After payment: the
   // figure on the attempt that actually settled — a refund must replay that
@@ -289,6 +300,35 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
           <p className="mb-8 font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal rtl:font-sans text-mute">
             {tMode(PAYMENT_MODE_NAME_KEY[booking.payment_mode])}
           </p>
+        )}
+
+        {/* What the booking is made of, when it has extras: the stay, each
+            extra from the booking_services snapshot, and one total. Bookings
+            without extras read exactly as they always have. */}
+        {extrasLines.length > 0 && totalUsd !== null && stayUsd !== null && (
+          <div className="border border-rule rounded-[14px] p-5 mb-6">
+            <p className="font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal text-mute mb-3">
+              {t('breakdownTitle')}
+            </p>
+            <dl className="flex flex-col gap-2 text-[13px]">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-ink-soft">{t('breakdownStay')}</dt>
+                <dd className="text-ink tabular-nums">{usd.format(stayUsd)}</dd>
+              </div>
+              {extrasLines.map((line, i) => (
+                <div key={i} className="flex items-baseline justify-between gap-3">
+                  <dt className="text-ink-soft">
+                    {line.quantity > 1 ? `${line.name} × ${line.quantity}` : line.name}
+                  </dt>
+                  <dd className="text-ink tabular-nums">{usd.format(line.totalUsd)}</dd>
+                </div>
+              ))}
+              <div className="flex items-baseline justify-between gap-3 border-t border-rule pt-2 mt-1">
+                <dt className="text-ink font-medium">{t('breakdownTotal')}</dt>
+                <dd className="text-ink font-semibold tabular-nums">{usd.format(totalUsd)}</dd>
+              </div>
+            </dl>
+          </div>
         )}
 
         {/* A payment that failed, reported where the booking still is — with
@@ -557,9 +597,11 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                   <span className="text-[1.5rem] font-semibold text-stay tabular-nums leading-none">
                     {tryFmt.format(dueNowTry)}
                   </span>
-                  {totalUsd !== null && (
+                  {/* The USD of the SAME amount: on a deposit booking that is
+                      the deposit, never the whole stay beside a deposit's lira. */}
+                  {dueNowUsd !== null && (
                     <span className="text-[13px] text-mute tabular-nums">
-                      ({usd.format(totalUsd)})
+                      ({usd.format(dueNowUsd)})
                     </span>
                   )}
                 </p>
@@ -607,7 +649,9 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               <LydPaymentForm
                 locale={locale}
                 amountLabel={lydFmt.format(amountLyd)}
-                usdLabel={totalUsd !== null ? usd.format(totalUsd) : ''}
+                // The dollar amount the dinar figure was converted from — the
+                // deposit on a deposit booking, not the stay's total.
+                usdLabel={totalUsdForLyd !== null ? usd.format(totalUsdForLyd) : ''}
                 rateLabel={lydFx.rate.toFixed(2)}
               />
             ) : (

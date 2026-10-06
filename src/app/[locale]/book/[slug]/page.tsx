@@ -6,7 +6,9 @@ import { Header } from '@/components/home/Header';
 import { Link } from '@/i18n/navigation';
 import { BookingFlow } from '@/components/booking/BookingFlow';
 import { getPublicUnitBySlug } from '@/lib/queries/stays';
-import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
+import { quoteStay, quoteUnitServicesAction } from '@/app/[locale]/stays/[slug]/actions';
+import { getUnitServices } from '@/lib/queries/unit-services';
+import { normalizeSelections, parseSvcParam } from '@/lib/services/selection';
 import { isRealDate } from '@/lib/stays/search-params';
 import { getBookingAccount } from '@/lib/booking/account';
 import { quotePaymentModes } from '@/lib/queries/payment-modes';
@@ -33,12 +35,12 @@ export const metadata: Metadata = {
 
 interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ from?: string; to?: string; guests?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; guests?: string; svc?: string }>;
 }
 
 export default async function BookPage({ params, searchParams }: PageProps) {
   const { locale, slug } = await params;
-  const { from, to, guests } = await searchParams;
+  const { from, to, guests, svc } = await searchParams;
 
   const unit = await getPublicUnitBySlug(slug, locale);
   if (!unit) notFound();
@@ -72,10 +74,28 @@ export default async function BookPage({ params, searchParams }: PageProps) {
   // Alongside it: which payment modes this unit offers and what each one costs
   // in lira. Both are one round trip each and independent, so they run
   // together rather than in sequence.
-  const [quote, modeQuote] = await Promise.all([
+  //
+  // Extras come from the URL (&svc=id:qty,…). That is user input, so it is
+  // parsed strictly and then kept only where it names a service this unit
+  // offers, at a quantity it accepts. The cached service list makes that a
+  // memory read on a warm page.
+  const services  = await getUnitServices(unit.id, locale);
+  const selection = normalizeSelections(parseSvcParam(svc), services);
+  const [quote, modeQuote, extras] = await Promise.all([
     quoteStay(unit.id, checkIn, checkOut),
-    quotePaymentModes(unit.id, checkIn, checkOut),
+    // With a selection, the total, deposit and balance include the extras.
+    quotePaymentModes(unit.id, checkIn, checkOut, { guests: initialGuests, services: selection }),
+    selection.length > 0
+      ? quoteUnitServicesAction(unit.id, checkIn, checkOut, initialGuests, selection, locale)
+      : null,
   ]);
+  const extrasLines = extras?.lines.filter((l) => l.total > 0) ?? [];
+  // Both figures come from the database's own quotes, priced by the same
+  // engine create_booking_hold runs; nothing here is a rate times a count.
+  const grandTotalUsd =
+    quote?.total_usd != null
+      ? quote.total_usd + (extras?.total_usd ?? 0)
+      : null;
 
   const title = unit.ad_title ?? unit.unit_name ?? slug;
   const nights = quote?.nights ?? null;
@@ -111,6 +131,8 @@ export default async function BookPage({ params, searchParams }: PageProps) {
             <BookingFlow
               account={account}
               unitId={unit.id}
+              slug={slug}
+              services={selection}
               checkIn={checkIn}
               checkOut={checkOut}
               initialGuests={initialGuests}
@@ -143,12 +165,26 @@ export default async function BookPage({ params, searchParams }: PageProps) {
                 )}
               </dl>
 
-              {quote?.total_usd !== null && quote?.total_usd !== undefined ? (
+              {grandTotalUsd !== null && quote?.total_usd != null ? (
                 <div className="border-t border-rule mt-4 pt-4">
+                  {/* Extras sit next to the stay as their own lines, then one
+                      total — the figure create_booking_hold will charge. */}
+                  {extrasLines.length > 0 && (
+                    <dl className="flex flex-col gap-2 text-[13px] mb-3 pb-3 border-b border-rule">
+                      <Row label={t('summary.stay')} value={money.format(quote.total_usd)} />
+                      {extrasLines.map((line) => (
+                        <Row
+                          key={line.id}
+                          label={line.qty > 1 ? `${line.name} × ${line.qty}` : line.name}
+                          value={money.format(line.total)}
+                        />
+                      ))}
+                    </dl>
+                  )}
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-[13px] text-ink-soft">{t('summary.total')}</span>
                     <span className="text-[1.25rem] font-semibold text-stay tabular-nums">
-                      {money.format(quote.total_usd)}
+                      {money.format(grandTotalUsd)}
                     </span>
                   </div>
                   {/* §9: prices are quoted in USD; the TRY figure actually

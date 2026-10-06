@@ -179,6 +179,7 @@ async function sendWalletConfirmation(bookingId: string): Promise<void> {
   }
 
   await sendBookingConfirmation({
+    bookingId,
     reference: b.booking_reference as string,
     email,
     checkIn:  b.check_in as string,

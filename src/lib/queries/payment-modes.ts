@@ -1,6 +1,7 @@
 import 'server-only';
 import { createPublicClient } from '@/lib/supabase/public';
 import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
+import type { ServiceSelection } from '@/lib/services/types';
 
 /**
  * The payment modes on offer for a stay, priced — quote_payment_modes.
@@ -23,13 +24,22 @@ export async function quotePaymentModes(
   unitId: string,
   checkIn: string,
   checkOut: string,
+  /**
+   * Extras, when the guest picked any: the total, deposit and balance then
+   * include them (deposit = Homesta's margin on nights + extras, balance = the
+   * host's price of both). Omitted or empty → nights only, exactly as before.
+   * Guests are only sent with a selection, since only per-guest extras use it.
+   */
+  extras?: { guests: number; services: ServiceSelection[] },
 ): Promise<PaymentModeQuote | null> {
   const supabase = createPublicClient();
 
+  const withExtras = extras && extras.services.length > 0;
   const { data, error } = await supabase.rpc('quote_payment_modes', {
     p_unit_id:   unitId,
     p_check_in:  checkIn,
     p_check_out: checkOut,
+    ...(withExtras ? { p_guests: extras.guests, p_services: extras.services } : {}),
   });
 
   if (error) {

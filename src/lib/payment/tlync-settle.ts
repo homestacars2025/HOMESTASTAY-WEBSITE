@@ -368,6 +368,7 @@ export async function settleTlyncPayment(
   if (email) {
     after(async () => {
       await sendBookingConfirmation({
+        bookingId:        booking.id as string,
         reference,
         email,
         checkIn:          booking.check_in as string,

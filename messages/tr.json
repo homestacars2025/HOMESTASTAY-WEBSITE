@@ -543,7 +543,6 @@
     "depositAvailable": "Şimdi kapora, kalanını girişte nakit ödeyebilirsiniz.",
     "services": {
       "title": "Ek hizmetler",
-      "required": "Zorunlu",
       "pickerTitle": "Ekstra ekle",
       "price": {
         "per_booking": "{price} / konaklama",
@@ -553,7 +552,6 @@
         "per_guest_night": "{price} / misafir / gece"
       },
       "extrasLine": "Ekstralar",
-      "confirmedAtCheckout": "Ekstralar ödeme adımında onaylanır",
       "decrease": "Azalt",
       "increase": "Artır",
       "quantityFor": "{name} için adet"
@@ -801,7 +799,8 @@
       "nights": "Gece",
       "total": "Toplam",
       "tryNote": "Ödeme anında sabitlenen kur ile Türk lirası olarak tahsil edilir. Kesin tutar bankanıza yönlendirilmeden önce gösterilir.",
-      "noQuote": "Bu tarihler için şu anda fiyat hesaplanamadı. Lütfen geri dönüp tekrar seçin."
+      "noQuote": "Bu tarihler için şu anda fiyat hesaplanamadı. Lütfen geri dönüp tekrar seçin.",
+      "stay": "Konaklama"
     },
     "fields": {
       "firstName": "Ad",
@@ -890,7 +889,10 @@
       "arrivalNotSentBody": "Tarihleriniz tutuluyor ama ev sahibine henüz sorulmadı. Devam etmek için talebi gönderin.",
       "refundCard": "Ev sahibi reddettiği anda iadeyi başlatırız; tutar aynı karta genellikle 1–3 iş günü içinde yansır.",
       "refundLyd": "Ekibimiz tutarı, ödeme yaptığınız aynı Libya kanalı üzerinden bir iş günü içinde elle iade eder.",
-      "refundWallet": "Tutar anında cüzdan bakiyenize geri döner."
+      "refundWallet": "Tutar anında cüzdan bakiyenize geri döner.",
+      "breakdownTitle": "Fiyat dökümü",
+      "breakdownStay": "Konaklama",
+      "breakdownTotal": "Toplam"
     },
     "legal": {
       "versionLabel": "Belge sürümü",

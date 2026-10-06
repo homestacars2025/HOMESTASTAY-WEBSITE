@@ -17,7 +17,6 @@ interface UnitServicesSectionProps {
   services: UnitService[];
   labels: {
     title:    string;
-    required: string;
     /** "{price} / guest / night" — one template per pricing unit. */
     price:    (unit: ServicePricingUnit, price: string) => string;
   };
@@ -50,14 +49,7 @@ export function UnitServicesSection({ services, labels }: UnitServicesSectionPro
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <p className="text-sm font-medium text-ink">
-                    {s.name}
-                    {s.is_required && (
-                      <span className="ms-2 inline-block rounded-full bg-paper-warm px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.08em] text-ink-soft">
-                        {labels.required}
-                      </span>
-                    )}
-                  </p>
+                  <p className="text-sm font-medium text-ink">{s.name}</p>
                   <p className="text-sm font-semibold text-stay tabular-nums whitespace-nowrap">
                     {labels.price(s.pricing_unit, formatServiceUsd(s.price_usd))}
                   </p>

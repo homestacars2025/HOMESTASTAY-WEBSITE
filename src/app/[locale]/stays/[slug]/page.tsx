@@ -31,7 +31,7 @@ import {
   parseStaysPage,
   buildStaysQueryWithPage,
 } from '@/lib/stays/search-params';
-import { quoteStay, quoteUnitServicesAction } from '@/app/[locale]/stays/[slug]/actions';
+import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { getUnitServices } from '@/lib/queries/unit-services';
 import { quotePaymentModes } from '@/lib/queries/payment-modes';
 import { FadeUp } from '@/components/motion/FadeUp';
@@ -207,11 +207,6 @@ export default async function UnitDetailPage({
     getUnitServices(unit.id, locale),
   ]);
 
-  // Required services are priced for the arrival dates too, so the Extras
-  // line is right on first paint. Only when there is something to price.
-  const initialServicesQuote = priceable && services.length > 0
-    ? await quoteUnitServicesAction(unit.id, search.checkIn!, search.checkOut!, search.guests ?? 1, [], locale)
-    : null;
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const title = unit.ad_title ?? unit.unit_name ?? '—';
@@ -476,7 +471,6 @@ export default async function UnitDetailPage({
                     services={services}
                     labels={{
                       title:    t('services.title'),
-                      required: t('services.required'),
                       price:    (pricingUnit, price) => t(`services.price.${pricingUnit}`, { price }),
                     }}
                   />
@@ -578,7 +572,6 @@ export default async function UnitDetailPage({
             allowPayAtArrival={unit.allow_pay_at_arrival}
             initialModeQuote={initialModes}
             services={services}
-            initialServicesQuote={initialServicesQuote}
           />
         </div>
       </main>

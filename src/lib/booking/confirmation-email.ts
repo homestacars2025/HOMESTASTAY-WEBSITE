@@ -5,6 +5,8 @@ import { createElement, type ReactElement } from 'react';
 import { LegalDocumentPdf, type LegalAnnexRow } from '@/lib/pdf/legal-document-pdf';
 import { getLegalDoc } from '@/content/legal';
 import { DOCUMENT_VERSION } from '@/lib/booking/documents';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { loadBookingServices, type BookingServiceLine } from '@/lib/booking/booking-services';
 
 /**
  * The paid-booking confirmation email.
@@ -26,6 +28,11 @@ import { DOCUMENT_VERSION } from '@/lib/booking/documents';
  */
 
 export interface BookingConfirmationData {
+  /**
+   * Lets the email list the booking's extras from the booking_services
+   * snapshot. Omitted, the email is exactly what it was before extras.
+   */
+  bookingId?:     string;
   reference:      string;
   email:          string;
   checkIn:        string;   // YYYY-MM-DD
@@ -113,6 +120,12 @@ export async function sendBookingConfirmation(
   }
 
   try {
+    // Extras are part of the sale, so they belong in EK-1 and in the email.
+    // Read from the snapshot — what the guest agreed to — never re-quoted.
+    const extras: BookingServiceLine[] = data.bookingId
+      ? await loadBookingServices(createAdminClient(), data.bookingId)
+      : [];
+
     // The booking summary is the Ön Bilgilendirme Formu's annex (EK-1).
     const annex: LegalAnnexRow[] = [
       { label: 'Rezervasyon numarası', value: data.reference },
@@ -120,6 +133,12 @@ export async function sendBookingConfirmation(
       { label: 'Çıkış',  value: formatDate(data.checkOut) },
       { label: 'Misafir', value: String(data.guests) },
     ];
+    for (const line of extras) {
+      annex.push({
+        label: `Ek hizmet: ${line.name}${line.quantity > 1 ? ` × ${line.quantity}` : ''}`,
+        value: formatUsd(line.totalUsd),
+      });
+    }
     // A TLYNC guest paid in dinar and never in lira, so the lira figure — the
     // booking's internal reference amount — must not be presented to them as
     // "the amount charged".
@@ -184,7 +203,7 @@ export async function sendBookingConfirmation(
       from: 'Homesta Stay <noreply@homestastay.com>',
       to: data.email,
       subject: `Ödeme alındı — ${data.reference} · Payment received`,
-      html: confirmationHtml(data, amountLine),
+      html: confirmationHtml(data, amountLine, extras),
       attachments: [
         { filename: `On-Bilgilendirme-Formu-${data.reference}.pdf`, content: preInfoPdf },
         { filename: `Mesafeli-Satis-Sozlesmesi-${data.reference}.pdf`, content: contractPdf },
@@ -209,8 +228,24 @@ function esc(s: string): string {
  * documents are Turkish. Never claims the stay is confirmed: it says payment
  * was received and the owner has 12 hours, mirroring the result page.
  */
-function confirmationHtml(data: BookingConfirmationData, amountLine: string): string {
+function confirmationHtml(
+  data: BookingConfirmationData,
+  amountLine: string,
+  extras: BookingServiceLine[],
+): string {
   const ref = esc(data.reference);
+  // The stay and each extra, then one total — only when there are extras, so
+  // every other booking's email is unchanged.
+  const extrasBlock = extras.length > 0 && data.totalUsd !== null
+    ? `<div style="border:1px solid #E2DED4;border-radius:10px;padding:16px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#8C8881;">Fiyat dökümü · Price breakdown</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#45454B;">
+        <tr><td style="padding:3px 0;">Konaklama · Stay</td><td align="right" style="padding:3px 0;">${esc(formatUsd(data.totalUsd - extras.reduce((sum, l) => sum + l.totalUsd, 0)))}</td></tr>
+        ${extras.map((l) => `<tr><td style="padding:3px 0;">${esc(l.name)}${l.quantity > 1 ? ` × ${l.quantity}` : ''}</td><td align="right" style="padding:3px 0;">${esc(formatUsd(l.totalUsd))}</td></tr>`).join('')}
+        <tr><td style="padding:8px 0 0;border-top:1px solid #E2DED4;font-weight:600;color:#0E0E10;">Toplam · Total</td><td align="right" style="padding:8px 0 0;border-top:1px solid #E2DED4;font-weight:600;color:#0E0E10;">${esc(formatUsd(data.totalUsd))}</td></tr>
+      </table>
+    </div>`
+    : '';
   return `<!DOCTYPE html>
 <html lang="tr">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -244,6 +279,8 @@ function confirmationHtml(data: BookingConfirmationData, amountLine: string): st
       <p style="margin:2px 0 0;font-size:12px;color:#8C8881;line-height:1.6;">You’ll pay the rest in cash directly to the host at arrival, in US dollars or the equivalent in lira or euro at the rate on the day.</p>`
         : ''}
     </div>` : ''}
+
+    ${extrasBlock}
 
     ${data.gateway === 'tlync'
       ? `<p style="margin:0 0 6px;font-size:13px;color:#45454B;line-height:1.6;">
