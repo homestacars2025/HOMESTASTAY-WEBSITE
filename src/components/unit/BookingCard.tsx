@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Calendar } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { BookingModal } from '@/components/unit/BookingModal';
 import { PaymentModesDialog } from '@/components/unit/PaymentModesDialog';
-import { quoteStay, quotePaymentModesAction } from '@/app/[locale]/stays/[slug]/actions';
+import { quoteStay, quotePaymentModesAction, quoteUnitServicesAction } from '@/app/[locale]/stays/[slug]/actions';
+import { ServicesPicker, ExtrasLine, toSelections, type ServicesSelectionMap } from '@/components/unit/ServicesPicker';
+import type { ServicesQuote, UnitService } from '@/lib/services/types';
 import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
 import { toISODate } from '@/lib/stays/search-params';
 import type { UnitPricing } from '@/lib/types/unit';
@@ -51,6 +53,10 @@ interface BookingCardProps {
   allowPayAtArrival?: boolean;
   /** Priced modes for the dates the page was opened with (server-side). */
   initialModeQuote?: PaymentModeQuote | null;
+  /** The unit's extra services (public_unit_services). Empty hides the add-ons. */
+  services?: UnitService[];
+  /** Extras quote for the initial dates (required services only), server-side. */
+  initialServicesQuote?: ServicesQuote | null;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -65,6 +71,7 @@ export function BookingCard({
   pricing, minNights, rating, reviewCount, unitId, unitTitle, slug,
   initialCheckIn, initialCheckOut, initialGuests, initialQuote, allowDeposit,
   allowFullPrepay, allowPayAtArrival, initialModeQuote,
+  services = [], initialServicesQuote = null,
 }: BookingCardProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
@@ -91,6 +98,40 @@ export function BookingCard({
   /** The explainer, and whether this unit has already shown it this session. */
   const [explainOpen, setExplainOpen] = useState(false);
   const depositUsd = modeQuote?.allowDeposit ? modeQuote.depositUsd : null;
+
+  // ── Extras (display only — never sent to checkout yet) ─────────────────────
+  const [servicesSelected, setServicesSelected] = useState<ServicesSelectionMap>({});
+  const [servicesQuote,    setServicesQuote]    = useState<ServicesQuote | null>(initialServicesQuote);
+  const [isQuotingServices, startServicesQuote] = useTransition();
+  // Selections can change faster than quotes return; only the latest request
+  // may write its answer, or a slow early reply would overwrite a newer one.
+  const servicesRequest = useRef(0);
+
+  /** Re-quote the extras for the current dates, guests and ticks. */
+  function refreshServices(r: DateRange, guestCount: number, selected: ServicesSelectionMap) {
+    if (services.length === 0) return;
+    const request = ++servicesRequest.current;
+    if (!r.from || !r.to) {
+      setServicesQuote(null);
+      return;
+    }
+    const from = toISODate(r.from);
+    const to   = toISODate(r.to);
+    startServicesQuote(async () => {
+      const q = await quoteUnitServicesAction(unitId, from, to, guestCount, toSelections(selected), locale);
+      if (request === servicesRequest.current) setServicesQuote(q);
+    });
+  }
+
+  function handleServicesChange(next: ServicesSelectionMap) {
+    setServicesSelected(next);
+    refreshServices(dateRange, guests, next);
+  }
+
+  function handleGuestsChange(n: number) {
+    setGuests(n);
+    refreshServices(dateRange, n, servicesSelected);
+  }
 
   /**
    * Re-quote for a date range. Called from event handlers rather than an
@@ -158,6 +199,7 @@ export function BookingCard({
   function handleDateRangeChange(r: DateRange) {
     setDateRange(r);
     refreshQuote(r);
+    refreshServices(r, guests, servicesSelected);
   }
 
   // Reset initialStep each time modal closes so re-opening starts at 'pick'
@@ -257,6 +299,15 @@ export function BookingCard({
         </p>
       )}
 
+      {/* Add-ons — selectable here, quoted live as their own line. Not part
+          of the amount checkout charges until extras are stored there. */}
+      {services.length > 0 && (
+        <div className="mb-4 border-t border-rule pt-4 flex flex-col gap-3">
+          <ServicesPicker services={services} selected={servicesSelected} onChange={handleServicesChange} />
+          <ExtrasLine totalUsd={hasDates ? servicesQuote?.total_usd ?? null : null} pending={isQuotingServices} />
+        </div>
+      )}
+
       {/* Reserve CTA */}
       <button
         type="button"
@@ -339,7 +390,12 @@ export function BookingCard({
           dateRange={dateRange}
           guests={guests}
           onDateRangeChange={handleDateRangeChange}
-          onGuestsChange={setGuests}
+          onGuestsChange={handleGuestsChange}
+          services={services}
+          servicesSelected={servicesSelected}
+          onServicesChange={handleServicesChange}
+          servicesTotalUsd={servicesQuote?.total_usd ?? null}
+          servicesPending={isQuotingServices}
           initialStep={initialStep}
           onClose={handleClose}
         />

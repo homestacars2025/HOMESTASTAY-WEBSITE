@@ -540,7 +540,24 @@
       "telegram": "Telegram",
       "email": "E-posta"
     },
-    "depositAvailable": "Şimdi kapora, kalanını girişte nakit ödeyebilirsiniz."
+    "depositAvailable": "Şimdi kapora, kalanını girişte nakit ödeyebilirsiniz.",
+    "services": {
+      "title": "Ek hizmetler",
+      "required": "Zorunlu",
+      "pickerTitle": "Ekstra ekle",
+      "price": {
+        "per_booking": "{price} / konaklama",
+        "per_night": "{price} / gece",
+        "per_item": "{price} / adet",
+        "per_guest": "{price} / misafir",
+        "per_guest_night": "{price} / misafir / gece"
+      },
+      "extrasLine": "Ekstralar",
+      "confirmedAtCheckout": "Ekstralar ödeme adımında onaylanır",
+      "decrease": "Azalt",
+      "increase": "Artır",
+      "quantityFor": "{name} için adet"
+    }
   },
   "auth": {
     "signIn": {

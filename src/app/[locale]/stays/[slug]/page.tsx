@@ -18,6 +18,7 @@ import { UnitGallery } from '@/components/unit/UnitGallery';
 import { BookingCard } from '@/components/unit/BookingCard';
 import { UnitSpecsSection } from '@/components/unit/UnitSpecsSection';
 import { UnitAmenitiesSection } from '@/components/unit/UnitAmenitiesSection';
+import { UnitServicesSection } from '@/components/unit/UnitServicesSection';
 import { UnitRulesSection } from '@/components/unit/UnitRulesSection';
 import { UnitCancellationSection } from '@/components/unit/UnitCancellationSection';
 import { UnitLocationSection } from '@/components/unit/UnitLocationSection';
@@ -30,7 +31,8 @@ import {
   parseStaysPage,
   buildStaysQueryWithPage,
 } from '@/lib/stays/search-params';
-import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
+import { quoteStay, quoteUnitServicesAction } from '@/app/[locale]/stays/[slug]/actions';
+import { getUnitServices } from '@/lib/queries/unit-services';
 import { quotePaymentModes } from '@/lib/queries/payment-modes';
 import { FadeUp } from '@/components/motion/FadeUp';
 import type { UnitTypeEnum } from '@/lib/types/unit';
@@ -195,12 +197,21 @@ export default async function UnitDetailPage({
   // are right on first paint — the deposit line is otherwise only drawn after
   // a date change, which never happens when the dates came in the URL.
   const priceable = Boolean(search.checkIn && search.checkOut);
-  const [initialQuote, initialModes] = await Promise.all([
+  // Extra services ride along in the same wait — cached and tagged 'units'
+  // like the unit itself, so they add no round trip on a warm page.
+  const [initialQuote, initialModes, services] = await Promise.all([
     priceable ? quoteStay(unit.id, search.checkIn!, search.checkOut!) : null,
     priceable && (unit.allow_deposit || unit.allow_pay_at_arrival)
       ? quotePaymentModes(unit.id, search.checkIn!, search.checkOut!)
       : null,
+    getUnitServices(unit.id, locale),
   ]);
+
+  // Required services are priced for the arrival dates too, so the Extras
+  // line is right on first paint. Only when there is something to price.
+  const initialServicesQuote = priceable && services.length > 0
+    ? await quoteUnitServicesAction(unit.id, search.checkIn!, search.checkOut!, search.guests ?? 1, [], locale)
+    : null;
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const title = unit.ad_title ?? unit.unit_name ?? '—';
@@ -456,6 +467,25 @@ export default async function UnitDetailPage({
 
             <hr className="border-rule mb-6" />
 
+            {/* ── 3b. EXTRA SERVICES — omitted entirely when there are none ── */}
+            {services.length > 0 && (
+              <>
+                <FadeUp>
+                <div className="mb-6">
+                  <UnitServicesSection
+                    services={services}
+                    labels={{
+                      title:    t('services.title'),
+                      required: t('services.required'),
+                      price:    (pricingUnit, price) => t(`services.price.${pricingUnit}`, { price }),
+                    }}
+                  />
+                </div>
+                </FadeUp>
+                <hr className="border-rule mb-6" />
+              </>
+            )}
+
             {/* ── 4. HOUSE RULES ──────────────────────────────────────────── */}
             {unit.rules && (
               <>
@@ -547,6 +577,8 @@ export default async function UnitDetailPage({
             allowFullPrepay={unit.allow_full_prepay}
             allowPayAtArrival={unit.allow_pay_at_arrival}
             initialModeQuote={initialModes}
+            services={services}
+            initialServicesQuote={initialServicesQuote}
           />
         </div>
       </main>

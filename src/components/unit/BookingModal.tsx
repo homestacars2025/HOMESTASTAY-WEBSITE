@@ -13,6 +13,8 @@ import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import { BrandMark } from '@/components/brand/BrandMark';
 import type { UnitPricing } from '@/lib/types/unit';
 import type { DateRange } from '@/components/home/DateRangePicker';
+import { ServicesPicker, ExtrasLine, type ServicesSelectionMap } from '@/components/unit/ServicesPicker';
+import type { UnitService } from '@/lib/services/types';
 
 const DateRangePicker = dynamic(
   () => import('@/components/home/DateRangePicker').then((m) => ({ default: m.DateRangePicker })),
@@ -62,6 +64,12 @@ interface BookingModalProps {
   onGuestsChange:    (n: number) => void;
   initialStep?:      Step;
   onClose:           () => void;
+  /** Extras — owned by BookingCard so the card and this modal agree. */
+  services?:          UnitService[];
+  servicesSelected?:  ServicesSelectionMap;
+  onServicesChange?:  (next: ServicesSelectionMap) => void;
+  servicesTotalUsd?:  number | null;
+  servicesPending?:   boolean;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -77,6 +85,11 @@ export function BookingModal({
   onGuestsChange,
   initialStep = 'pick',
   onClose,
+  services = [],
+  servicesSelected = {},
+  onServicesChange,
+  servicesTotalUsd = null,
+  servicesPending = false,
 }: BookingModalProps) {
   const t      = useTranslations('unit');
   const locale = useLocale();
@@ -213,6 +226,14 @@ export function BookingModal({
                     inputLabel={t('guestsLabel')}
                   />
                 </div>
+
+                {/* Add-ons — the mobile path to the same picker as the card */}
+                {services.length > 0 && onServicesChange && (
+                  <div className="border-t border-rule pt-5 flex flex-col gap-3">
+                    <ServicesPicker services={services} selected={servicesSelected} onChange={onServicesChange} />
+                    <ExtrasLine totalUsd={dateRange.to ? servicesTotalUsd : null} pending={servicesPending} />
+                  </div>
+                )}
               </div>
             ) : (
               /* Confirm step */
@@ -272,6 +293,13 @@ export function BookingModal({
                     )}
                   </div>
                 </div>
+
+                {/* Extras stay a line of their own, outside the stay total */}
+                {services.length > 0 && (
+                  <div className="w-full text-start">
+                    <ExtrasLine totalUsd={servicesTotalUsd} pending={servicesPending} />
+                  </div>
+                )}
 
                 {/* Rating */}
                 <div className="flex items-center gap-1 text-xs text-mute mt-1">

@@ -540,7 +540,24 @@
       "telegram": "تيليجرام",
       "email": "البريد الإلكتروني"
     },
-    "depositAvailable": "يمكنك دفع عربون الآن والباقي نقداً عند الوصول."
+    "depositAvailable": "يمكنك دفع عربون الآن والباقي نقداً عند الوصول.",
+    "services": {
+      "title": "خدمات إضافية",
+      "required": "إلزامية",
+      "pickerTitle": "أضف خدمات",
+      "price": {
+        "per_booking": "{price} / للإقامة",
+        "per_night": "{price} / لليلة",
+        "per_item": "{price} / للقطعة",
+        "per_guest": "{price} / للضيف",
+        "per_guest_night": "{price} / للضيف / لليلة"
+      },
+      "extrasLine": "الإضافات",
+      "confirmedAtCheckout": "تُؤكَّد الإضافات عند إتمام الحجز",
+      "decrease": "إنقاص",
+      "increase": "زيادة",
+      "quantityFor": "الكمية لـ {name}"
+    }
   },
   "auth": {
     "signIn": {

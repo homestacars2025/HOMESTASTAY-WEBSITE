@@ -540,7 +540,24 @@
       "telegram": "Telegram",
       "email": "Эл. почта"
     },
-    "depositAvailable": "Можно оплатить задаток сейчас, а остаток — наличными по приезде."
+    "depositAvailable": "Можно оплатить задаток сейчас, а остаток — наличными по приезде.",
+    "services": {
+      "title": "Дополнительные услуги",
+      "required": "Обязательно",
+      "pickerTitle": "Добавить услуги",
+      "price": {
+        "per_booking": "{price} / за проживание",
+        "per_night": "{price} / ночь",
+        "per_item": "{price} / шт.",
+        "per_guest": "{price} / гость",
+        "per_guest_night": "{price} / гость / ночь"
+      },
+      "extrasLine": "Дополнительно",
+      "confirmedAtCheckout": "Дополнительные услуги подтверждаются при оформлении",
+      "decrease": "Меньше",
+      "increase": "Больше",
+      "quantityFor": "Количество: {name}"
+    }
   },
   "auth": {
     "signIn": {

@@ -5,6 +5,7 @@ import { isRealDate } from '@/lib/stays/search-params';
 import type { UnitPricing } from '@/lib/types/unit';
 import { quotePaymentModes } from '@/lib/queries/payment-modes';
 import type { PaymentModeQuote } from '@/lib/booking/payment-mode';
+import { servicesLang, type ServiceSelection, type ServicesQuote } from '@/lib/services/types';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -82,4 +83,73 @@ export async function quotePaymentModesAction(
   if (checkIn >= checkOut) return null;
 
   return quotePaymentModes(unitId, checkIn, checkOut);
+}
+
+const MAX_SELECTIONS = 50;
+const MAX_QUANTITY   = 99;
+
+/**
+ * The live "Extras" figure on the unit page, from quote_unit_services().
+ *
+ * DISPLAY ONLY. Nothing here reaches checkout or payment: the amount charged
+ * is still create_booking_hold's, and extras are confirmed at checkout until
+ * that path stores them (booking_services) and prices them in.
+ *
+ * Every argument crosses the boundary from a Client Component, so each is
+ * validated; unknown service ids are ignored by the function itself, and
+ * required services are included by it whatever is sent. Null on any failure —
+ * the card then shows no extras figure rather than a guessed one.
+ */
+export async function quoteUnitServicesAction(
+  unitId: string,
+  checkIn: string,
+  checkOut: string,
+  guests: number,
+  selections: ServiceSelection[],
+  locale: string,
+): Promise<ServicesQuote | null> {
+  if (!UUID_RE.test(unitId)) return null;
+  if (!isRealDate(checkIn) || !isRealDate(checkOut) || checkIn >= checkOut) return null;
+  if (!Number.isInteger(guests) || guests < 1 || guests > 50) return null;
+  if (!Array.isArray(selections) || selections.length > MAX_SELECTIONS) return null;
+
+  const clean: ServiceSelection[] = [];
+  for (const s of selections) {
+    if (!s || typeof s.unit_service_id !== 'string' || !UUID_RE.test(s.unit_service_id)) return null;
+    if (!Number.isInteger(s.quantity) || s.quantity < 1 || s.quantity > MAX_QUANTITY) return null;
+    clean.push({ unit_service_id: s.unit_service_id, quantity: s.quantity });
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('quote_unit_services', {
+    p_unit_id:    unitId,
+    p_check_in:   checkIn,
+    p_check_out:  checkOut,
+    p_guests:     guests,
+    p_selections: clean,
+    p_lang:       servicesLang(locale),
+  });
+
+  if (error || !data || typeof data !== 'object') {
+    if (error) console.error('[quoteUnitServices]', { unitId, message: error.message, code: error.code });
+    return null;
+  }
+
+  const row = data as Record<string, unknown>;
+  const total = num(row.total_usd);
+  if (total === null) return null;
+
+  return {
+    nights:    num(row.nights) ?? 0,
+    guests:    num(row.guests) ?? guests,
+    total_usd: total,
+    lines: (Array.isArray(row.lines) ? row.lines : []).map((l: Record<string, unknown>) => ({
+      id:           String(l.id ?? ''),
+      name:         String(l.name ?? ''),
+      pricing_unit: l.pricing_unit as ServicesQuote['lines'][number]['pricing_unit'],
+      price_usd:    num(l.price_usd) ?? 0,
+      qty:          num(l.qty) ?? 0,
+      total:        num(l.total) ?? 0,
+    })),
+  };
 }

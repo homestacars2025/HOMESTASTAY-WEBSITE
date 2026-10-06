@@ -540,7 +540,24 @@
       "telegram": "Telegram",
       "email": "Email"
     },
-    "depositAvailable": "You can pay a deposit now and the rest in cash at arrival."
+    "depositAvailable": "You can pay a deposit now and the rest in cash at arrival.",
+    "services": {
+      "title": "Extra services",
+      "required": "Required",
+      "pickerTitle": "Add extras",
+      "price": {
+        "per_booking": "{price} / stay",
+        "per_night": "{price} / night",
+        "per_item": "{price} / item",
+        "per_guest": "{price} / guest",
+        "per_guest_night": "{price} / guest / night"
+      },
+      "extrasLine": "Extras",
+      "confirmedAtCheckout": "Extras are confirmed at checkout",
+      "decrease": "Fewer",
+      "increase": "More",
+      "quantityFor": "Quantity for {name}"
+    }
   },
   "auth": {
     "signIn": {
