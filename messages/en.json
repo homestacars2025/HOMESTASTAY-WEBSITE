@@ -638,6 +638,57 @@
         "cancelled": "Google sign-in was cancelled. You can try again or use your email below.",
         "failed": "We couldn't sign you in with Google. Please try again, or use your email below."
       }
+    },
+    "accountNotice": {
+      "team": {
+        "title": "This account is for the Homesta team",
+        "body": "Team accounts don’t sign in here. Sign in at <b>{site}</b>."
+      },
+      "admin": {
+        "title": "This account is for Homesta admins",
+        "body": "Admin accounts don’t sign in here. Sign in at <b>{site}</b>."
+      },
+      "host": {
+        "title": "Sign in to the host portal",
+        "body": "This is a host account. We couldn’t take you to your portal automatically — please sign in at <b>{site}</b>."
+      },
+      "blocked": {
+        "title": "This account isn’t active",
+        "body": "Your account is currently not active, so you can’t sign in. If you think this is a mistake, please contact Homesta support."
+      },
+      "goTo": "Go to {site}",
+      "backHome": "Back to homestastay.com"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "We’ll email you a link to choose a new one",
+      "emailLabel": "Email",
+      "submit": "Send reset link",
+      "loading": "Sending…",
+      "sent": "If an account exists for {email}, a reset link is on its way. Check your inbox and spam folder.",
+      "backToSignIn": "Back to sign in",
+      "error": {
+        "emailInvalid": "Please enter a valid email address.",
+        "rateLimited": "Too many requests. Please wait a few minutes and try again."
+      }
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "subtitle": "At least 8 characters",
+      "passwordLabel": "New password",
+      "confirmLabel": "Confirm new password",
+      "submit": "Save new password",
+      "loading": "Saving…",
+      "success": "Your password has been changed. Sign in with your new password.",
+      "signIn": "Sign in",
+      "requestNew": "Request a new link",
+      "error": {
+        "invalidLink": "This reset link is invalid or has expired.",
+        "tooShort": "Password must be at least 8 characters.",
+        "mismatch": "Passwords do not match.",
+        "samePassword": "Choose a password different from your current one.",
+        "generic": "Something went wrong. Please try again."
+      }
     }
   },
   "myBookings": {

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { routing } from '@/i18n/routing';
+import { continueUrl } from '@/lib/auth/continue-url';
 
 /**
  * The OAuth return leg. Google sends the guest back here with a code.
@@ -184,6 +185,8 @@ export async function GET(request: NextRequest) {
     console.error('[auth:callback] ensureProfile threw', { userId: data.user.id, thrown });
   }
 
-  // The same destination the email flow uses: returnUrl, else home.
-  return NextResponse.redirect(localized(origin, locale, returnUrl || '/'));
+  // The same exit every sign-in takes: /api/auth/continue decides whether
+  // this account stays here, is handed to the host portal, or is pointed at a
+  // staff sign-in. returnUrl was already checked above.
+  return NextResponse.redirect(new URL(continueUrl(returnUrl || null, locale), origin));
 }

@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useIsCustomer } from '@/hooks/useIsCustomer';
 import { LogOut, ChevronDown, BookOpen, Wallet } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
@@ -27,6 +28,8 @@ function getDisplayName(user: User): string {
 }
 
 export function UserMenu({ user }: UserMenuProps) {
+  // My bookings and Wallet are the guest area — hidden for hosts and staff.
+  const isCustomer = useIsCustomer(user);
   const t        = useTranslations('auth.userMenu');
   const router   = useRouter();
   const [open, setOpen] = useState(false);
@@ -44,7 +47,9 @@ export function UserMenu({ user }: UserMenuProps) {
 
   async function handleSignOut() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    // 'local': this browser's website session only — never the user's
+    // host-portal session or their other devices.
+    await supabase.auth.signOut({ scope: 'local' });
     setOpen(false);
     router.push('/');
     router.refresh();
@@ -74,6 +79,7 @@ export function UserMenu({ user }: UserMenuProps) {
 
       {open && (
         <div className="absolute top-full end-0 mt-2 w-48 bg-white border border-rule rounded-[14px] shadow-[0_4px_24px_rgba(0,0,0,0.10)] py-1.5 z-50">
+          {isCustomer === true && (<>
           <Link
             href="/my-bookings"
             onClick={() => setOpen(false)}
@@ -90,6 +96,7 @@ export function UserMenu({ user }: UserMenuProps) {
             <Wallet className="w-4 h-4 text-mute shrink-0" />
             {t('wallet')}
           </Link>
+          </>)}
           <button
             type="button"
             onClick={handleSignOut}

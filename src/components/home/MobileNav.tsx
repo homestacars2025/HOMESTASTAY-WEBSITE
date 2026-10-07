@@ -9,6 +9,7 @@ import { NavLinks } from '@/components/home/NavLinks';
 import { LanguageSwitcher } from '@/components/home/LanguageSwitcher';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useIsCustomer } from '@/hooks/useIsCustomer';
 import { createClient } from '@/lib/supabase/client';
 
 function getInitials(user: NonNullable<ReturnType<typeof useAuthUser>>): string {
@@ -33,6 +34,8 @@ export function MobileNav() {
   const tMenu  = useTranslations('auth.userMenu');
   const router = useRouter();
   const user   = useAuthUser();
+  // My bookings and Wallet are the guest area — hidden for hosts and staff.
+  const isCustomer = useIsCustomer(user);
 
   const [open,    setOpen]    = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -125,6 +128,7 @@ export function MobileNav() {
                       carries the SAME links as UserMenu, in the same order.
                       Divergence here is how a feature quietly goes missing on
                       the device it was built for. */}
+                  {isCustomer === true && (<>
                   <Link
                     href="/my-bookings"
                     onClick={close}
@@ -141,11 +145,14 @@ export function MobileNav() {
                     <Wallet className="w-4 h-4 text-mute shrink-0" />
                     {tMenu('wallet')}
                   </Link>
+                  </>)}
                   <button
                     type="button"
                     onClick={async () => {
                       const supabase = createClient();
-                      await supabase.auth.signOut();
+                      // 'local': this browser's website session only — never the
+                      // user's host-portal session or their other devices.
+                      await supabase.auth.signOut({ scope: 'local' });
                       close();
                       router.push('/');
                       router.refresh();

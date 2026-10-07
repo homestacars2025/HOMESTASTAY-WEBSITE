@@ -1,4 +1,8 @@
+import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
+import { accountKind } from '@/lib/auth/account-role';
+import { continueUrl } from '@/lib/auth/continue-url';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 /**
@@ -32,8 +36,18 @@ export async function getBookingAccount(): Promise<BookingAccount | null> {
   // booking, so it has to be revalidated with the auth server rather than
   // trusted from a cookie.
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return null;
+  if (!user) return null;
 
+  // Hosts and staff may not book or top up a wallet with that account. Sent
+  // through /api/auth/continue rather than treated as anonymous: booking
+  // "as a guest" while signed in as a host would still file the booking from
+  // their browser under their details. Covers the checkout and wallet pages
+  // and the Server Actions behind them, which all read identity here.
+  if ((await accountKind(user.id)) !== 'customer') {
+    redirect(continueUrl(null, await getLocale()));
+  }
+
+  if (!user.email) return null;
   return readAccount(supabase, user);
 }
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { continueUrl } from '@/lib/auth/continue-url';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { isValidPhoneNumber } from 'react-phone-number-input';
@@ -17,6 +18,7 @@ interface SignUpFormProps {
 
 export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps) {
   const t      = useTranslations('auth.signUp');
+  const locale = useLocale();
   const router = useRouter();
 
   const [firstName,       setFirstName]       = useState('');
@@ -116,8 +118,8 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
       }
 
       sessionStorage.removeItem('pending_profile');
-      router.push(returnUrl || '/');
-      router.refresh();
+      // A full page load through /api/auth/continue — see SignInForm.
+      window.location.assign(continueUrl(returnUrl, locale));
     } else {
       // Email OTP confirmation required — go to verify-email page
       const verifyUrl = `/verify-email?email=${encodeURIComponent(email)}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;

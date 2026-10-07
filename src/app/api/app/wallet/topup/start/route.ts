@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
   // ── Who is calling ────────────────────────────────────────────────────────
   const caller = await authenticate(request);
   if (!caller) return bad(401, 'unauthorized');
+  if (!caller.isCustomer) return bad(403, 'not_customer');
 
   const { user, supabase: asUser } = caller;
 

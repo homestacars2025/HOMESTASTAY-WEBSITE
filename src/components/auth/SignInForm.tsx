@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { continueUrl } from '@/lib/auth/continue-url';
 import { useRouter, Link } from '@/i18n/navigation';
 import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
 import { createClient } from '@/lib/supabase/client';
@@ -31,6 +32,7 @@ function isEmailNotConfirmed(error: AuthError): boolean {
 export function SignInForm({ returnUrl, googleEnabled = false }: SignInFormProps) {
   const t      = useTranslations('auth.signIn');
   const tOauth = useTranslations('auth.oauth');
+  const locale = useLocale();
   const router = useRouter();
 
   /**
@@ -78,8 +80,10 @@ export function SignInForm({ returnUrl, googleEnabled = false }: SignInFormProps
       setError(t('error.invalidCredentials'));
       setLoading(false);
     } else {
-      router.push(returnUrl || '/');
-      router.refresh();
+      // Full page load to /api/auth/continue, which decides where this
+      // account belongs (guest stays, host is handed to the portal, staff are
+      // pointed elsewhere). Loading stays on: the navigation is in flight.
+      window.location.assign(continueUrl(returnUrl, locale));
     }
   }
 

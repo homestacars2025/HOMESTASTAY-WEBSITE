@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { useRouter, Link } from '@/i18n/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import { continueUrl } from '@/lib/auth/continue-url';
+import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 const LENGTH = 6;
@@ -14,7 +15,7 @@ interface OtpFormProps {
 
 export function OtpForm({ email, returnUrl }: OtpFormProps) {
   const t      = useTranslations('auth.verifyEmail');
-  const router = useRouter();
+  const locale = useLocale();
 
   const [digits,   setDigits]   = useState<string[]>(Array(LENGTH).fill(''));
   const [error,    setError]    = useState('');
@@ -177,9 +178,9 @@ export function OtpForm({ email, returnUrl }: OtpFormProps) {
       // Non-fatal — the session is valid and they are signed in either way.
     }
 
-    router.push(returnUrl || '/');
-    router.refresh();
-  }, [digits, email, returnUrl, t, router]);
+    // A full page load through /api/auth/continue — see SignInForm.
+    window.location.assign(continueUrl(returnUrl, locale));
+  }, [digits, email, returnUrl, t, locale]);
 
   async function handleResend() {
     if (cooldown > 0) return;

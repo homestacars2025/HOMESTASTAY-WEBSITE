@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
   if (!caller) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
+  if (!caller.isCustomer) {
+    return NextResponse.json({ ok: false, error: 'not_customer' }, { status: 403 });
+  }
 
   const { user, supabase: asUser } = caller;
 

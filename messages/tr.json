@@ -638,6 +638,57 @@
         "cancelled": "Google ile giriş iptal edildi. Tekrar deneyebilir veya aşağıdan e-postanızı kullanabilirsiniz.",
         "failed": "Google ile giriş yapılamadı. Lütfen tekrar deneyin veya aşağıdan e-postanızı kullanın."
       }
+    },
+    "accountNotice": {
+      "team": {
+        "title": "Bu hesap Homesta ekibi içindir",
+        "body": "Ekip hesapları buradan giriş yapmaz. Lütfen <b>{site}</b> adresinden giriş yapın."
+      },
+      "admin": {
+        "title": "Bu hesap Homesta yöneticileri içindir",
+        "body": "Yönetici hesapları buradan giriş yapmaz. Lütfen <b>{site}</b> adresinden giriş yapın."
+      },
+      "host": {
+        "title": "Ev sahibi portalına giriş yapın",
+        "body": "Bu bir ev sahibi hesabı. Sizi portalınıza otomatik olarak yönlendiremedik — lütfen <b>{site}</b> adresinden giriş yapın."
+      },
+      "blocked": {
+        "title": "Bu hesap aktif değil",
+        "body": "Hesabınız şu anda aktif olmadığı için giriş yapamazsınız. Bir hata olduğunu düşünüyorsanız Homesta destek ekibiyle iletişime geçin."
+      },
+      "goTo": "{site} adresine git",
+      "backHome": "homestastay.com’a dön"
+    },
+    "forgotPassword": {
+      "title": "Şifrenizi sıfırlayın",
+      "subtitle": "Yeni bir şifre belirlemeniz için size bir bağlantı göndereceğiz",
+      "emailLabel": "E-posta",
+      "submit": "Sıfırlama bağlantısı gönder",
+      "loading": "Gönderiliyor…",
+      "sent": "{email} için bir hesap varsa sıfırlama bağlantısı yolda. Gelen kutunuzu ve spam klasörünü kontrol edin.",
+      "backToSignIn": "Girişe dön",
+      "error": {
+        "emailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
+        "rateLimited": "Çok fazla istek. Birkaç dakika bekleyip tekrar deneyin."
+      }
+    },
+    "resetPassword": {
+      "title": "Yeni bir şifre belirleyin",
+      "subtitle": "En az 8 karakter",
+      "passwordLabel": "Yeni şifre",
+      "confirmLabel": "Yeni şifreyi onaylayın",
+      "submit": "Yeni şifreyi kaydet",
+      "loading": "Kaydediliyor…",
+      "success": "Şifreniz değiştirildi. Yeni şifrenizle giriş yapın.",
+      "signIn": "Giriş yap",
+      "requestNew": "Yeni bağlantı iste",
+      "error": {
+        "invalidLink": "Bu sıfırlama bağlantısı geçersiz veya süresi dolmuş.",
+        "tooShort": "Şifre en az 8 karakter olmalıdır.",
+        "mismatch": "Şifreler eşleşmiyor.",
+        "samePassword": "Mevcut şifrenizden farklı bir şifre seçin.",
+        "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+      }
     }
   },
   "myBookings": {

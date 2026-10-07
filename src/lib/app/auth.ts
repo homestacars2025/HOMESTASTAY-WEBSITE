@@ -1,4 +1,5 @@
 import 'server-only';
+import { accountKind } from '@/lib/auth/account-role';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 
@@ -26,6 +27,13 @@ export interface AppCaller {
   user: User;
   /** Scoped to this user: RLS applies, auth.uid() is set. */
   supabase: SupabaseClient;
+  /**
+   * False for hosts, staff and blocked accounts. The app's API is the guest
+   * area (wallet, payments), which those accounts may not use — callers answer
+   * 403 not_customer, NOT 401, so the app does not mistake a valid session for
+   * an expired one and loop through sign-in.
+   */
+  isCustomer: boolean;
 }
 
 /** Reads the bearer token, or null when the header is absent or malformed. */
@@ -84,5 +92,9 @@ export async function authenticate(request: Request): Promise<AppCaller | null> 
     return null;
   }
 
-  return { user: data.user, supabase };
+  const isCustomer = (await accountKind(data.user.id)) === 'customer';
+  if (!isCustomer) {
+    console.warn('[app/auth] not a customer account', { profileId: data.user.id });
+  }
+  return { user: data.user, supabase, isCustomer };
 }

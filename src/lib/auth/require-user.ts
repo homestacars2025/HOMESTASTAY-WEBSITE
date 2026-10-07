@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { accountKind } from '@/lib/auth/account-role';
+import { continueUrl } from '@/lib/auth/continue-url';
 
 /**
  * Server-side gate for account-specific pages.
@@ -40,6 +42,13 @@ export async function requireConfirmedUser(
       `/${locale}/verify-email?email=${encodeURIComponent(user.email ?? '')}` +
         `&returnUrl=${returnUrl}`,
     );
+  }
+
+  // The customer area is for guests. A host, staff or blocked session is sent
+  // through /api/auth/continue, which hands a host to the portal, points staff
+  // at their sign-in, and signs this website session out for both.
+  if ((await accountKind(user.id)) !== 'customer') {
+    redirect(continueUrl(returnPath, locale));
   }
 
   return user;
