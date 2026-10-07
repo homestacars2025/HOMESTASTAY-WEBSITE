@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Header } from '@/components/home/Header';
 import { OtpForm } from '@/components/auth/OtpForm';
+import { hostNextPath } from '@/lib/auth/portals';
 
 export async function generateMetadata({
   params,
@@ -17,14 +18,16 @@ export default async function VerifyEmailPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ email?: string; returnUrl?: string }>;
+  searchParams: Promise<{ email?: string; returnUrl?: string; next?: string }>;
 }) {
   const { locale }    = await params;
-  const { email = '', returnUrl } = await searchParams;
+  const { email = '', returnUrl, next: rawNext } = await searchParams;
   const t = await getTranslations({ locale, namespace: 'auth.verifyEmail' });
 
-  const decodedEmail     = decodeURIComponent(email);
-  const decodedReturnUrl = returnUrl ? decodeURIComponent(returnUrl) : undefined;
+  // Already decoded by Next — decoding again would throw on a stray '%'.
+  const decodedEmail     = email;
+  const decodedReturnUrl = returnUrl || undefined;
+  const next             = hostNextPath(rawNext);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -46,7 +49,7 @@ export default async function VerifyEmailPage({
 
           {/* Card */}
           <div className="bg-white border border-rule rounded-[14px] p-8 shadow-[0_2px_20px_rgba(0,0,0,0.06)]">
-            <OtpForm email={decodedEmail} returnUrl={decodedReturnUrl} />
+            <OtpForm email={decodedEmail} returnUrl={decodedReturnUrl} next={next} />
           </div>
 
         </div>

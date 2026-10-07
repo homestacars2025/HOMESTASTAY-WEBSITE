@@ -11,9 +11,11 @@ const LENGTH = 6;
 interface OtpFormProps {
   email: string;
   returnUrl?: string;
+  /** Host portal page, when the sign-in started from the portal. */
+  next?: string | null;
 }
 
-export function OtpForm({ email, returnUrl }: OtpFormProps) {
+export function OtpForm({ email, returnUrl, next = null }: OtpFormProps) {
   const t      = useTranslations('auth.verifyEmail');
   const locale = useLocale();
 
@@ -178,8 +180,8 @@ export function OtpForm({ email, returnUrl }: OtpFormProps) {
     }
 
     // A full page load through /api/auth/continue — see SignInForm.
-    window.location.assign(continueUrl(returnUrl, locale));
-  }, [digits, email, returnUrl, t, locale]);
+    window.location.assign(continueUrl(returnUrl, locale, next));
+  }, [digits, email, returnUrl, next, t, locale]);
 
   async function handleResend() {
     if (cooldown > 0) return;

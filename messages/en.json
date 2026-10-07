@@ -600,7 +600,8 @@
         "invalidCredentials": "Incorrect email or password.",
         "generic": "Something went wrong. Please try again."
       },
-      "forHosts": "Homesta for hosts"
+      "forHosts": "Homesta for hosts",
+      "guestTitle": "Open the host portal"
     },
     "signUp": {
       "title": "Create account",
@@ -725,6 +726,12 @@
         "samePassword": "Choose a password different from your current one.",
         "generic": "Something went wrong. Please try again."
       }
+    },
+    "hostInterstitial": {
+      "body": "You’re signed in as <b>{who}</b> — this is a guest account. To open the host portal, sign in with your host account.",
+      "signOutAndSwitch": "Sign out and sign in as host",
+      "becomeHost": "Become a host",
+      "back": "Back to Homesta"
     }
   },
   "myBookings": {
@@ -1112,5 +1119,11 @@
       "body": "Thank you for applying to {title}. Your application is with our hiring team.",
       "note": "If it's a match, we'll be in touch using the contact details you gave us."
     }
+  },
+  "notFound": {
+    "title": "We couldn’t find that page",
+    "body": "The link may be old or mistyped. Let’s get you back on track.",
+    "home": "Go to home",
+    "signIn": "Sign in"
   }
 }

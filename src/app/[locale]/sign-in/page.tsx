@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { accountKind } from '@/lib/auth/account-role';
 import { continueUrl } from '@/lib/auth/continue-url';
 import { hostNextPath } from '@/lib/auth/portals';
+import { HostPortalInterstitial } from '@/components/auth/HostPortalInterstitial';
 
 export async function generateMetadata({
   params,
@@ -38,16 +39,20 @@ export default async function SignInPage({
   const hostPortal = portal === 'host';
   const next = hostPortal ? hostNextPath(rawNext) : null;
 
+  // Already signed in with portal=host: an owner goes straight through the
+  // handoff, staff and blocked accounts get their notice from the continue
+  // route — and a GUEST is asked, not sent to the application form: they may
+  // simply be signed in with the wrong account.
+  let guestWho: string | null = null;
   if (hostPortal) {
-    // Already signed in: no form to fill. An owner goes straight through the
-    // handoff; a guest has no host account yet, so the way in is applying;
-    // anyone else gets their notice from /api/auth/continue.
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const kind = await accountKind(user.id);
-      if (kind === 'customer') redirect(`/${locale}/host`);
-      redirect(continueUrl(null, locale, next));
+      if (kind !== 'customer') redirect(continueUrl(null, locale, next));
+      const first = typeof user.user_metadata?.first_name === 'string' ? user.user_metadata.first_name.trim() : '';
+      const last  = typeof user.user_metadata?.last_name === 'string' ? user.user_metadata.last_name.trim() : '';
+      guestWho = [first, last].filter(Boolean).join(' ') || user.email || '';
     }
   }
 
@@ -65,18 +70,22 @@ export default async function SignInPage({
               </p>
             )}
             <h1 className="text-[clamp(1.5rem,4vw,2rem)] font-medium tracking-[-0.035em] text-ink mb-2 leading-tight">
-              {t('title')}
+              {guestWho !== null ? t('guestTitle') : t('title')}
             </h1>
-            <p className="text-sm text-mute">{t('subtitle')}</p>
+            {guestWho === null && <p className="text-sm text-mute">{t('subtitle')}</p>}
           </div>
 
           {/* Card */}
           <div className="bg-white border border-rule rounded-[14px] p-8 shadow-[0_2px_20px_rgba(0,0,0,0.06)]">
+            {guestWho !== null ? (
+              <HostPortalInterstitial locale={locale} who={guestWho} next={next} />
+            ) : (
             <SignInForm
-              returnUrl={returnUrl ? decodeURIComponent(returnUrl) : undefined}
+              returnUrl={returnUrl || undefined}
               next={next}
               googleEnabled={googleEnabled}
             />
+            )}
           </div>
 
         </div>

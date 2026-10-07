@@ -600,7 +600,8 @@
         "invalidCredentials": "E-posta veya şifre hatalı.",
         "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
       },
-      "forHosts": "Ev sahipleri için Homesta"
+      "forHosts": "Ev sahipleri için Homesta",
+      "guestTitle": "Ev sahibi portalını açın"
     },
     "signUp": {
       "title": "Hesap oluştur",
@@ -725,6 +726,12 @@
         "samePassword": "Mevcut şifrenizden farklı bir şifre seçin.",
         "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
       }
+    },
+    "hostInterstitial": {
+      "body": "<b>{who}</b> olarak giriş yaptınız — bu bir misafir hesabı. Ev sahibi portalını açmak için ev sahibi hesabınızla giriş yapın.",
+      "signOutAndSwitch": "Çıkış yap ve ev sahibi olarak giriş yap",
+      "becomeHost": "Ev sahibi ol",
+      "back": "Homesta’ya dön"
     }
   },
   "myBookings": {
@@ -1112,5 +1119,11 @@
       "body": "{title} pozisyonuna başvurduğunuz için teşekkürler. Başvurunuz işe alım ekibimizde.",
       "note": "Uygun bulunursa, verdiğiniz iletişim bilgilerinden size ulaşacağız."
     }
+  },
+  "notFound": {
+    "title": "Bu sayfayı bulamadık",
+    "body": "Bağlantı eski ya da hatalı yazılmış olabilir. Sizi doğru yere götürelim.",
+    "home": "Ana sayfaya git",
+    "signIn": "Giriş yap"
   }
 }

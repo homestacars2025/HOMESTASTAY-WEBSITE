@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { routing } from '@/i18n/routing';
 import { continueUrl } from '@/lib/auth/continue-url';
+import { hostNextPath } from '@/lib/auth/portals';
 
 /**
  * The OAuth return leg. Google sends the guest back here with a code.
@@ -148,6 +149,10 @@ export async function GET(request: NextRequest) {
 
   const locale = url.searchParams.get('locale') ?? routing.defaultLocale;
   const returnUrl = safeReturnUrl(url.searchParams.get('returnUrl'));
+  // A sign-in that started from the host portal keeps that context through a
+  // failure too, so "try again" is still the host sign-in.
+  const next = hostNextPath(url.searchParams.get('next'));
+  const portalQs = next ? `&portal=host&next=${encodeURIComponent(next)}` : '';
 
   // The guest dismissed Google's consent screen, or the provider refused.
   // Google reports this as ?error=access_denied on the redirect.
@@ -159,13 +164,13 @@ export async function GET(request: NextRequest) {
       description: url.searchParams.get('error_description'),
     });
     return NextResponse.redirect(
-      localized(origin, locale, `/sign-in?authError=${cancelled ? 'cancelled' : 'failed'}`),
+      localized(origin, locale, `/sign-in?authError=${cancelled ? 'cancelled' : 'failed'}${portalQs}`),
     );
   }
 
   const code = url.searchParams.get('code');
   if (!code) {
-    return NextResponse.redirect(localized(origin, locale, '/sign-in?authError=failed'));
+    return NextResponse.redirect(localized(origin, locale, `/sign-in?authError=failed${portalQs}`));
   }
 
   const supabase = await createClient();
@@ -173,7 +178,7 @@ export async function GET(request: NextRequest) {
 
   if (error || !data.user) {
     console.error('[auth:callback] code exchange failed', { message: error?.message });
-    return NextResponse.redirect(localized(origin, locale, '/sign-in?authError=failed'));
+    return NextResponse.redirect(localized(origin, locale, `/sign-in?authError=failed${portalQs}`));
   }
 
   // Never fatal: the session is valid and the guest is signed in either way.
@@ -189,5 +194,5 @@ export async function GET(request: NextRequest) {
   // this account stays here, is handed to the host portal, or is pointed at a
   // staff sign-in. returnUrl was already checked above.
   // `next` is re-checked against the portal allow-list by the continue route.
-  return NextResponse.redirect(new URL(continueUrl(returnUrl || null, locale, url.searchParams.get('next')), origin));
+  return NextResponse.redirect(new URL(continueUrl(returnUrl || null, locale, next), origin));
 }

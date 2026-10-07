@@ -18,11 +18,34 @@ export function hostNextPath(raw: string | null | undefined): HostNextPath | nul
   return (HOST_NEXT_PATHS as readonly string[]).includes(raw ?? '') ? (raw as HostNextPath) : null;
 }
 
-/** The portal's one-time handoff endpoint (HS-HOST: /api/auth/handoff). */
+/** Where a handoff lands when nothing more specific was asked for. */
+export const HOST_DEFAULT_NEXT: HostNextPath = '/units';
+
+/**
+ * A website path that is really a PORTAL page — "/units", or "/en/units" —
+ * mapped to the portal path. These must never be treated as website
+ * destinations: the website has no /units, so they would 404 here.
+ */
+export function portalPathOf(raw: string | null | undefined, locales: readonly string[]): HostNextPath | null {
+  if (!raw || !raw.startsWith('/')) return null;
+  const path = raw.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+  const segments = path.split('/').filter(Boolean);
+  const bare = segments.length > 0 && locales.includes(segments[0]) ? `/${segments.slice(1).join('/')}` : path;
+  return hostNextPath(bare);
+}
+
+/**
+ * The portal's one-time handoff endpoint (HS-HOST: /api/auth/handoff).
+ *
+ * `next` is ALWAYS sent — the default when none was asked for. The portal's
+ * handoff turned a missing `next` into /{locale}null (e.g. /en/ennull, a 404):
+ * that is the "signed in as a host, got a 404" bug of 2026-10-07. Sending a
+ * valid value means this side can never hit it, whatever the portal does.
+ */
 export function hostHandoffUrl(tokenHash: string, locale: string, next?: HostNextPath | null): string {
   const url = new URL('/api/auth/handoff', HOST_PORTAL_ORIGIN);
   url.searchParams.set('token_hash', tokenHash);
   url.searchParams.set('locale', locale);
-  if (next) url.searchParams.set('next', next);
+  url.searchParams.set('next', next ?? HOST_DEFAULT_NEXT);
   return url.toString();
 }

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { routing } from '@/i18n/routing';
 import { accountKind } from '@/lib/auth/account-role';
-import { hostHandoffUrl, hostNextPath } from '@/lib/auth/portals';
+import { hostHandoffUrl, hostNextPath, portalPathOf } from '@/lib/auth/portals';
 
 /**
  * Where a just-signed-in account belongs. Every sign-in on the site ends here
@@ -56,6 +56,9 @@ function safeReturnPath(raw: string | null, locale: string): string {
   if (bare.startsWith('/api') || NO_RETURN.some((p) => bare === p || bare.startsWith(`${p}?`) || bare.startsWith(`${p}/`))) {
     return home;
   }
+  // A host-portal page (/units, /en/bookings, …) is not a website page: it
+  // would 404 here. Guests go home; owners never reach this function.
+  if (portalPathOf(raw, LOCALES)) return home;
   return path;
 }
 
@@ -67,7 +70,9 @@ export async function GET(request: NextRequest) {
 
   const to = (path: string) => noStore(NextResponse.redirect(new URL(path, origin), 303));
   // The portal page a host asked for (sign-in?portal=host&next=…), allow-listed.
-  const next = hostNextPath(params.get('next'));
+  // A portal path that arrived as returnUrl instead (/units, /en/bookings) is
+  // read as that request too — never used as a website address.
+  const next = hostNextPath(params.get('next')) ?? portalPathOf(params.get('returnUrl'), LOCALES);
   const notice = (reason: 'team' | 'admin' | 'blocked' | 'host') =>
     to(`/${locale}/account-notice?reason=${reason}`);
 

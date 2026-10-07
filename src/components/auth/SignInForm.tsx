@@ -73,9 +73,12 @@ export function SignInForm({ returnUrl, next = null, googleEnabled = false }: Si
       // send them to the page that can resend the code. Loading stays true:
       // the navigation is in flight and a second submit helps nobody.
       if (isEmailNotConfirmed(authError)) {
+        // portal=host and next ride along, so a host who confirms their email
+        // here still ends up in the portal, on the page they asked for.
         router.push(
           `/verify-email?email=${encodeURIComponent(email)}` +
-            (returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''),
+            (returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : '') +
+            (next ? `&portal=host&next=${encodeURIComponent(next)}` : ''),
         );
         return;
       }
