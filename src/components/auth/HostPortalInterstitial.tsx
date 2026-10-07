@@ -33,7 +33,11 @@ export async function HostPortalInterstitial({
       <p className="text-sm text-ink-soft leading-relaxed">
         {t.rich('body', {
           who,
-          b: (chunks) => <span dir="auto" className="font-medium text-ink break-all">{chunks}</span>,
+          // One unbroken left-to-right line: an email split mid-word ("gmail.co
+          // / m") reads as a typo. Truncated only if it cannot fit at all.
+          b: (chunks) => (
+            <span dir="ltr" className="inline-block max-w-full truncate align-bottom font-medium text-ink">{chunks}</span>
+          ),
         })}
       </p>
       <a
