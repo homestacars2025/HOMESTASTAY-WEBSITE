@@ -1,6 +1,6 @@
 import { NextResponse, after, type NextRequest } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { timingSafeEqual } from 'node:crypto';
+import { isInternalSecret } from '@/lib/security/internal-secret';
 import { cardUrls, slugForRow, warmCards } from '@/lib/seo/warm-cards';
 import { routing } from '@/i18n/routing';
 
@@ -36,23 +36,23 @@ import { routing } from '@/i18n/routing';
  *
  * SECURITY: this is a cache-control lever, and an open one is a DoS vector
  * (an attacker could force endless revalidation). It requires a shared secret
- * and rejects everything else LOUDLY. If REVALIDATE_SECRET is unset the route
- * is closed, never open.
+ * and rejects everything else LOUDLY. With neither REVALIDATE_SECRET nor the
+ * Vault secret available the route is closed, never open.
  */
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function authorised(request: NextRequest): boolean {
-  const secret = process.env.REVALIDATE_SECRET;
-  if (!secret) return false;
+/**
+ * The REVALIDATE_SECRET env var OR the database's own copy in Vault
+ * (revalidate_secret) — see lib/security/internal-secret for why both.
+ */
+async function authorised(request: NextRequest): Promise<boolean> {
   const provided =
     request.headers.get('x-revalidate-secret') ??
     new URL(request.url).searchParams.get('secret') ??
     '';
-  const a = Buffer.from(provided);
-  const b = Buffer.from(secret);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return isInternalSecret(provided, { env: process.env.REVALIDATE_SECRET, name: 'revalidate_secret' });
 }
 
 /**
@@ -112,7 +112,7 @@ async function affectedSlug(body: Record<string, unknown> | null): Promise<strin
 }
 
 export async function POST(request: NextRequest) {
-  if (!authorised(request)) {
+  if (!(await authorised(request))) {
     console.error('[revalidate] REJECTED unauthorized call', {
       from: request.headers.get('x-forwarded-for') ?? 'unknown',
       hasSecretConfigured: Boolean(process.env.REVALIDATE_SECRET),

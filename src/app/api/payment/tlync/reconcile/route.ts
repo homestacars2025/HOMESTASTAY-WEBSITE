@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isInternalSecret } from '@/lib/security/internal-secret';
 import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
 import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
 
@@ -26,8 +27,10 @@ import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
  *   matching expire_holds. A Vercel Cron works too where the plan allows the
  *   frequency.
  *
- * Unset TLYNC_RECONCILE_SECRET closes the route completely: a sweep that
- * anyone can trigger is a way to burn a rate limit.
+ * The header must match TLYNC_RECONCILE_SECRET or the database's Vault copy
+ * (get_internal_secret('tlync_reconcile_secret')). With neither available the
+ * route refuses everything: a sweep that anyone can trigger is a way to burn
+ * a rate limit.
  */
 
 export const runtime = 'nodejs';
@@ -41,15 +44,18 @@ const MAX_BATCH = 30;
 const LOOKBACK_HOURS = 48;
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.TLYNC_RECONCILE_SECRET;
-
-  if (!secret) {
-    console.error('[tlync/reconcile] TLYNC_RECONCILE_SECRET not set — route closed');
-    return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
-  }
-
-  if (request.headers.get('x-reconcile-secret') !== secret) {
-    console.warn('[tlync/reconcile] rejected unauthenticated sweep');
+  // The TLYNC_RECONCILE_SECRET env var OR the database's own copy in Vault
+  // (tlync_reconcile_secret), constant-time either way. The sweep is sent by
+  // pg_cron with the Vault value, so that one must work even when the env var
+  // is unset or has drifted — this was 403ing every sweep.
+  const authorised = await isInternalSecret(request.headers.get('x-reconcile-secret'), {
+    env:  process.env.TLYNC_RECONCILE_SECRET,
+    name: 'tlync_reconcile_secret',
+  });
+  if (!authorised) {
+    console.warn('[tlync/reconcile] rejected unauthenticated sweep', {
+      hasEnvSecret: Boolean(process.env.TLYNC_RECONCILE_SECRET),
+    });
     return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
   }
 
