@@ -1006,16 +1006,34 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * Unit detail. Cached and tagged 'units' — /api/revalidate drops it when the
  * unit's price, photos, availability or content change. The window (300s) is a
  * fallback for a missed webhook; the tag is the real freshness mechanism.
+ *
+ * A CACHED "NOT FOUND" IS NEVER TRUSTED.
+ *   unstable_cache stores whatever the query returns — null included — and
+ *   serves it stale-while-revalidate: even after the window, the first request
+ *   gets the old answer while the refresh runs behind it. So a lookup made
+ *   while a unit was still being created (an early visit, or the share-card
+ *   warm-up the revalidate webhook fires, which renders every locale and falls
+ *   back to English) stored null for that slug, and a freshly published unit
+ *   kept answering 404 until a refresh happened to land. That is the bug of
+ *   2026-10-06: fourteen new units, published and readable, 404ing on the site.
+ *
+ *   So a cached hit is used as-is, and a cached miss is checked again against
+ *   the database before anyone is shown a 404. Units that exist stay one cache
+ *   read; only genuinely absent slugs pay a query — and those were about to
+ *   render a 404 page anyway. A query ERROR also returns null, so this is what
+ *   stops one failed read from turning a live unit into a cached 404 too.
  */
 export async function getPublicUnitBySlug(
   slugOrId: string,
   locale: string = SOURCE_LOCALE,
 ): Promise<UnitListing | null> {
-  return unstable_cache(
+  const cached = await unstable_cache(
     () => queryPublicUnitBySlug(slugOrId, locale),
     ['unit-by-slug', slugOrId, locale],
     { tags: ['units'], revalidate: 300 },
   )();
+  if (cached) return cached;
+  return queryPublicUnitBySlug(slugOrId, locale);
 }
 
 async function queryPublicUnitBySlug(

@@ -1,7 +1,8 @@
 import { NextResponse, after, type NextRequest } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { timingSafeEqual } from 'node:crypto';
 import { cardUrls, slugForRow, warmCards } from '@/lib/seo/warm-cards';
+import { routing } from '@/i18n/routing';
 
 /**
  * On-demand cache invalidation. Called by Supabase Database Webhooks when a
@@ -25,6 +26,13 @@ import { cardUrls, slugForRow, warmCards } from '@/lib/seo/warm-cards';
  * the old card unreachable; without this the next person to share that listing
  * would be the one who paid to rebuild it. Warming here means a brand new unit
  * is shareable the moment it is published, rather than at the next daily cron.
+ *
+ * EXPLICIT UNIT CALLS — {"type":"unit","slug":"…"} (optionally "old_slug")
+ *   For the database to call directly whenever a unit is created, published,
+ *   edited or archived, independent of webhook payload shapes. Drops 'units',
+ *   revalidates the unit's page in every locale plus the listing and home
+ *   pages, and re-warms its share cards. "old_slug" covers a renamed unit, so
+ *   the old address stops serving the old page too.
  *
  * SECURITY: this is a cache-control lever, and an open one is a DoS vector
  * (an attacker could force endless revalidation). It requires a shared secret
@@ -77,6 +85,24 @@ function row(body: Record<string, unknown> | null, key: string): Record<string, 
  * unit's card should stop being served too, and re-warming it is how we find
  * out it now 404s.
  */
+/** Slugs are generated (lowercase, digits, hyphens); a UUID also resolves. */
+const SLUG_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/;
+
+function slugField(body: Record<string, unknown> | null, key: string): string | null {
+  const value = body?.[key];
+  return typeof value === 'string' && SLUG_RE.test(value.trim()) ? value.trim() : null;
+}
+
+/** Every locale's copy of the pages a unit change can alter. */
+function unitPaths(slugs: string[]): string[] {
+  const paths: string[] = [];
+  for (const locale of routing.locales) {
+    for (const slug of slugs) paths.push(`/${locale}/stays/${slug}`);
+    paths.push(`/${locale}/stays`, `/${locale}`);
+  }
+  return paths;
+}
+
 async function affectedSlug(body: Record<string, unknown> | null): Promise<string | null> {
   try {
     return await slugForRow(row(body, 'record') ?? row(body, 'old_record'));
@@ -105,6 +131,36 @@ export async function POST(request: NextRequest) {
       slug: row(body, 'record')?.slug ?? null,
     });
     return NextResponse.json({ revalidated: true, tag: 'city-content' });
+  }
+
+  // An explicit unit call from the database: {type:'unit', slug}. Checked
+  // before the webhook path because a webhook's `type` is INSERT/UPDATE/DELETE,
+  // never 'unit', so the two cannot be confused.
+  if (body?.type === 'unit') {
+    const unitSlug = slugField(body, 'slug');
+    if (!unitSlug) {
+      return NextResponse.json({ error: 'slug required' }, { status: 400 });
+    }
+    const oldSlug = slugField(body, 'old_slug');
+    const slugs = oldSlug && oldSlug !== unitSlug ? [unitSlug, oldSlug] : [unitSlug];
+
+    // The tag is what actually refreshes the data — unit detail, listing,
+    // homepage pool and services are all cached under 'units'. The paths drop
+    // any rendered copy of those pages on top of it.
+    revalidateTag('units');
+    const paths = unitPaths(slugs);
+    for (const path of paths) revalidatePath(path);
+
+    after(async () => {
+      const result = await warmCards(cardUrls(unitSlug), {
+        deadlineMs: 45_000,
+        bust: String(Date.now()),
+      });
+      console.log('[revalidate] unit call re-warmed card', { slug: unitSlug, ...result });
+    });
+
+    console.log('[revalidate] unit', { slug: unitSlug, oldSlug, paths: paths.length });
+    return NextResponse.json({ revalidated: true, tag: 'units', slugs, paths });
   }
 
   revalidateTag('units');
