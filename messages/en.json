@@ -243,7 +243,8 @@
         "listingLinkLabel": "Existing listing link",
         "listingLinkPlaceholder": "https://airbnb.com/rooms/…",
         "submit": "Send application",
-        "sending": "Sending…"
+        "sending": "Sending…",
+        "applyingAs": "Applying as <b>{email}</b>"
       },
       "unitTypes": {
         "apartment": "Apartment",
@@ -262,7 +263,31 @@
         "emailInvalid": "Please enter a valid email address.",
         "phoneInvalid": "Please enter a valid phone number.",
         "unitsMin": "Number of units must be at least 1.",
-        "generic": "Something went wrong. Please try again."
+        "generic": "Something went wrong. Please try again.",
+        "signin": "Please sign in again to send your application."
+      },
+      "signedOut": {
+        "title": "Apply with your Homesta account",
+        "body": "Sign in or create a free account first — your application is linked to it, and once approved, the same account opens your host portal.",
+        "signUp": "Create an account",
+        "signIn": "Sign in"
+      },
+      "staffNote": "Team accounts can’t apply to host. Please use a personal guest account.",
+      "status": {
+        "under_review": {
+          "title": "Your application is under review",
+          "body": "Thank you! Our team will contact you soon. You can close this page."
+        },
+        "approved": {
+          "title": "You’re a host",
+          "body": "Your account is approved. Manage your properties, bookings and calendar in the host portal.",
+          "cta": "Open the host portal"
+        },
+        "declined": {
+          "title": "We couldn’t approve your application",
+          "body": "Your application wasn’t approved this time. If you have questions, our team is happy to help.",
+          "cta": "Contact us"
+        }
       }
     },
     "terms": {
@@ -574,7 +599,8 @@
         "emailInvalid": "Please enter a valid email address.",
         "invalidCredentials": "Incorrect email or password.",
         "generic": "Something went wrong. Please try again."
-      }
+      },
+      "forHosts": "Homesta for hosts"
     },
     "signUp": {
       "title": "Create account",
@@ -657,7 +683,17 @@
         "body": "Your account is currently not active, so you can’t sign in. If you think this is a mistake, please contact Homesta support."
       },
       "goTo": "Go to {site}",
-      "backHome": "Back to homestastay.com"
+      "backHome": "Back to homestastay.com",
+      "not-owner": {
+        "title": "This isn’t a host account",
+        "body": "You’re signed in with a guest account. To host with Homesta, apply with this same account — our team will review it.",
+        "cta": "Become a host"
+      },
+      "link-expired": {
+        "title": "Your sign-in link has expired",
+        "body": "For your security, sign-in links work once and only for a short time. Please sign in again.",
+        "cta": "Sign in again"
+      }
     },
     "forgotPassword": {
       "title": "Reset your password",

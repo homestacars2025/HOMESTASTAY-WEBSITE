@@ -40,7 +40,7 @@ function GoogleMark() {
   );
 }
 
-export function GoogleButton({ returnUrl }: { returnUrl?: string }) {
+export function GoogleButton({ returnUrl, next }: { returnUrl?: string; next?: string | null }) {
   const t = useTranslations('auth.oauth');
   const locale = useLocale();
   const [error, setError] = useState('');
@@ -68,6 +68,7 @@ export function GoogleButton({ returnUrl }: { returnUrl?: string }) {
     const callback = new URL('/api/auth/callback', siteUrl);
     callback.searchParams.set('locale', locale);
     if (returnUrl) callback.searchParams.set('returnUrl', returnUrl);
+    if (next) callback.searchParams.set('next', next);
 
     const supabase = createClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({

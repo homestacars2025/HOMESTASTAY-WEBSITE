@@ -6,22 +6,27 @@ import { ADMIN_PORTAL_URL, HOST_PORTAL_ORIGIN, TEAM_PORTAL_URL } from '@/lib/aut
 
 /**
  * Where /api/auth/continue sends an account that does not belong on the guest
- * site. The session has already been signed out (locally) by the time this
- * renders; this page only says why, and where to go instead.
+ * site, and where the host portal sends its own sign-in errors (not-owner,
+ * link-expired, blocked). Any session has already been signed out (locally)
+ * by the time this renders; this page only says why, and where to go instead.
  */
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Reason = 'team' | 'admin' | 'blocked' | 'host';
-const REASONS: readonly Reason[] = ['team', 'admin', 'blocked', 'host'];
+type Reason = 'team' | 'admin' | 'blocked' | 'host' | 'not-owner' | 'link-expired';
+const REASONS: readonly Reason[] = ['team', 'admin', 'blocked', 'host', 'not-owner', 'link-expired'];
 
-const DESTINATION: Record<Reason, { href: string; label: string } | null> = {
-  team:    { href: TEAM_PORTAL_URL,  label: 'team.homestastay.com' },
-  admin:   { href: ADMIN_PORTAL_URL, label: 'admin.homestastay.com' },
-  host:    { href: HOST_PORTAL_ORIGIN, label: 'host.homestastay.com' },
-  blocked: null,
+/** External portals for staff; internal next steps for the two host cases. */
+const EXTERNAL: Partial<Record<Reason, { href: string; label: string }>> = {
+  team:  { href: TEAM_PORTAL_URL,  label: 'team.homestastay.com' },
+  admin: { href: ADMIN_PORTAL_URL, label: 'admin.homestastay.com' },
+  host:  { href: HOST_PORTAL_ORIGIN, label: 'host.homestastay.com' },
+};
+const INTERNAL: Partial<Record<Reason, '/host' | '/sign-in?portal=host'>> = {
+  'not-owner':    '/host',
+  'link-expired': '/sign-in?portal=host',
 };
 
 export default async function AccountNoticePage({
@@ -35,7 +40,8 @@ export default async function AccountNoticePage({
   const { reason: raw } = await searchParams;
   const reason: Reason = REASONS.includes(raw as Reason) ? (raw as Reason) : 'blocked';
   const t = await getTranslations({ locale, namespace: 'auth.accountNotice' });
-  const destination = DESTINATION[reason];
+  const destination = EXTERNAL[reason];
+  const internal = INTERNAL[reason];
 
   return (
     <div className="min-h-screen bg-paper">
@@ -53,6 +59,15 @@ export default async function AccountNoticePage({
                 })
               : t(`${reason}.body`)}
           </p>
+
+          {internal && (
+            <Link
+              href={internal}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-[999px] bg-ink text-white text-sm font-medium px-6 py-3 transition-opacity duration-[240ms] hover:opacity-80"
+            >
+              {t(`${reason}.cta`)}
+            </Link>
+          )}
 
           {destination && (
             <a

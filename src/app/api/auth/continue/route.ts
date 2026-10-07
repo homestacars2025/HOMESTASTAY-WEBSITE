@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { routing } from '@/i18n/routing';
 import { accountKind } from '@/lib/auth/account-role';
-import { hostHandoffUrl } from '@/lib/auth/portals';
+import { hostHandoffUrl, hostNextPath } from '@/lib/auth/portals';
 
 /**
  * Where a just-signed-in account belongs. Every sign-in on the site ends here
@@ -13,8 +13,8 @@ import { hostHandoffUrl } from '@/lib/auth/portals';
  *   customer → returnUrl (internal paths only) or the home page
  *   owner    → a one-time magic-link token (auth.admin.generateLink, no email
  *              sent), the website session signed out LOCALLY, then the host
- *              portal's /api/auth/handoff, which exchanges the token for the
- *              portal's own session. Two independent sessions: signing out of
+ *              portal's /api/auth/handoff (with an allow-listed &next= page),
+ *              which exchanges the token for the portal's own session. Two independent sessions: signing out of
  *              one never signs the user out of the other.
  *   team / admin → signed out locally, told where their sign-in is
  *   blocked  → signed out locally, told plainly
@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin;
 
   const to = (path: string) => noStore(NextResponse.redirect(new URL(path, origin), 303));
+  // The portal page a host asked for (sign-in?portal=host&next=…), allow-listed.
+  const next = hostNextPath(params.get('next'));
   const notice = (reason: 'team' | 'admin' | 'blocked' | 'host') =>
     to(`/${locale}/account-notice?reason=${reason}`);
 
@@ -74,8 +76,12 @@ export async function GET(request: NextRequest) {
 
   // No session: the sign-in did not stick (or this was opened directly).
   if (!user) {
+    const query = new URLSearchParams();
     const back = params.get('returnUrl');
-    return to(`/${locale}/sign-in${back ? `?returnUrl=${encodeURIComponent(back)}` : ''}`);
+    if (back) query.set('returnUrl', back);
+    if (next) { query.set('portal', 'host'); query.set('next', next); }
+    const qs = query.toString();
+    return to(`/${locale}/sign-in${qs ? `?${qs}` : ''}`);
   }
 
   const kind = await accountKind(user.id);
@@ -114,7 +120,7 @@ export async function GET(request: NextRequest) {
     await signOutHere();
     // Logged without the token: it is a one-time credential.
     console.log('[auth/continue] owner handed off to the host portal', { userId: user.id });
-    return noStore(NextResponse.redirect(hostHandoffUrl(tokenHash, locale), 303));
+    return noStore(NextResponse.redirect(hostHandoffUrl(tokenHash, locale, next), 303));
   }
 
   await signOutHere();

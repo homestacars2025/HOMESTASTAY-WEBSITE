@@ -188,5 +188,6 @@ export async function GET(request: NextRequest) {
   // The same exit every sign-in takes: /api/auth/continue decides whether
   // this account stays here, is handed to the host portal, or is pointed at a
   // staff sign-in. returnUrl was already checked above.
-  return NextResponse.redirect(new URL(continueUrl(returnUrl || null, locale), origin));
+  // `next` is re-checked against the portal allow-list by the continue route.
+  return NextResponse.redirect(new URL(continueUrl(returnUrl || null, locale, url.searchParams.get('next')), origin));
 }

@@ -243,7 +243,8 @@
         "listingLinkLabel": "Mevcut ilan bağlantısı",
         "listingLinkPlaceholder": "https://airbnb.com/rooms/…",
         "submit": "Başvuru gönder",
-        "sending": "Gönderiliyor…"
+        "sending": "Gönderiliyor…",
+        "applyingAs": "<b>{email}</b> olarak başvuruyorsunuz"
       },
       "unitTypes": {
         "apartment": "Daire",
@@ -262,7 +263,31 @@
         "emailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
         "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
         "unitsMin": "Birim sayısı en az 1 olmalıdır.",
-        "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
+        "generic": "Bir hata oluştu. Lütfen tekrar deneyin.",
+        "signin": "Başvurunuzu göndermek için lütfen tekrar giriş yapın."
+      },
+      "signedOut": {
+        "title": "Homesta hesabınızla başvurun",
+        "body": "Önce giriş yapın veya ücretsiz bir hesap oluşturun — başvurunuz bu hesaba bağlanır ve onaylandığında aynı hesap ev sahibi portalınızı açar.",
+        "signUp": "Hesap oluştur",
+        "signIn": "Giriş yap"
+      },
+      "staffNote": "Ekip hesapları ev sahibi başvurusu yapamaz. Lütfen kişisel bir misafir hesabı kullanın.",
+      "status": {
+        "under_review": {
+          "title": "Başvurunuz inceleniyor",
+          "body": "Teşekkürler! Ekibimiz kısa süre içinde sizinle iletişime geçecek. Bu sayfayı kapatabilirsiniz."
+        },
+        "approved": {
+          "title": "Artık bir ev sahibisiniz",
+          "body": "Hesabınız onaylandı. Mülklerinizi, rezervasyonlarınızı ve takviminizi ev sahibi portalından yönetin.",
+          "cta": "Ev sahibi portalını aç"
+        },
+        "declined": {
+          "title": "Başvurunuzu onaylayamadık",
+          "body": "Başvurunuz bu sefer onaylanmadı. Sorularınız varsa ekibimiz yardımcı olmaktan memnuniyet duyar.",
+          "cta": "Bize ulaşın"
+        }
       }
     },
     "terms": {
@@ -574,7 +599,8 @@
         "emailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
         "invalidCredentials": "E-posta veya şifre hatalı.",
         "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
-      }
+      },
+      "forHosts": "Ev sahipleri için Homesta"
     },
     "signUp": {
       "title": "Hesap oluştur",
@@ -657,7 +683,17 @@
         "body": "Hesabınız şu anda aktif olmadığı için giriş yapamazsınız. Bir hata olduğunu düşünüyorsanız Homesta destek ekibiyle iletişime geçin."
       },
       "goTo": "{site} adresine git",
-      "backHome": "homestastay.com’a dön"
+      "backHome": "homestastay.com’a dön",
+      "not-owner": {
+        "title": "Bu bir ev sahibi hesabı değil",
+        "body": "Misafir hesabıyla giriş yaptınız. Homesta’da ev sahibi olmak için aynı hesapla başvurun — ekibimiz inceleyecek.",
+        "cta": "Ev sahibi ol"
+      },
+      "link-expired": {
+        "title": "Giriş bağlantınızın süresi doldu",
+        "body": "Güvenliğiniz için giriş bağlantıları yalnızca bir kez ve kısa bir süre çalışır. Lütfen tekrar giriş yapın.",
+        "cta": "Tekrar giriş yap"
+      }
     },
     "forgotPassword": {
       "title": "Şifrenizi sıfırlayın",

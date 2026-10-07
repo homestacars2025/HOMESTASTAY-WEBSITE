@@ -6,6 +6,10 @@ import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/
 import { Header } from '@/components/home/Header';
 import { FadeUp } from '@/components/motion/FadeUp';
 import { HostForm } from '@/components/host/HostForm';
+import { HostApplicationStatus, type HostApplicationState } from '@/components/host/HostApplicationStatus';
+import { Link } from '@/i18n/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { accountKind } from '@/lib/auth/account-role';
 import { getHostGeoData } from '@/lib/data/cities';
 
 // Listed in sitemap.xml but had no canonical and no hreflang. This is also the
@@ -55,11 +59,12 @@ const TRUST_POINTS = [
 export default async function HostPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
 
-  const [t, geoData] = await Promise.all([
+  const [t, geoData, applicant] = await Promise.all([
     getTranslations({ locale, namespace: 'pages.host' }),
     // Names come localised from geo_cities/geo_districts, so every city in the
     // table is covered rather than the six that had message keys.
     getHostGeoData(locale),
+    readApplicant(),
   ]);
 
   const localizedCities = geoData.cities.map((c) => ({
@@ -110,13 +115,86 @@ export default async function HostPage({ params }: { params: Promise<{ locale: s
 
         {/* ── Form ─────────────────────────────────────────────────────── */}
         <FadeUp delay={0.06}>
-          <HostForm
-            cities={localizedCities}
-            districtsByCityId={geoData.districtsByCityId}
-          />
+          {applicant.kind === 'signed-out' ? (
+            /* Applying needs an account: the application becomes this
+               account's, and approval turns the same account into a host. */
+            <div className="flex flex-col items-center text-center gap-4 py-6">
+              <h2 className="text-xl font-medium tracking-[-0.025em] text-ink">{t('signedOut.title')}</h2>
+              <p className="text-sm text-ink-soft leading-relaxed max-w-sm">{t('signedOut.body')}</p>
+              <div className="flex w-full max-w-sm flex-col gap-3 mt-2">
+                <Link
+                  href="/sign-up?returnUrl=%2Fhost"
+                  className="inline-flex min-h-11 items-center justify-center rounded-[999px] bg-stay text-white text-sm font-medium px-6 py-3 transition-opacity duration-[240ms] hover:opacity-90"
+                >
+                  {t('signedOut.signUp')}
+                </Link>
+                <Link
+                  href="/sign-in?returnUrl=%2Fhost"
+                  className="inline-flex min-h-11 items-center justify-center rounded-[999px] border border-rule text-ink text-sm font-medium px-6 py-3 transition-colors duration-[240ms] hover:bg-paper-warm"
+                >
+                  {t('signedOut.signIn')}
+                </Link>
+              </div>
+            </div>
+          ) : applicant.kind === 'staff' ? (
+            <p className="text-sm text-ink-soft leading-relaxed text-center py-6">{t('staffNote')}</p>
+          ) : applicant.state ? (
+            <HostApplicationStatus state={applicant.state} />
+          ) : (
+            <HostForm
+              cities={localizedCities}
+              districtsByCityId={geoData.districtsByCityId}
+              prefill={applicant.prefill}
+            />
+          )}
         </FadeUp>
 
       </main>
     </div>
   );
+}
+
+type Applicant =
+  | { kind: 'signed-out' }
+  | { kind: 'staff' }
+  | { kind: 'account'; state: HostApplicationState | null; prefill: { name: string; phone: string; email: string } };
+
+/**
+ * Who is looking at /host, and where their application stands.
+ *
+ * The page stays public (it is the hosts' landing page and is indexed); only
+ * the form section depends on the visitor. my_host_application() is called as
+ * the user — it answers for auth.uid() only. An owner is shown "approved"
+ * without asking: the role is the answer.
+ */
+async function readApplicant(): Promise<Applicant> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { kind: 'signed-out' };
+
+  const kind = await accountKind(user.id);
+  if (kind === 'team' || kind === 'admin' || kind === 'blocked') return { kind: 'staff' };
+
+  const [{ data: profile }, application] = await Promise.all([
+    supabase.from('profiles').select('first_name, last_name, phone').eq('id', user.id).maybeSingle(),
+    kind === 'owner' ? Promise.resolve(null) : supabase.rpc('my_host_application'),
+  ]);
+
+  let state: HostApplicationState | null = kind === 'owner' ? 'approved' : null;
+  if (application) {
+    if (application.error) {
+      console.error('[host] my_host_application failed', { code: application.error.code, message: application.error.message });
+    } else {
+      const row = (Array.isArray(application.data) ? application.data[0] : application.data) as { status?: string } | null;
+      const status = row?.status;
+      if (status === 'under_review' || status === 'approved' || status === 'declined') state = status;
+    }
+  }
+
+  const name = [profile?.first_name, profile?.last_name].filter((v) => typeof v === 'string' && v.trim()).join(' ');
+  return {
+    kind: 'account',
+    state,
+    prefill: { name, phone: typeof profile?.phone === 'string' ? profile.phone : '', email: user.email ?? '' },
+  };
 }

@@ -2,13 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useLocale } from 'next-intl';
-import { Link } from '@/i18n/navigation';
-import { ChevronDown, CheckCircle } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { CategoryIcon } from '@/components/home/CategoryIcon';
 import { submitHostApplication } from '@/app/[locale]/host/actions';
+import { HostApplicationStatus, type HostApplicationState } from '@/components/host/HostApplicationStatus';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -261,17 +260,18 @@ const inputCls = (hasError?: boolean) =>
 export function HostForm({
   cities,
   districtsByCityId,
+  prefill,
 }: {
   cities: FormCity[];
   districtsByCityId: Record<string, FormDistrict[]>;
+  /** From the signed-in account. The email is the account's and not editable. */
+  prefill: { name: string; phone: string; email: string };
 }) {
   const t      = useTranslations('pages.host');
-  const locale = useLocale();
 
   // ── Field state
-  const [name,           setName]           = useState('');
-  const [phone,          setPhone]          = useState('');
-  const [email,          setEmail]          = useState('');
+  const [name,           setName]           = useState(prefill.name);
+  const [phone,          setPhone]          = useState(prefill.phone);
   const [unitType,       setUnitType]       = useState('');
   const [unitsCount,     setUnitsCount]     = useState('');
   const [cityId,         setCityId]         = useState('');
@@ -284,9 +284,8 @@ export function HostForm({
   // ── UI state
   const [errors,       setErrors]       = useState<Record<string, string>>({});
   const [loading,      setLoading]      = useState(false);
-  const [submitted,    setSubmitted]    = useState(false);
+  const [submitted,    setSubmitted]    = useState<HostApplicationState | null>(null);
   const [submitError,  setSubmitError]  = useState('');
-  const [submittedName, setSubmittedName] = useState('');
 
   // ── Derived geo state
   const selectedCity    = cities.find((c) => c.id === cityId) ?? null;
@@ -308,8 +307,6 @@ export function HostForm({
     if (!name.trim())    errs.name      = t('error.required');
     if (!phone)          errs.phone     = t('error.required');
     else if (!isValidPhoneNumber(phone)) errs.phone = t('error.phoneInvalid');
-    if (!email.trim())   errs.email     = t('error.required');
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = t('error.emailInvalid');
     if (!unitType)       errs.unitType  = t('error.required');
     const count = parseInt(unitsCount, 10);
     if (!unitsCount || isNaN(count) || count < 1) errs.unitsCount = t('error.unitsMin');
@@ -338,7 +335,6 @@ export function HostForm({
     const result = await submitHostApplication({
       name:          name.trim(),
       phone,
-      email:         email.trim(),
       unitType,
       unitsCount:    parseInt(unitsCount, 10),
       city:          selectedCity?.name ?? '',
@@ -349,8 +345,7 @@ export function HostForm({
     });
 
     if (result.ok) {
-      setSubmittedName(result.name);
-      setSubmitted(true);
+      setSubmitted(result.status === 'already_host' ? 'approved' : 'under_review');
     } else {
       setSubmitError(t(`error.${result.error}`));
       setLoading(false);
@@ -359,27 +354,7 @@ export function HostForm({
 
   // ── Success state ─────────────────────────────────────────────────────────
 
-  if (submitted) {
-    return (
-      <div className="flex flex-col items-center text-center gap-5 py-10">
-        <CheckCircle size={48} strokeWidth={1.5} className="text-stay" />
-        <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-medium tracking-[-0.025em] text-ink">
-            {t('success.title')}
-          </h2>
-          <p className="text-sm text-mute leading-relaxed max-w-xs">
-            {t('success.body', { name: submittedName })}
-          </p>
-        </div>
-        <Link
-          href={`/${locale}`}
-          className="rounded-[999px] bg-ink text-white text-sm font-medium px-6 py-2.5 transition-opacity duration-[240ms] hover:opacity-80"
-        >
-          {t('success.back')}
-        </Link>
-      </div>
-    );
-  }
+  if (submitted) return <HostApplicationStatus state={submitted} />;
 
   // ── Unit type labels (localised)
   const unitLabels = {
@@ -421,6 +396,7 @@ export function HostForm({
       <div className="flex flex-col gap-1.5">
         <PhoneInput
           value={phone}
+          initialValue={prefill.phone || undefined}
           onChange={setPhone}
           defaultCountry="TR"
           label={t('form.phoneLabel')}
@@ -430,20 +406,13 @@ export function HostForm({
         {errors.phone && <p id="host-phone-err" className="text-xs text-stay mt-0.5">{errors.phone}</p>}
       </div>
 
-      {/* Email */}
-      <div className="flex flex-col gap-1.5">
-        <FieldLabel htmlFor="host-email" required>{t('form.emailLabel')}</FieldLabel>
-        <input
-          id="host-email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t('form.emailPlaceholder')}
-          className={inputCls(!!errors.email)}
-        />
-        <FieldError message={errors.email} />
-      </div>
+      {/* The application belongs to this account: its email is the contact. */}
+      <p className="text-sm text-mute">
+        {t.rich('form.applyingAs', {
+          email: prefill.email,
+          b: (chunks) => <span dir="ltr" className="font-medium text-ink">{chunks}</span>,
+        })}
+      </p>
 
       {/* Unit type */}
       <UnitTypeSelect

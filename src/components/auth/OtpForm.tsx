@@ -150,7 +150,6 @@ export function OtpForm({ email, returnUrl }: OtpFormProps) {
       fill('email',      data.user.email ?? email);
       fill('first_name', pending.first_name);
       fill('last_name',  pending.last_name);
-      fill('phone',      pending.phone);
 
       if (Object.keys(patch).length > 0) {
         patch.updated_at = new Date().toISOString();

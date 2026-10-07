@@ -11,6 +11,8 @@ import type { AuthError } from '@supabase/supabase-js';
 
 interface SignInFormProps {
   returnUrl?: string;
+  /** Host portal page to open after a host's handoff (allow-listed upstream). */
+  next?: string | null;
   /** False when Google is not enabled on the Supabase project — see
    *  lib/auth/providers. A button that cannot work is worse than no button. */
   googleEnabled?: boolean;
@@ -29,7 +31,7 @@ function isEmailNotConfirmed(error: AuthError): boolean {
   );
 }
 
-export function SignInForm({ returnUrl, googleEnabled = false }: SignInFormProps) {
+export function SignInForm({ returnUrl, next = null, googleEnabled = false }: SignInFormProps) {
   const t      = useTranslations('auth.signIn');
   const tOauth = useTranslations('auth.oauth');
   const locale = useLocale();
@@ -83,7 +85,7 @@ export function SignInForm({ returnUrl, googleEnabled = false }: SignInFormProps
       // Full page load to /api/auth/continue, which decides where this
       // account belongs (guest stays, host is handed to the portal, staff are
       // pointed elsewhere). Loading stays on: the navigation is in flight.
-      window.location.assign(continueUrl(returnUrl, locale));
+      window.location.assign(continueUrl(returnUrl, locale, next));
     }
   }
 
@@ -100,7 +102,7 @@ export function SignInForm({ returnUrl, googleEnabled = false }: SignInFormProps
           should not have to read past a password field to find it. */}
       {googleEnabled && (
         <>
-          <GoogleButton returnUrl={returnUrl} />
+          <GoogleButton returnUrl={returnUrl} next={next} />
           <AuthDivider />
         </>
       )}

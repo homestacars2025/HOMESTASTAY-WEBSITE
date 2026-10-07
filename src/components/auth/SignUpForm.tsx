@@ -5,8 +5,6 @@ import { useLocale, useTranslations } from 'next-intl';
 import { continueUrl } from '@/lib/auth/continue-url';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { isValidPhoneNumber } from 'react-phone-number-input';
-import { PhoneInput } from './PhoneInput';
 import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
 
 interface SignUpFormProps {
@@ -16,6 +14,13 @@ interface SignUpFormProps {
   googleEnabled?: boolean;
 }
 
+/**
+ * Email sign-up. Always creates a guest (customer) account.
+ *
+ * No phone field: a number typed here was never verified, and profiles.phone
+ * is UNIQUE — anyone could claim someone else's number and lock its owner out
+ * of it. The phone is asked for at the first booking instead, as before.
+ */
 export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps) {
   const t      = useTranslations('auth.signUp');
   const locale = useLocale();
@@ -24,7 +29,6 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
   const [firstName,       setFirstName]       = useState('');
   const [lastName,        setLastName]        = useState('');
   const [email,           setEmail]           = useState('');
-  const [phone,           setPhone]           = useState('');
   const [password,        setPassword]        = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error,           setError]           = useState('');
@@ -36,7 +40,6 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t('error.emailInvalid');
     if (password.length < 8) return t('error.passwordTooShort');
     if (password !== confirmPassword) return t('error.passwordMismatch');
-    if (phone && !isValidPhoneNumber(phone)) return t('error.phoneInvalid');
     return '';
   }
 
@@ -57,7 +60,6 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
         data: {
           first_name: firstName.trim(),
           last_name:  lastName.trim()  || null,
-          phone:      phone             || null,
         },
       },
     });
@@ -81,7 +83,6 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
       JSON.stringify({
         first_name: firstName.trim() || null,
         last_name:  lastName.trim()  || null,
-        phone:      phone             || null,
       })
     );
 
@@ -93,7 +94,6 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
           email:      data.user.email ?? email,
           first_name: firstName.trim() || null,
           last_name:  lastName.trim()  || null,
-          phone:      phone             || null,
           role:       'customer',
           status:     'active',
         },
@@ -205,15 +205,6 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
           className="w-full border border-rule rounded-[8px] px-4 py-2.5 text-sm text-ink bg-paper placeholder:text-mute focus:outline-none focus:border-ink transition-colors duration-[240ms]"
         />
       </div>
-
-      {/* Phone */}
-      <PhoneInput
-        value={phone}
-        onChange={setPhone}
-        defaultCountry="TR"
-        label={t('phoneLabel')}
-        searchPlaceholder={t('phoneSearchPlaceholder')}
-      />
 
       {/* Password */}
       <div className="flex flex-col gap-1.5">
