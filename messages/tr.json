@@ -601,7 +601,8 @@
         "generic": "Bir hata oluştu. Lütfen tekrar deneyin."
       },
       "forHosts": "Ev sahipleri için Homesta",
-      "guestTitle": "Ev sahibi portalını açın"
+      "guestTitle": "Ev sahibi portalını açın",
+      "signInAgain": "Güvenliğiniz için lütfen tekrar giriş yapın."
     },
     "signUp": {
       "title": "Hesap oluştur",

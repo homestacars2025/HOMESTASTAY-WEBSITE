@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { ShieldCheck } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { SignInForm } from '@/components/auth/SignInForm';
 import { isGoogleAuthEnabled } from '@/lib/auth/providers';
@@ -24,13 +25,17 @@ export default async function SignInPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ returnUrl?: string; portal?: string; next?: string }>;
+  searchParams: Promise<{ returnUrl?: string; portal?: string; next?: string; notice?: string }>;
 }) {
   // Resolved on the server: the button is hidden unless the provider is
   // actually enabled — see lib/auth/providers for what happens when it is not.
   const googleEnabled = await isGoogleAuthEnabled();
   const { locale } = await params;
-  const { returnUrl, portal, next: rawNext } = await searchParams;
+  const { returnUrl, portal, next: rawNext, notice } = await searchParams;
+  // The portal sends ?notice=sign-in-again after an invalid or expired
+  // handoff, or a session that never passed the email code. Not an error the
+  // host caused — a calm, one-line reason, above the form.
+  const signInAgain = notice === 'sign-in-again';
   const t = await getTranslations({ locale, namespace: 'auth.signIn' });
 
   // ── Portal entry: /sign-in?portal=host&next=/bookings ────────────────────
@@ -74,6 +79,13 @@ export default async function SignInPage({
             </h1>
             {guestWho === null && <p className="text-sm text-mute">{t('subtitle')}</p>}
           </div>
+
+          {signInAgain && guestWho === null && (
+            <div role="status" className="mb-4 flex items-start gap-2.5 rounded-[14px] border border-rule bg-paper-warm px-4 py-3 text-sm text-ink-soft leading-relaxed">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" aria-hidden="true" />
+              <span>{t('signInAgain')}</span>
+            </div>
+          )}
 
           {/* Card */}
           <div className="bg-white border border-rule rounded-[14px] p-8 shadow-[0_2px_20px_rgba(0,0,0,0.06)]">

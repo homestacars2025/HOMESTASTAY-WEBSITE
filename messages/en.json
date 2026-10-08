@@ -601,7 +601,8 @@
         "generic": "Something went wrong. Please try again."
       },
       "forHosts": "Homesta for hosts",
-      "guestTitle": "Open the host portal"
+      "guestTitle": "Open the host portal",
+      "signInAgain": "For your security, please sign in again."
     },
     "signUp": {
       "title": "Create account",
