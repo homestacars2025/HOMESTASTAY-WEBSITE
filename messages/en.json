@@ -732,6 +732,41 @@
       "signOutAndSwitch": "Sign out and sign in as host",
       "becomeHost": "Become a host",
       "back": "Back to Homesta"
+    },
+    "code": {
+      "label": "Verification code",
+      "digit": "Digit {n}",
+      "submit": "Verify",
+      "loading": "Verifying…",
+      "resend": "Resend code",
+      "resendIn": "Resend in {seconds}s",
+      "error": {
+        "incompleteCode": "Please enter all 6 digits.",
+        "invalidCode": "That code is wrong or has expired. Please try again.",
+        "generic": "Something went wrong. Please try again.",
+        "resendFailed": "We couldn’t send a new code. Please wait a moment and try again."
+      }
+    },
+    "hostVerify": {
+      "label": "Homesta for hosts",
+      "title": "Check your email",
+      "subtitle": "One more step to open the host portal",
+      "sending": "Sending your code…",
+      "sentTo": "We sent a 6-digit code to <b>{email}</b>",
+      "alreadySent": "We already sent a code to <b>{email}</b> — check your inbox.",
+      "submit": "Verify and continue",
+      "invalid": "{count, plural, =0 {That code is wrong.} one {That code is wrong. # attempt left.} other {That code is wrong. # attempts left.}}",
+      "invalidNoCount": "That code is wrong. Please try again.",
+      "expired": "This code has expired. Tap “Resend code” to get a new one.",
+      "locked": "Too many wrong codes. For your security, please wait 15 minutes and try again.",
+      "wait": "Please wait {seconds} seconds before asking for a new code.",
+      "tooManySends": "Too many codes were requested. Please try again in an hour, or contact Homesta support.",
+      "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+      "sendFailed": "We couldn’t send the email. Please try again.",
+      "signedOut": "Your sign-in has ended. Please sign in again.",
+      "generic": "Something went wrong. Please try again.",
+      "retrySend": "Send the code again",
+      "otherAccount": "Use a different account"
     }
   },
   "myBookings": {

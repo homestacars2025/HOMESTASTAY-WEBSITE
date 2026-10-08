@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { routing } from '@/i18n/routing';
 import { accountKind } from '@/lib/auth/account-role';
-import { hostHandoffUrl, hostNextPath, portalPathOf } from '@/lib/auth/portals';
+import { hostNextPath, portalPathOf } from '@/lib/auth/portals';
 
 /**
  * Where a just-signed-in account belongs. Every sign-in on the site ends here
@@ -11,10 +10,10 @@ import { hostHandoffUrl, hostNextPath, portalPathOf } from '@/lib/auth/portals';
  * lives in one place:
  *
  *   customer → returnUrl (internal paths only) or the home page
- *   owner    → a one-time magic-link token (auth.admin.generateLink, no email
- *              sent), the website session signed out LOCALLY, then the host
- *              portal's /api/auth/handoff (with an allow-listed &next= page),
- *              which exchanges the token for the portal's own session. Two independent sessions: signing out of
+ *   owner    → /{locale}/host-verify: a 6-digit email code first. Only a
+ *              successful code there mints the one-time magic link (with a
+ *              grant) and hands off to the host portal's /api/auth/handoff,
+ *              signing the website session out LOCALLY at that moment. Two independent sessions: signing out of
  *              one never signs the user out of the other.
  *   team / admin → signed out locally, told where their sign-in is
  *   blocked  → signed out locally, told plainly
@@ -109,23 +108,14 @@ export async function GET(request: NextRequest) {
       return notice('host');
     }
 
-    const { data, error } = await createAdminClient().auth.admin.generateLink({
-      type: 'magiclink',
-      email: user.email,
-    });
-    const tokenHash = data?.properties?.hashed_token;
-    if (error || !tokenHash) {
-      console.error('[auth/continue] handoff link could not be minted', {
-        userId: user.id, code: error?.code, status: error?.status,
-      });
-      await signOutHere();
-      return notice('host');
-    }
-
-    await signOutHere();
-    // Logged without the token: it is a one-time credential.
-    console.log('[auth/continue] owner handed off to the host portal', { userId: user.id });
-    return noStore(NextResponse.redirect(hostHandoffUrl(tokenHash, locale, next), 303));
+    // The second step. No handoff is minted here any more: the host proves
+    // the inbox with a 6-digit code on /host-verify first, and only a
+    // successful verify there mints the magic link (with its one-time grant).
+    // The website session stays signed in until then — the code is bound to
+    // it — and is signed out locally at the moment of the handoff.
+    const query = new URLSearchParams({ portal: 'host' });
+    if (next) query.set('next', next);
+    return to(`/${locale}/host-verify?${query.toString()}`);
   }
 
   await signOutHere();

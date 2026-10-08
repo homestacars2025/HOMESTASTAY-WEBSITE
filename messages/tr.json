@@ -732,6 +732,41 @@
       "signOutAndSwitch": "Çıkış yap ve ev sahibi olarak giriş yap",
       "becomeHost": "Ev sahibi ol",
       "back": "Homesta’ya dön"
+    },
+    "code": {
+      "label": "Doğrulama kodu",
+      "digit": "{n}. hane",
+      "submit": "Doğrula",
+      "loading": "Doğrulanıyor…",
+      "resend": "Kodu tekrar gönder",
+      "resendIn": "{seconds} sn sonra tekrar gönder",
+      "error": {
+        "incompleteCode": "Lütfen 6 hanenin tamamını girin.",
+        "invalidCode": "Kod hatalı veya süresi dolmuş. Lütfen tekrar deneyin.",
+        "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+        "resendFailed": "Yeni kod gönderilemedi. Biraz bekleyip tekrar deneyin."
+      }
+    },
+    "hostVerify": {
+      "label": "Ev sahipleri için Homesta",
+      "title": "E-postanızı kontrol edin",
+      "subtitle": "Ev sahibi portalını açmak için son bir adım",
+      "sending": "Kodunuz gönderiliyor…",
+      "sentTo": "<b>{email}</b> adresine 6 haneli bir kod gönderdik",
+      "alreadySent": "<b>{email}</b> adresine az önce bir kod gönderdik — gelen kutunuzu kontrol edin.",
+      "submit": "Doğrula ve devam et",
+      "invalid": "{count, plural, =0 {Kod hatalı.} one {Kod hatalı. # deneme hakkınız kaldı.} other {Kod hatalı. # deneme hakkınız kaldı.}}",
+      "invalidNoCount": "Kod hatalı. Lütfen tekrar deneyin.",
+      "expired": "Bu kodun süresi doldu. Yeni kod için “Kodu tekrar gönder”e dokunun.",
+      "locked": "Çok fazla hatalı kod. Güvenliğiniz için 15 dakika bekleyip tekrar deneyin.",
+      "wait": "Yeni kod istemeden önce lütfen {seconds} saniye bekleyin.",
+      "tooManySends": "Çok fazla kod istendi. Bir saat sonra tekrar deneyin veya Homesta destek ile iletişime geçin.",
+      "rateLimited": "Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.",
+      "sendFailed": "E-posta gönderilemedi. Lütfen tekrar deneyin.",
+      "signedOut": "Oturumunuz sona erdi. Lütfen tekrar giriş yapın.",
+      "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+      "retrySend": "Kodu tekrar gönder",
+      "otherAccount": "Başka bir hesap kullan"
     }
   },
   "myBookings": {

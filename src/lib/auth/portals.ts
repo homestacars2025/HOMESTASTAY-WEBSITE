@@ -42,10 +42,21 @@ export function portalPathOf(raw: string | null | undefined, locales: readonly s
  * that is the "signed in as a host, got a 404" bug of 2026-10-07. Sending a
  * valid value means this side can never hit it, whatever the portal does.
  */
-export function hostHandoffUrl(tokenHash: string, locale: string, next?: HostNextPath | null): string {
+export function hostHandoffUrl(
+  tokenHash: string,
+  locale: string,
+  next: HostNextPath | null | undefined,
+  /**
+   * The one-time grant from host_otp_verify. REQUIRED: a handoff without a
+   * passed email code cannot be built at all — the type system says so.
+   * The portal consumes it (host_step_up_grant) to mark its session verified.
+   */
+  grant: string,
+): string {
   const url = new URL('/api/auth/handoff', HOST_PORTAL_ORIGIN);
   url.searchParams.set('token_hash', tokenHash);
   url.searchParams.set('locale', locale);
   url.searchParams.set('next', next ?? HOST_DEFAULT_NEXT);
+  url.searchParams.set('grant', grant);
   return url.toString();
 }
