@@ -47,16 +47,17 @@ export function hostHandoffUrl(
   locale: string,
   next: HostNextPath | null | undefined,
   /**
-   * The one-time grant from host_otp_verify. REQUIRED: a handoff without a
-   * passed email code cannot be built at all — the type system says so.
-   * The portal consumes it (host_step_up_grant) to mark its session verified.
+   * The one-time grant from host_otp_verify, which the portal consumes
+   * (host_step_up_grant) to mark its session verified. Must be passed
+   * EXPLICITLY: null is only correct while host_login_otp_required() is off —
+   * see isHostOtpRequired — never as a default someone forgot to fill in.
    */
-  grant: string,
+  grant: string | null,
 ): string {
   const url = new URL('/api/auth/handoff', HOST_PORTAL_ORIGIN);
   url.searchParams.set('token_hash', tokenHash);
   url.searchParams.set('locale', locale);
   url.searchParams.set('next', next ?? HOST_DEFAULT_NEXT);
-  url.searchParams.set('grant', grant);
+  if (grant) url.searchParams.set('grant', grant);
   return url.toString();
 }

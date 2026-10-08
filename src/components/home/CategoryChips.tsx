@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { CategoryIcon } from './CategoryIcon';
+import { CategoryIcon, ExternalArrow } from './CategoryIcon';
 import { Link } from '@/i18n/navigation';
 import { getCatalogueFacets, type StaysFilters } from '@/lib/queries/stays';
 import { STAY_TYPES, type StayType } from '@/lib/stays/filters';
@@ -32,15 +32,23 @@ interface CategoryChipsProps {
    * Omitted on the homepage, where there is no search to preserve.
    */
   filters?: StaysFilters;
+  /**
+   * The homepage ends the row with Homesta Cars — another Homesta service,
+   * not a filter — after a thin divider. Off on /stays, where every item in
+   * the row filters the results.
+   */
+  showCars?: boolean;
 }
+
+const CARS_URL = 'https://homestacars.com';
 
 /** English floor for a missing message — see `label` below. */
 const FALLBACK: Record<StayType, string> = {
   apartment: 'Apartment', villa: 'Villa', studio: 'Studio', suite: 'Suite', room: 'Room',
-  cabin: 'Cabin', farm: 'Farm', bed: 'Bed', other: 'Place',
+  cabin: 'Cabin', farm: 'Farm', bed: 'Bed', other: 'Other',
 };
 
-export async function CategoryChips({ filters = {} }: CategoryChipsProps) {
+export async function CategoryChips({ filters = {}, showCars = false }: CategoryChipsProps) {
   const [t, { typeCounts }] = await Promise.all([
     getTranslations('categories'),
     getCatalogueFacets(),
@@ -97,6 +105,24 @@ export async function CategoryChips({ filters = {} }: CategoryChipsProps) {
             active={active.has(type)}
           />
         ))}
+        {showCars && (
+          <>
+            <span className="mx-1 h-10 w-px shrink-0 bg-rule sm:mx-2" aria-hidden="true" />
+            <a
+              href={CARS_URL}
+              target="_blank"
+              rel="noopener"
+              className="flex flex-col items-center gap-1.5 min-w-14 px-1.5 py-2.5 text-mute hover:text-ink transition-colors duration-[240ms]"
+            >
+              <CategoryIcon name="car" size={28} />
+              <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.09em] leading-none whitespace-nowrap">
+                {label('cars', 'Cars')}
+                <ExternalArrow />
+                <span className="sr-only">{label('newTab', '(opens in a new tab)')}</span>
+              </span>
+            </a>
+          </>
+        )}
       </nav>
     </div>
   );

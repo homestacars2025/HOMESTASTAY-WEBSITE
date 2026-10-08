@@ -30,13 +30,14 @@ type FormDistrict = {
 const UNIT_TYPES = ['apartment', 'villa', 'cabin', 'hotel', 'farm'] as const;
 const CONTACT_METHODS = ['whatsapp', 'phone', 'email'] as const;
 
-// Maps form unit type slug → CategoryIcon name prop
+// Maps form unit type slug → CategoryIcon name. These were plural names that
+// matched no icon, so every type fell back to the generic one.
 const ICON_MAP: Record<string, string> = {
-  apartment: 'apartments',
-  villa:     'villas',
-  cabin:     'cabins',
-  hotel:     'hotels',
-  farm:      'farms',
+  apartment: 'apartment',
+  villa:     'villa',
+  cabin:     'cabin',
+  hotel:     'hotel',
+  farm:      'farm',
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -97,7 +98,7 @@ function UnitTypeSelect({
         >
           <span className="flex items-center gap-2 min-w-0">
             {value && (
-              <CategoryIcon name={ICON_MAP[value] ?? 'apartments'} size={18} />
+              <CategoryIcon name={ICON_MAP[value] ?? 'apartment'} size={18} />
             )}
             <span className="truncate">{value ? unitLabels[value] : placeholder}</span>
           </span>

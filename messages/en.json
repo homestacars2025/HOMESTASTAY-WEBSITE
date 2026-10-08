@@ -38,8 +38,10 @@
     "cabin": "Cabin",
     "farm": "Farm",
     "bed": "Bed",
-    "other": "Place",
-    "label": "Browse by type"
+    "other": "Other",
+    "label": "Browse by type",
+    "cars": "Cars",
+    "newTab": "(opens in a new tab)"
   },
   "filters": {
     "button": "Filters",

@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { accountKind } from '@/lib/auth/account-role';
 import { continueUrl } from '@/lib/auth/continue-url';
 import { hostNextPath } from '@/lib/auth/portals';
-import { maskEmail } from '@/lib/auth/host-otp';
+import { isHostOtpRequired, maskEmail } from '@/lib/auth/host-otp';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -37,7 +37,9 @@ export default async function HostVerifyPage({
   if (!user) {
     redirect(`/${locale}/sign-in?portal=host${next ? `&next=${encodeURIComponent(next)}` : ''}`);
   }
-  if ((await accountKind(user.id)) !== 'owner' || !user.email) {
+  // Not an owner — or the code is switched off (host_login_otp_required), in
+  // which case the continue route hands an owner straight to the portal.
+  if ((await accountKind(user.id)) !== 'owner' || !user.email || !(await isHostOtpRequired())) {
     redirect(continueUrl(null, locale, next));
   }
 

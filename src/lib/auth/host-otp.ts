@@ -131,13 +131,32 @@ export async function verifyHostOtp(who: Who & { code: string }): Promise<Verify
 }
 
 /**
- * The handoff, minted ONLY with a grant from a successful verify. Returns null
- * when the magic link could not be generated (logged, without the token).
+ * Whether hosts must pass the email code before the portal handoff — the
+ * database switch host_login_otp_required(). Off today (product decision); the
+ * whole OTP flow stays in place for the day it is turned on.
+ *
+ * FAILS CLOSED: if the switch cannot be read, the code is required. An outage
+ * must never quietly turn a security step off; at worst a host types a code
+ * they did not strictly need.
+ */
+export async function isHostOtpRequired(): Promise<boolean> {
+  const { data, error } = await createAdminClient().rpc('host_login_otp_required');
+  if (error) {
+    console.error('[host-otp] switch unreadable — requiring the code', { code: error.code });
+    return true;
+  }
+  return data !== false;
+}
+
+/**
+ * The handoff. With the switch on, only ever called with the grant from a
+ * successful verify; with it off, with grant: null. Returns null when the
+ * magic link could not be generated (logged, without the token).
  */
 export async function mintHostHandoff({
   userId, email, locale, next, grant,
 }: {
-  userId: string; email: string; locale: string; next: HostNextPath | null; grant: string;
+  userId: string; email: string; locale: string; next: HostNextPath | null; grant: string | null;
 }): Promise<string | null> {
   const { data, error } = await createAdminClient().auth.admin.generateLink({ type: 'magiclink', email });
   const tokenHash = data?.properties?.hashed_token;

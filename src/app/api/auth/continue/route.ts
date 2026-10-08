@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { routing } from '@/i18n/routing';
 import { accountKind } from '@/lib/auth/account-role';
 import { hostNextPath, portalPathOf } from '@/lib/auth/portals';
+import { isHostOtpRequired, mintHostHandoff } from '@/lib/auth/host-otp';
 
 /**
  * Where a just-signed-in account belongs. Every sign-in on the site ends here
@@ -108,11 +109,25 @@ export async function GET(request: NextRequest) {
       return notice('host');
     }
 
-    // The second step. No handoff is minted here any more: the host proves
-    // the inbox with a 6-digit code on /host-verify first, and only a
-    // successful verify there mints the magic link (with its one-time grant).
-    // The website session stays signed in until then — the code is bound to
-    // it — and is signed out locally at the moment of the handoff.
+    // The second step is behind a database switch (host_login_otp_required).
+    // OFF: hand off straight away, as before — no grant; the portal accepts
+    // that while the switch is off.
+    if (!(await isHostOtpRequired())) {
+      const url = await mintHostHandoff({ userId: user.id, email: user.email, locale, next, grant: null });
+      if (!url) {
+        await signOutHere();
+        return notice('host');
+      }
+      await signOutHere();
+      console.log('[auth/continue] owner handed off to the host portal (code not required)', { userId: user.id });
+      return noStore(NextResponse.redirect(url, 303));
+    }
+
+    // ON: no handoff is minted here. The host proves the inbox with a 6-digit
+    // code on /host-verify first, and only a successful verify there mints the
+    // magic link (with its one-time grant). The website session stays signed
+    // in until then — the code is bound to it — and is signed out locally at
+    // the moment of the handoff.
     const query = new URLSearchParams({ portal: 'host' });
     if (next) query.set('next', next);
     return to(`/${locale}/host-verify?${query.toString()}`);

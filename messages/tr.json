@@ -35,11 +35,13 @@
     "studio": "Stüdyo",
     "suite": "Suit",
     "room": "Oda",
-    "cabin": "Kabin",
+    "cabin": "Bungalov",
     "farm": "Çiftlik",
     "bed": "Yatak",
-    "other": "Mekân",
-    "label": "Türe göre gözat"
+    "other": "Diğer",
+    "label": "Türe göre gözat",
+    "cars": "Araçlar",
+    "newTab": "(yeni sekmede açılır)"
   },
   "filters": {
     "button": "Filtreler",
