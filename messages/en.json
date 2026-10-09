@@ -604,7 +604,8 @@
       },
       "forHosts": "Homesta for hosts",
       "guestTitle": "Open the host portal",
-      "signInAgain": "For your security, please sign in again."
+      "signInAgain": "For your security, please sign in again.",
+      "phoneSubtitle": "Enter your phone number — we’ll text you a code"
     },
     "signUp": {
       "title": "Create account",
@@ -630,7 +631,8 @@
         "emailAlreadyRegistered": "This email is already registered.",
         "generic": "Something went wrong. Please try again.",
         "phoneTaken": "This phone number is already on another account. Use a different one, or sign in to that account."
-      }
+      },
+      "phoneSubtitle": "Start with your phone number — we’ll text you a code"
     },
     "verifyEmail": {
       "title": "Confirm your email",
@@ -665,8 +667,8 @@
       "loading": "Redirecting…",
       "or": "or",
       "error": {
-        "cancelled": "Google sign-in was cancelled. You can try again or use your email below.",
-        "failed": "We couldn't sign you in with Google. Please try again, or use your email below."
+        "cancelled": "Google sign-in was cancelled. You can try again or use another option below.",
+        "failed": "We couldn’t sign you in with Google. Please try again, or use another option below."
       }
     },
     "accountNotice": {
@@ -770,6 +772,74 @@
       "generic": "Something went wrong. Please try again.",
       "retrySend": "Send the code again",
       "otherAccount": "Use a different account"
+    },
+    "method": {
+      "useEmail": "Continue with email instead",
+      "usePhone": "Continue with phone instead"
+    },
+    "phone": {
+      "label": "Phone number",
+      "searchPlaceholder": "Search countries…",
+      "submit": "Send code",
+      "sending": "Sending…",
+      "hint": "New here? Verifying your number creates your account.",
+      "codeSent": "We sent a 6-digit code to <b>{phone}</b>",
+      "changeNumber": "Change number",
+      "error": {
+        "phoneInvalid": "Please enter a valid phone number.",
+        "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+        "sendFailed": "We couldn’t send a text to this number. Please check it and try again.",
+        "generic": "Something went wrong. Please try again.",
+        "captcha": "Please complete the security check, then try again.",
+        "unavailable": "Phone sign-in is not available right now. Please continue with email."
+      },
+      "hintSignUp": "We’ll text you a 6-digit code. Then add your name and email to finish.",
+      "emailAccount": {
+        "body": "This number belongs to an account (<b>{email}</b>). Sign in with your email, then add your phone in your account.",
+        "bodyNoHint": "This number belongs to an account that signs in with email. Sign in with your email, then add your phone in your account.",
+        "cta": "Sign in with email"
+      },
+      "newAccount": {
+        "body": "No account uses this number yet.",
+        "create": "Create an account with this number",
+        "useEmail": "Or continue with email"
+      }
+    },
+    "completeProfile": {
+      "title": "Complete your profile",
+      "subtitle": "One last step before you book",
+      "stepEmail": "Your details",
+      "stepPhone": "Your phone number",
+      "firstNameLabel": "First name",
+      "lastNameLabel": "Last name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "emailWhy": "Booking confirmations and receipts are sent here. We’ll email you a code to confirm it.",
+      "sendEmailCode": "Send email code",
+      "continue": "Continue",
+      "loading": "Saving…",
+      "emailCodeSent": "We sent a 6-digit code to <b>{email}</b>",
+      "changeEmail": "Change email",
+      "phoneIntro": "Add your phone number so we can reach you about your stay. We’ll text you a code to confirm it.",
+      "phoneLabel": "Phone number",
+      "searchPlaceholder": "Search countries…",
+      "sendCode": "Send code",
+      "sending": "Sending…",
+      "phoneCodeSent": "We sent a 6-digit code to <b>{phone}</b>",
+      "changeNumber": "Change number",
+      "signInWithEmail": "Sign in with email",
+      "signInWithPhone": "Sign in with phone",
+      "phoneTakenNotice": "Your number is verified. It’s also listed on another Homesta profile, so we’ll confirm it with you at checkout.",
+      "error": {
+        "requiredField": "Please fill in all required fields.",
+        "emailInvalid": "Please enter a valid email address.",
+        "emailExists": "This email already has a Homesta account.",
+        "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+        "generic": "Something went wrong. Please try again.",
+        "phoneInvalid": "Please enter a valid phone number.",
+        "phoneExists": "This number is already linked to another account.",
+        "sendFailed": "We couldn’t send a text to this number. Please check it and try again."
+      }
     }
   },
   "myBookings": {
@@ -1163,5 +1233,33 @@
     "body": "The link may be old or mistyped. Let’s get you back on track.",
     "home": "Go to home",
     "signIn": "Sign in"
+  },
+  "account": {
+    "title": "Your account",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "verified": "verified",
+    "noPhone": "No phone yet",
+    "addPhone": "Add & verify your phone",
+    "changePhone": "Change your phone",
+    "addPhoneIntro": "Add a mobile number so you can also sign in with a text-message code. We’ll text you a 6-digit code to confirm it.",
+    "phoneLabel": "Phone number",
+    "searchPlaceholder": "Search countries…",
+    "sendCode": "Send code",
+    "sending": "Sending…",
+    "codeSent": "We sent a 6-digit code to <b>{phone}</b>",
+    "changeNumber": "Change number",
+    "phoneAdded": "Your phone is verified. You can now sign in with it too.",
+    "error": {
+      "phoneInvalid": "Please enter a valid phone number.",
+      "phoneExists": "This number is already linked to another account.",
+      "captcha": "Please complete the security check, then try again.",
+      "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+      "sendFailed": "We couldn’t send a text to this number. Please check it and try again.",
+      "signedOut": "Your session has ended. Please sign in again.",
+      "unavailable": "Adding a phone is not available right now.",
+      "generic": "Something went wrong. Please try again."
+    }
   }
 }

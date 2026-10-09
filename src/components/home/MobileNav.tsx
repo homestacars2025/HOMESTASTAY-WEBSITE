@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Menu, X, LogOut, Wallet, BookOpen } from 'lucide-react';
+import { Menu, X, LogOut, Wallet, BookOpen, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Wordmark } from '@/components/brand/Wordmark';
 import { NavLinks } from '@/components/home/NavLinks';
@@ -24,7 +24,7 @@ function getDisplayName(user: NonNullable<ReturnType<typeof useAuthUser>>): stri
   if (user === null || user === undefined) return '';
   const first = user.user_metadata?.first_name as string | undefined;
   if (first) return first;
-  return user.email?.split('@')[0] ?? '';
+  return user.email?.split('@')[0] ?? (user.phone ? `+${user.phone}` : '');
 }
 
 export function MobileNav() {
@@ -129,6 +129,14 @@ export function MobileNav() {
                       Divergence here is how a feature quietly goes missing on
                       the device it was built for. */}
                   {isCustomer === true && (<>
+          <Link
+            href="/account"
+            onClick={close}
+            className="w-full flex items-center justify-center gap-2 rounded-[999px] border border-rule text-sm font-medium text-ink py-3 hover:bg-paper-warm transition-colors duration-[240ms]"
+          >
+            <UserRound className="w-4 h-4 text-mute shrink-0" />
+            {tMenu('account')}
+          </Link>
                   <Link
                     href="/my-bookings"
                     onClick={close}

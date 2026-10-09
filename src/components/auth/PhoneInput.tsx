@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { useLocale } from 'next-intl';
 import { getCountries, getCountryCallingCode } from 'react-phone-number-input';
 import type { CountryCode } from 'libphonenumber-js';
 import { ChevronDown, Search } from 'lucide-react';
@@ -35,6 +36,27 @@ const ALL_COUNTRIES: Country[] = getCountries()
     flag: toFlagEmoji(code),
   }))
   .sort((a, b) => a.name.localeCompare(b.name));
+
+/**
+ * Country names in the page's language — Intl.DisplayNames ships with every
+ * modern browser and Node, so Arabic, Turkish and Russian guests read their
+ * own names at no bundle cost. The English label stays searchable alongside,
+ * since a lot of people type "Turkey" whatever language the page is in.
+ */
+function localizedNames(locale: string): { name: (c: Country) => string; sorted: Country[] } {
+  let display: Intl.DisplayNames | null = null;
+  try {
+    display = new Intl.DisplayNames([locale], { type: 'region' });
+  } catch {
+    display = null;
+  }
+  const name = (c: Country) => {
+    if (!display) return c.name;
+    try { return display.of(c.code) ?? c.name; } catch { return c.name; }
+  };
+  const sorted = [...ALL_COUNTRIES].sort((a, b) => name(a).localeCompare(name(b), locale));
+  return { name, sorted };
+}
 
 /**
  * E.164 → country + national part, by LONGEST matching calling code.
@@ -105,6 +127,8 @@ export function PhoneInput({
   invalid = false,
 }: PhoneInputProps) {
   const v = VARIANTS[variant];
+  const locale = useLocale();
+  const { name: countryName, sorted: countries } = useMemo(() => localizedNames(locale), [locale]);
   const defaultC = ALL_COUNTRIES.find((c) => c.code === defaultCountry) ?? ALL_COUNTRIES[0];
 
   // A prefill that does not parse falls back to defaultCountry and an empty
@@ -161,15 +185,16 @@ export function PhoneInput({
   }
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return ALL_COUNTRIES;
-    const q = search.toLowerCase();
-    return ALL_COUNTRIES.filter(
+    if (!search.trim()) return countries;
+    const q = search.trim().toLocaleLowerCase(locale);
+    return countries.filter(
       (c) =>
+        countryName(c).toLocaleLowerCase(locale).includes(q) ||
         c.name.toLowerCase().includes(q) ||
         c.dialCode.includes(q) ||
         c.code.toLowerCase() === q
     );
-  }, [search]);
+  }, [search, countries, countryName, locale]);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -189,14 +214,14 @@ export function PhoneInput({
             type="button"
             aria-expanded={dropdownOpen}
             aria-haspopup="listbox"
-            aria-label={`${selected.name} ${selected.dialCode}`}
+            aria-label={`${countryName(selected)} ${selected.dialCode}`}
             onClick={() => setDropdownOpen((v) => !v)}
             className={`flex items-center gap-1.5 ps-3 pe-2.5 py-2.5 bg-paper-warm hover:bg-rule/40 border-e border-rule ${v.radiusS} shrink-0 transition-colors duration-[240ms]`}
           >
             <span className="text-[18px] leading-none select-none" aria-hidden="true">
               {selected.flag}
             </span>
-            <span className="text-sm font-medium text-ink tabular-nums whitespace-nowrap">
+            <span dir="ltr" className="text-sm font-medium text-ink tabular-nums whitespace-nowrap">
               {selected.dialCode}
             </span>
             <ChevronDown
@@ -263,8 +288,8 @@ export function PhoneInput({
                     <span className="text-[16px] leading-none shrink-0 select-none" aria-hidden="true">
                       {c.flag}
                     </span>
-                    <span className="flex-1 truncate">{c.name}</span>
-                    <span className="text-mute tabular-nums text-xs shrink-0">{c.dialCode}</span>
+                    <span className="flex-1 truncate">{countryName(c)}</span>
+                    <span dir="ltr" className="text-mute tabular-nums text-xs shrink-0">{c.dialCode}</span>
                   </button>
                 ))
               )}

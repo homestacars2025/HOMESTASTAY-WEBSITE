@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useIsCustomer } from '@/hooks/useIsCustomer';
-import { LogOut, ChevronDown, BookOpen, Wallet } from 'lucide-react';
+import { LogOut, ChevronDown, BookOpen, Wallet, UserRound } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface UserMenuProps {
@@ -24,7 +24,7 @@ function getInitials(user: User): string {
 function getDisplayName(user: User): string {
   const first = user.user_metadata?.first_name as string | undefined;
   if (first) return first;
-  return user.email?.split('@')[0] ?? '';
+  return user.email?.split('@')[0] ?? (user.phone ? `+${user.phone}` : '');
 }
 
 export function UserMenu({ user }: UserMenuProps) {
@@ -80,6 +80,14 @@ export function UserMenu({ user }: UserMenuProps) {
       {open && (
         <div className="absolute top-full end-0 mt-2 w-48 bg-white border border-rule rounded-[14px] shadow-[0_4px_24px_rgba(0,0,0,0.10)] py-1.5 z-50">
           {isCustomer === true && (<>
+          <Link
+            href="/account"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-paper-warm transition-colors duration-[240ms]"
+          >
+            <UserRound className="w-4 h-4 text-mute shrink-0" />
+            {t('account')}
+          </Link>
           <Link
             href="/my-bookings"
             onClick={() => setOpen(false)}

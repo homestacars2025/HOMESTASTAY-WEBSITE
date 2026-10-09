@@ -604,7 +604,8 @@
       },
       "forHosts": "Ev sahipleri için Homesta",
       "guestTitle": "Ev sahibi portalını açın",
-      "signInAgain": "Güvenliğiniz için lütfen tekrar giriş yapın."
+      "signInAgain": "Güvenliğiniz için lütfen tekrar giriş yapın.",
+      "phoneSubtitle": "Telefon numaranızı girin, size SMS ile bir kod gönderelim"
     },
     "signUp": {
       "title": "Hesap oluştur",
@@ -630,7 +631,8 @@
         "emailAlreadyRegistered": "Bu e-posta adresi zaten kayıtlı.",
         "generic": "Bir hata oluştu. Lütfen tekrar deneyin.",
         "phoneTaken": "Bu telefon numarası başka bir hesapta kayıtlı. Farklı bir numara kullanın veya o hesapla giriş yapın."
-      }
+      },
+      "phoneSubtitle": "Telefon numaranızla başlayın, size SMS ile bir kod gönderelim"
     },
     "verifyEmail": {
       "title": "E-postanızı doğrulayın",
@@ -665,8 +667,8 @@
       "loading": "Yönlendiriliyor…",
       "or": "veya",
       "error": {
-        "cancelled": "Google ile giriş iptal edildi. Tekrar deneyebilir veya aşağıdan e-postanızı kullanabilirsiniz.",
-        "failed": "Google ile giriş yapılamadı. Lütfen tekrar deneyin veya aşağıdan e-postanızı kullanın."
+        "cancelled": "Google ile giriş iptal edildi. Tekrar deneyebilir veya aşağıdan başka bir yöntem seçebilirsiniz.",
+        "failed": "Google ile giriş yapılamadı. Lütfen tekrar deneyin veya aşağıdan başka bir yöntem seçin."
       }
     },
     "accountNotice": {
@@ -770,6 +772,74 @@
       "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
       "retrySend": "Kodu tekrar gönder",
       "otherAccount": "Başka bir hesap kullan"
+    },
+    "method": {
+      "useEmail": "Bunun yerine e-posta ile devam et",
+      "usePhone": "Bunun yerine telefonla devam et"
+    },
+    "phone": {
+      "label": "Telefon numarası",
+      "searchPlaceholder": "Ülke ara…",
+      "submit": "Kod gönder",
+      "sending": "Gönderiliyor…",
+      "hint": "Yeni misiniz? Numaranızı doğrulamak hesabınızı oluşturur.",
+      "codeSent": "<b>{phone}</b> numarasına 6 haneli bir kod gönderdik",
+      "changeNumber": "Numarayı değiştir",
+      "error": {
+        "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
+        "rateLimited": "Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.",
+        "sendFailed": "Bu numaraya SMS gönderilemedi. Lütfen kontrol edip tekrar deneyin.",
+        "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+        "captcha": "Lütfen güvenlik doğrulamasını tamamlayıp tekrar deneyin.",
+        "unavailable": "Telefonla giriş şu anda kullanılamıyor. Lütfen e-posta ile devam edin."
+      },
+      "hintSignUp": "Size 6 haneli bir kod göndereceğiz. Ardından adınızı ve e-postanızı ekleyerek tamamlayın.",
+      "emailAccount": {
+        "body": "Bu numara bir hesaba ait (<b>{email}</b>). E-postanızla giriş yapın, ardından hesabınızdan telefonunuzu ekleyin.",
+        "bodyNoHint": "Bu numara e-postayla giriş yapan bir hesaba ait. E-postanızla giriş yapın, ardından hesabınızdan telefonunuzu ekleyin.",
+        "cta": "E-posta ile giriş yap"
+      },
+      "newAccount": {
+        "body": "Bu numarayla henüz bir hesap yok.",
+        "create": "Bu numarayla hesap oluştur",
+        "useEmail": "Veya e-posta ile devam et"
+      }
+    },
+    "completeProfile": {
+      "title": "Profilinizi tamamlayın",
+      "subtitle": "Rezervasyondan önce son bir adım",
+      "stepEmail": "Bilgileriniz",
+      "stepPhone": "Telefon numaranız",
+      "firstNameLabel": "Ad",
+      "lastNameLabel": "Soyad",
+      "emailLabel": "E-posta",
+      "emailPlaceholder": "siz@ornek.com",
+      "emailWhy": "Rezervasyon onayları ve makbuzlar buraya gönderilir. Onaylamanız için bir kod göndereceğiz.",
+      "sendEmailCode": "E-posta kodu gönder",
+      "continue": "Devam",
+      "loading": "Kaydediliyor…",
+      "emailCodeSent": "<b>{email}</b> adresine 6 haneli bir kod gönderdik",
+      "changeEmail": "E-postayı değiştir",
+      "phoneIntro": "Konaklamanızla ilgili size ulaşabilmemiz için telefon numaranızı ekleyin. Onaylamanız için SMS ile bir kod göndereceğiz.",
+      "phoneLabel": "Telefon numarası",
+      "searchPlaceholder": "Ülke ara…",
+      "sendCode": "Kod gönder",
+      "sending": "Gönderiliyor…",
+      "phoneCodeSent": "<b>{phone}</b> numarasına 6 haneli bir kod gönderdik",
+      "changeNumber": "Numarayı değiştir",
+      "signInWithEmail": "E-posta ile giriş yapın",
+      "signInWithPhone": "Telefonla giriş yapın",
+      "phoneTakenNotice": "Numaranız doğrulandı. Bu numara başka bir Homesta profilinde de kayıtlı; ödeme sırasında sizinle teyit edeceğiz.",
+      "error": {
+        "requiredField": "Lütfen tüm zorunlu alanları doldurun.",
+        "emailInvalid": "Lütfen geçerli bir e-posta adresi girin.",
+        "emailExists": "Bu e-postanın zaten bir Homesta hesabı var.",
+        "rateLimited": "Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.",
+        "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+        "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
+        "phoneExists": "Bu numara başka bir hesaba bağlı.",
+        "sendFailed": "Bu numaraya SMS gönderilemedi. Lütfen kontrol edip tekrar deneyin."
+      }
     }
   },
   "myBookings": {
@@ -1163,5 +1233,33 @@
     "body": "Bağlantı eski ya da hatalı yazılmış olabilir. Sizi doğru yere götürelim.",
     "home": "Ana sayfaya git",
     "signIn": "Giriş yap"
+  },
+  "account": {
+    "title": "Hesabınız",
+    "name": "Ad",
+    "email": "E-posta",
+    "phone": "Telefon",
+    "verified": "doğrulandı",
+    "noPhone": "Henüz telefon yok",
+    "addPhone": "Telefonunuzu ekleyin ve doğrulayın",
+    "changePhone": "Telefonu değiştir",
+    "addPhoneIntro": "SMS koduyla da giriş yapabilmek için bir cep numarası ekleyin. Onaylamanız için 6 haneli bir kod göndereceğiz.",
+    "phoneLabel": "Telefon numarası",
+    "searchPlaceholder": "Ülke ara…",
+    "sendCode": "Kod gönder",
+    "sending": "Gönderiliyor…",
+    "codeSent": "<b>{phone}</b> numarasına 6 haneli bir kod gönderdik",
+    "changeNumber": "Numarayı değiştir",
+    "phoneAdded": "Telefonunuz doğrulandı. Artık onunla da giriş yapabilirsiniz.",
+    "error": {
+      "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
+      "phoneExists": "Bu numara başka bir hesaba bağlı.",
+      "captcha": "Lütfen güvenlik doğrulamasını tamamlayıp tekrar deneyin.",
+      "rateLimited": "Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.",
+      "sendFailed": "Bu numaraya SMS gönderilemedi. Lütfen kontrol edip tekrar deneyin.",
+      "signedOut": "Oturumunuz sona erdi. Lütfen tekrar giriş yapın.",
+      "unavailable": "Telefon ekleme şu anda kullanılamıyor.",
+      "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+    }
   }
 }

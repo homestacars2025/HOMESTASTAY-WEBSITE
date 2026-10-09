@@ -17,6 +17,9 @@ import { continueUrl } from '@/lib/auth/continue-url';
  *   dashboard, and sessions minted while it was off outlive the change. This
  *   makes the guarantee a property of the code instead.
  *
+ * Accounts are keyed on a verified email (bookings, wallet, My bookings), so
+ * a phone-only session is sent to finish its profile, not let through.
+ *
  * NOT FOR THE BOOKING FLOW. Booking deliberately requires no account — see
  * CLAUDE.md §4. Only account-specific surfaces (my bookings, saved
  * preferences) call this.
@@ -34,6 +37,22 @@ export async function requireConfirmedUser(
     redirect(`/${locale}/sign-in?returnUrl=${returnUrl}`);
   }
 
+  // The customer area is for guests. A host, staff or blocked session is sent
+  // through /api/auth/continue, which hands a host to the portal, points staff
+  // at their sign-in, and signs this website session out for both. First, so
+  // no such account is ever asked to "complete" a guest profile below.
+  if ((await accountKind(user.id)) !== 'customer') {
+    redirect(continueUrl(returnPath, locale));
+  }
+
+  if (!user.email) {
+    // Signed in by phone, email not added — or added but its code not entered
+    // yet (a pending address waits in new_email, so .email is still empty).
+    // /verify-email would open with no address and no way forward; finishing
+    // the profile is the step they actually have left.
+    redirect(`/${locale}/complete-profile?returnUrl=${returnUrl}`);
+  }
+
   if (!user.email_confirmed_at) {
     // They have a session but an unverified address. Send them to the same
     // place a fresh signup lands, with the resend option, rather than to
@@ -42,13 +61,6 @@ export async function requireConfirmedUser(
       `/${locale}/verify-email?email=${encodeURIComponent(user.email ?? '')}` +
         `&returnUrl=${returnUrl}`,
     );
-  }
-
-  // The customer area is for guests. A host, staff or blocked session is sent
-  // through /api/auth/continue, which hands a host to the portal, points staff
-  // at their sign-in, and signs this website session out for both.
-  if ((await accountKind(user.id)) !== 'customer') {
-    redirect(continueUrl(returnPath, locale));
   }
 
   return user;

@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { continueUrl } from '@/lib/auth/continue-url';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { syncProfileFromAuth } from '@/lib/auth/sync-profile';
+import { continueUrl } from '@/lib/auth/continue-url';
 import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
 
 interface SignUpFormProps {
@@ -15,11 +16,14 @@ interface SignUpFormProps {
 }
 
 /**
- * Email sign-up. Always creates a guest (customer) account.
+ * Email sign-up — the second tab ("continue with email").
+ *
+ *   signUp → 6-digit email code (verify-email) → /api/auth/continue
  *
  * No phone field: a number typed here was never verified, and profiles.phone
- * is UNIQUE — anyone could claim someone else's number and lock its owner out
- * of it. The phone is asked for at the first booking instead, as before.
+ * is UNIQUE — an unverified number could lock its real owner out of it. A
+ * guest who wants to sign in by phone later adds and verifies it on the
+ * Account page.
  */
 export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps) {
   const t      = useTranslations('auth.signUp');
@@ -87,39 +91,11 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
     );
 
     if (data.session && data.user) {
-      // Auto-confirm is on — create profile immediately and go home
-      const { error: profileError } = await supabase.from('profiles').upsert(
-        {
-          id:         data.user.id,
-          email:      data.user.email ?? email,
-          first_name: firstName.trim() || null,
-          last_name:  lastName.trim()  || null,
-          role:       'customer',
-          status:     'active',
-        },
-        { onConflict: 'id', ignoreDuplicates: false }
-      );
-
-      // profiles.phone is UNIQUE — one number per account. 23505 here means
-      // the number belongs to somebody else, and the account still exists
-      // WITHOUT a phone. Said plainly and the flow stops: sending them on
-      // would hide it until checkout asked for the number again.
-      if (profileError?.code === '23505') {
-        setError(t('error.phoneTaken'));
-        setLoading(false);
-        return;
-      }
-      if (profileError) {
-        // The account is real and they are signed in; the profile row is the
-        // trigger's job anyway. Loud, but not a dead end for the guest.
-        console.error('[signUp] profile upsert failed', {
-          message: profileError.message, code: profileError.code,
-        });
-      }
-
+      // Auto-confirm is on — no email code. Names into the profile, then the
+      // common exit (a full page load), which routes every account correctly.
+      await syncProfileFromAuth({ firstName, lastName }).catch(() => null);
       sessionStorage.removeItem('pending_profile');
-      // A full page load through /api/auth/continue — see SignInForm.
-      window.location.assign(continueUrl(returnUrl, locale));
+      window.location.assign(continueUrl(returnUrl ?? null, locale));
     } else {
       // Email OTP confirmation required — go to verify-email page
       const verifyUrl = `/verify-email?email=${encodeURIComponent(email)}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;
@@ -138,7 +114,7 @@ export function SignUpForm({ returnUrl, googleEnabled = false }: SignUpFormProps
             <>
               {' '}
               <Link
-                href="/sign-in"
+                href={{ pathname: '/sign-in', query: { method: 'email', ...(returnUrl ? { returnUrl } : {}) } }}
                 className="font-medium underline underline-offset-2 hover:opacity-70 transition-opacity duration-[240ms]"
               >
                 {t('signIn')}

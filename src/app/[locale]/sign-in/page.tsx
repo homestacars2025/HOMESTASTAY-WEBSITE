@@ -2,7 +2,12 @@ import { getTranslations } from 'next-intl/server';
 import { ShieldCheck } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { SignInForm } from '@/components/auth/SignInForm';
+import { PhoneSignInForm } from '@/components/auth/PhoneSignInForm';
+import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
+import { MethodSwitchLink } from '@/components/auth/MethodSwitchLink';
 import { isGoogleAuthEnabled } from '@/lib/auth/providers';
+import { safeReturnPath } from '@/lib/auth/profile-gap';
+import { isTurnstileConfigured } from '@/lib/security/turnstile';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { accountKind } from '@/lib/auth/account-role';
@@ -20,34 +25,39 @@ export async function generateMetadata({
   return { title: `${t('title')} — Homesta Stay` };
 }
 
+/**
+ * Phone first; email (the original password sign-in, unchanged) one link
+ * away. Google, when enabled, is offered with either.
+ */
 export default async function SignInPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ returnUrl?: string; portal?: string; next?: string; notice?: string }>;
+  searchParams: Promise<{ returnUrl?: string; method?: string; authError?: string; portal?: string; next?: string; notice?: string }>;
 }) {
   // Resolved on the server: the button is hidden unless the provider is
   // actually enabled — see lib/auth/providers for what happens when it is not.
   const googleEnabled = await isGoogleAuthEnabled();
   const { locale } = await params;
-  const { returnUrl, portal, next: rawNext, notice } = await searchParams;
-  // The portal sends ?notice=sign-in-again after an invalid or expired
-  // handoff, or a session that never passed the email code. Not an error the
-  // host caused — a calm, one-line reason, above the form.
+  const { returnUrl: rawReturnUrl, method, authError, portal, next: rawNext, notice } = await searchParams;
+  // The portal's "please sign in again" (invalid/expired handoff, unverified session).
   const signInAgain = notice === 'sign-in-again';
-  const t = await getTranslations({ locale, namespace: 'auth.signIn' });
-
-  // ── Portal entry: /sign-in?portal=host&next=/bookings ────────────────────
-  // The host portal sends hosts here to sign in — the website is the only
-  // gateway. `next` (allow-listed) rides through to the handoff.
+  const returnUrl = safeReturnPath(rawReturnUrl) || undefined;
+  // Hosts arriving from the portal sign in with email (owners have no auth
+  // phone yet), so the portal entry always opens the email form.
   const hostPortal = portal === 'host';
   const next = hostPortal ? hostNextPath(rawNext) : null;
+  // Phone sign-in needs the human check (Cloudflare Turnstile) — every SMS is
+  // gated by it. Without the keys the phone tab is not offered at all and the
+  // page is email-only, rather than a phone form that cannot send.
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+  const phoneAvailable = isTurnstileConfigured() && siteKey !== '';
+  const current = !phoneAvailable ? 'email' : method === 'email' || hostPortal ? 'email' : 'phone';
 
-  // Already signed in with portal=host: an owner goes straight through the
-  // handoff, staff and blocked accounts get their notice from the continue
-  // route — and a GUEST is asked, not sent to the application form: they may
-  // simply be signed in with the wrong account.
+  // Already signed in with portal=host: an owner goes straight through, staff
+  // and blocked accounts get their notice from the continue route, and a GUEST
+  // is asked (HostPortalInterstitial) — they may be on the wrong account.
   let guestWho: string | null = null;
   if (hostPortal) {
     const supabase = await createClient();
@@ -60,6 +70,8 @@ export default async function SignInPage({
       guestWho = [first, last].filter(Boolean).join(' ') || user.email || '';
     }
   }
+  const t      = await getTranslations({ locale, namespace: 'auth.signIn' });
+  const tOauth = await getTranslations({ locale, namespace: 'auth.oauth' });
 
   return (
     <div className="min-h-screen bg-paper">
@@ -75,9 +87,9 @@ export default async function SignInPage({
               </p>
             )}
             <h1 className="text-[clamp(1.5rem,4vw,2rem)] font-medium tracking-[-0.035em] text-ink mb-2 leading-tight">
-              {guestWho !== null ? t('guestTitle') : t('title')}
+              {t('title')}
             </h1>
-            {guestWho === null && <p className="text-sm text-mute">{t('subtitle')}</p>}
+            <p className="text-sm text-mute">{t(current === 'phone' ? 'phoneSubtitle' : 'subtitle')}</p>
           </div>
 
           {signInAgain && guestWho === null && (
@@ -88,17 +100,32 @@ export default async function SignInPage({
           )}
 
           {/* Card */}
-          <div className="bg-white border border-rule rounded-[14px] p-8 shadow-[0_2px_20px_rgba(0,0,0,0.06)]">
+          <div className="relative z-10 bg-white border border-rule rounded-[14px] p-6 sm:p-8 shadow-[0_2px_20px_rgba(0,0,0,0.06)]">
             {guestWho !== null ? (
               <HostPortalInterstitial locale={locale} who={guestWho} next={next} />
+            ) : current === 'email' ? (
+              <SignInForm returnUrl={returnUrl} next={next} googleEnabled={googleEnabled} />
             ) : (
-            <SignInForm
-              returnUrl={returnUrl || undefined}
-              next={next}
-              googleEnabled={googleEnabled}
-            />
+              <div className="flex flex-col gap-5">
+                {/* The email form reports OAuth failures itself; here the
+                    page does, since the callback always lands on /sign-in. */}
+                {authError && (
+                  <div role="alert" className="bg-stay/5 border border-stay/20 rounded-[8px] px-4 py-3 text-sm text-stay leading-relaxed">
+                    {tOauth(authError === 'cancelled' ? 'error.cancelled' : 'error.failed')}
+                  </div>
+                )}
+                <PhoneSignInForm returnUrl={returnUrl} intent="sign-in" siteKey={siteKey} />
+                {googleEnabled && (
+                  <>
+                    <AuthDivider />
+                    <GoogleButton returnUrl={returnUrl} />
+                  </>
+                )}
+              </div>
             )}
           </div>
+
+          {phoneAvailable && !hostPortal && <MethodSwitchLink page="/sign-in" current={current} returnUrl={returnUrl} />}
 
         </div>
       </main>
