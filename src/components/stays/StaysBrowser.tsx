@@ -146,7 +146,7 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4">
           {visible.map((unit, i) => (
-            <UnitCard key={unit.id} unit={unit} searchQuery={searchQuery} priority={safePage === 1 && i < EAGER} />
+            <UnitCard key={unit.id} unit={unit} searchQuery={searchQuery} priority={safePage === 1 && i < EAGER} prefetchOnIntent />
           ))}
         </div>
       )}

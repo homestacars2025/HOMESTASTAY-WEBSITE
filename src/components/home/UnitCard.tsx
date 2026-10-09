@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { SaveButton } from '@/components/home/SaveButton';
 import { Link } from '@/i18n/navigation';
+import { IntentLink } from './IntentLink';
 import type { UnitCardData } from '@/lib/types/unit';
 import { formatPlace } from '@/lib/geo/localize';
 
@@ -18,9 +19,12 @@ interface UnitCardProps {
   searchQuery?: string;
   /** Above the fold (the first row of a grid): load eagerly, as LCP. */
   priority?: boolean;
+  /** Prefetch the unit page on hover/touch/focus rather than in the viewport —
+   *  for grids that swap cards in place without a request. */
+  prefetchOnIntent?: boolean;
 }
 
-export function UnitCard({ unit, className, searchQuery, priority = false }: UnitCardProps) {
+export function UnitCard({ unit, className, searchQuery, priority = false, prefetchOnIntent = false }: UnitCardProps) {
   const t = useTranslations('card');
   // The badge names a payment mode, so it uses the one name that mode has
   // everywhere else rather than a wording of its own.
@@ -70,8 +74,10 @@ export function UnitCard({ unit, className, searchQuery, priority = false }: Uni
   const href =
     `/stays/${unit.slug ?? unit.id}${searchQuery ? `?${searchQuery}` : ''}`;
 
+  const CardLink = prefetchOnIntent ? IntentLink : Link;
+
   return (
-    <Link href={href as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
+    <CardLink href={href as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
       <article>
         {/* Image */}
         {/* aspect-[4/3] reserves the box before the photo arrives, so nothing
@@ -155,6 +161,6 @@ export function UnitCard({ unit, className, searchQuery, priority = false }: Uni
           )}
         </div>
       </article>
-    </Link>
+    </CardLink>
   );
 }
