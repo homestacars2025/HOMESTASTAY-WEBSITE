@@ -41,7 +41,8 @@
     "other": "Diğer",
     "label": "Türe göre gözat",
     "cars": "Araçlar",
-    "newTab": "(yeni sekmede açılır)"
+    "newTab": "(yeni sekmede açılır)",
+    "hotels": "Oteller"
   },
   "filters": {
     "button": "Filtreler",

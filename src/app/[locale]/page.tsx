@@ -132,7 +132,7 @@ export default async function HomePage() {
         {/* ── Category chips ───────────────────────────────────── */}
         <FadeUp delay={0.10}>
           <section className="pb-10">
-            <CategoryChips showCars />
+            <CategoryChips />
           </section>
         </FadeUp>
 

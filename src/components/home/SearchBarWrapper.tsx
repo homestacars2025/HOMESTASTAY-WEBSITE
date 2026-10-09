@@ -51,7 +51,7 @@ export async function SearchBarWrapper({
         guests: filters?.guests,
         refine: filters
           ? {
-              types: filters.types,
+              category: filters.category,
               district: filters.district,
               priceMin: filters.priceMin,
               priceMax: filters.priceMax,

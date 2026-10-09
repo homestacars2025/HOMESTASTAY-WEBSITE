@@ -1,19 +1,16 @@
 import {
   DEFAULT_SORT,
-  LEGACY_CATEGORY_TYPES,
   MAX_GUESTS,
   MIN_GUESTS,
   PRICE_MAX,
   PRICE_MIN,
   PRICE_STEP,
   AMENITY_FILTERS,
-  STAY_TYPES,
   isAmenityFilter,
   isSortKey,
-  isStayType,
-  type StayType,
   type StaysFilters,
 } from '@/lib/stays/filters';
+import { parseCategory } from '@/lib/stays/categories';
 
 /**
  * Translation between /stays URL query params and StaysFilters.
@@ -87,16 +84,11 @@ export function parseStaysSearchParams(params: RawParams): StaysFilters {
   const district = single(params.district)?.toLowerCase();
   if (city && district) filters.district = district;
 
-  // Unknown types are dropped rather than passed through, so a hand-typed
-  // ?type=castle shows the whole catalogue instead of an empty page. The old
-  // folded keys (?type=apartments) expand to the types they stood for.
-  const types = new Set<StayType>();
-  for (const t of list(params.type)) {
-    if (isStayType(t)) types.add(t);
-    else LEGACY_CATEGORY_TYPES[t]?.forEach((x) => types.add(x));
-  }
-  // Canonical order, so the same selection always writes the same URL.
-  if (types.size > 0) filters.types = STAY_TYPES.filter((t) => types.has(t));
+  // The category chip. Old links still land correctly: ?type=studio means
+  // Apartment, ?type=room / suite mean Hotels, plural keys are understood, and
+  // anything unknown is All — never an empty page (see parseCategory).
+  const category = parseCategory(params.type);
+  if (category) filters.category = category;
 
   const amenities = new Set(list(params.amenities).filter(isAmenityFilter));
   if (amenities.size > 0) filters.amenities = AMENITY_FILTERS.filter((a) => amenities.has(a));
@@ -144,7 +136,7 @@ export function parseStaysPage(params: RawParams): number {
 /** Build the /stays query string for a search. Omits empty values entirely. */
 export function buildStaysQuery(filters: StaysFilters): string {
   const q = new URLSearchParams();
-  if (filters.types?.length) q.set('type', filters.types.join(','));
+  if (filters.category) q.set('type', filters.category);
   if (filters.city) q.set('city', filters.city);
   if (filters.city && filters.district) q.set('district', filters.district);
   if (filters.guests && filters.guests > MIN_GUESTS) q.set('guests', String(filters.guests));

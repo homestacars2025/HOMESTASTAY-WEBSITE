@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 // Locale-aware router: a plain next/navigation push would drop the /ar prefix.
 import { useRouter } from '@/i18n/navigation';
 import { buildStaysQuery, toISODate } from '@/lib/stays/search-params';
+import { withLiveCategory } from '@/lib/stays/live-category';
 import type { StaysFilters } from '@/lib/stays/filters';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
@@ -34,7 +35,7 @@ export interface SearchBarProps {
      * The district rides along only while the city stays the same: Şişli means
      * nothing in Antalya.
      */
-    refine?: Pick<StaysFilters, 'types' | 'district' | 'priceMin' | 'priceMax' | 'amenities' | 'sort'>;
+    refine?: Pick<StaysFilters, 'category' | 'district' | 'priceMin' | 'priceMax' | 'amenities' | 'sort'>;
   };
 }
 
@@ -149,7 +150,9 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
       return;
     }
 
-    const { district, ...refine } = initial?.refine ?? {};
+    const { district, ...refineRest } = initial?.refine ?? {};
+    // The category chip may have changed in place since this bar rendered.
+    const refine = initial?.refine ? withLiveCategory(refineRest) : refineRest;
     const query = buildStaysQuery({
       ...refine,
       district: selectedCity.id === initial?.cityId ? district : undefined,

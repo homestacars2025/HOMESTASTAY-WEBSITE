@@ -3,19 +3,19 @@ import { Suspense } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { canonical, hreflangAlternates } from '@/lib/config/urls';
 import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/config/seo';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { Header } from '@/components/home/Header';
-import { StaysGallery } from '@/components/stays/StaysGallery';
 import { StaysSkeleton } from '@/components/stays/StaysSkeleton';
-import { StaysToolbar } from '@/components/stays/StaysToolbar';
+import { StaysBrowser } from '@/components/stays/StaysBrowser';
+import type { DistrictOption } from '@/components/stays/FiltersSheet';
+import { pickLocalizedName } from '@/lib/geo/localize';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
-import { CategoryChips } from '@/components/home/CategoryChips';
 import { Link } from '@/i18n/navigation';
-import { getPublicUnits, LISTING_PAGE_SIZE, type StaysFilters } from '@/lib/queries/stays';
+import { getCatalogueFacets, getStaysCatalogue, type StaysFilters } from '@/lib/queries/stays';
 import {
   parseStaysSearchParams,
   parseStaysPage,
-  buildStaysQuery,
   buildStaysQueryWithPage,
 } from '@/lib/stays/search-params';
 
@@ -87,10 +87,6 @@ export async function generateMetadata({
  * unit page still reads only the dates/guests it needs for the booking card;
  * the rest rides along so it can hand the guest back their results.
  */
-function unitSearchQuery(filters: StaysFilters, page: number): string {
-  // Leading '?' is stripped here — UnitCard adds its own.
-  return buildStaysQueryWithPage(filters, page).replace(/^\?/, '');
-}
 
 export default async function StaysPage({ searchParams }: { searchParams: SearchParams }) {
   const [t, locale, rawParams] = await Promise.all([
@@ -103,6 +99,15 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
   // rather than erroring or emptying the page.
   const filters = parseStaysSearchParams(rawParams);
   const page = parseStaysPage(rawParams);
+
+  // Old category links still land on the right chip: ?type=studio becomes
+  // ?type=apartment, ?type=room / suite become ?type=hotels, plural keys and
+  // lists collapse to one. Anything unrecognisable simply shows All. Redirected
+  // once so the address bar (and anything shared from it) is the canonical one.
+  const rawType = Array.isArray(rawParams.type) ? rawParams.type.join(',') : rawParams.type;
+  if (rawType !== undefined && rawType !== (filters.category ?? '')) {
+    redirect(`/${locale}/stays${buildStaysQueryWithPage(filters, page)}`);
+  }
 
   return (
     <div className="min-h-screen bg-paper">
@@ -117,17 +122,13 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
           <SearchBarWrapper filters={filters} collapsible />
         </div>
 
-        {/* The chips live here as well as on the homepage: this is where a
-            guest can see what the filter did, and switch without going back. */}
-        <div className="mb-8">
-          <CategoryChips filters={filters} />
-        </div>
-
         {/* The results stream in their own boundary so the header + search bar
             never freeze. Keyed by the active filters/page so a new search shows
             the branded skeleton instead of the stale grid while it resolves. */}
         <Suspense
-          key={`${JSON.stringify(filters)}:${page}`}
+          // Not keyed on the category or page: those change in place on the
+          // client (StaysBrowser) and must never re-trigger the skeleton.
+          key={JSON.stringify({ ...filters, category: undefined })}
           fallback={<StaysSkeleton />}
         >
           <StaysResults locale={locale} filters={filters} page={page} />
@@ -148,19 +149,27 @@ async function StaysResults({
 }) {
   const t = await getTranslations('pages.stays');
 
-  const { units, total, amenityCounts } = await getPublicUnits(locale, filters, page);
+  // The whole search ONCE — every category — so the chips filter on the
+  // client with no request (see getStaysCatalogue / StaysBrowser).
+  const { category, ...shared } = filters;
+  const [cards, facets] = await Promise.all([getStaysCatalogue(locale, shared), getCatalogueFacets()]);
   const isFiltered = Object.values(filters).some((v) => v !== undefined);
 
-  const toolbar = (
-    <StaysToolbar locale={locale} filters={filters} total={total} amenityCounts={amenityCounts} />
-  );
+  // Districts of the chosen city that hold units, localised here so the
+  // client gets display strings, not table rows.
+  const districts: DistrictOption[] = shared.city
+    ? (facets.districtsByCity[shared.city.toLowerCase()] ?? []).map((d) => ({
+        key: d.key,
+        label: pickLocalizedName(locale, d) ?? d.key,
+        count: d.count,
+      }))
+    : [];
 
-  if (units.length === 0) {
+  if (cards.length === 0) {
     // A search that matched nothing is not the same as an empty catalogue:
     // offering "become a host" here would answer a question nobody asked.
     return isFiltered ? (
       <>
-      {toolbar}
       <div className="px-4 py-20 text-center max-w-md mx-auto">
         <h2 className="text-lg font-medium text-ink mb-2 tracking-[-0.015em]">
           {t('searchEmpty.title')}
@@ -191,68 +200,14 @@ async function StaysResults({
     );
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / LISTING_PAGE_SIZE));
-
   return (
-    <>
-      {toolbar}
-      <StaysGallery units={units} searchQuery={unitSearchQuery(filters, page)} />
-      {totalPages > 1 && (
-        <Pagination filters={filters} page={page} totalPages={totalPages} t={t} />
-      )}
-    </>
+    <StaysBrowser
+      cards={cards}
+      filters={shared}
+      initialCategory={category ?? 'all'}
+      initialPage={page}
+      districts={districts}
+    />
   );
 }
 
-function Pagination({
-  filters,
-  page,
-  totalPages,
-  t,
-}: {
-  filters: StaysFilters;
-  page: number;
-  totalPages: number;
-  t: Awaited<ReturnType<typeof getTranslations>>;
-}) {
-  // Preserve every active filter across pages; only `page` changes.
-  const base = buildStaysQuery(filters);
-  const hrefFor = (p: number) => `/stays${base}${base ? '&' : '?'}page=${p}` as '/stays';
-
-  const pill =
-    'inline-flex items-center gap-1.5 rounded-[999px] border border-rule px-5 py-2.5 text-sm font-medium text-ink-soft transition-colors duration-[240ms] hover:text-ink hover:border-ink-soft';
-  const pillOff =
-    'inline-flex items-center gap-1.5 rounded-[999px] border border-rule px-5 py-2.5 text-sm font-medium text-mute opacity-40 cursor-not-allowed';
-
-  return (
-    <nav aria-label={t('pagination.label')} className="flex items-center justify-center gap-3 px-4 pt-14">
-      {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className={pill} rel="prev">
-          <ChevronLeft className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />
-          {t('pagination.previous')}
-        </Link>
-      ) : (
-        <span className={pillOff} aria-disabled="true">
-          <ChevronLeft className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />
-          {t('pagination.previous')}
-        </span>
-      )}
-
-      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-mute tabular-nums px-1">
-        {t('pagination.status', { current: page, total: totalPages })}
-      </span>
-
-      {page < totalPages ? (
-        <Link href={hrefFor(page + 1)} className={pill} rel="next">
-          {t('pagination.next')}
-          <ChevronRight className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />
-        </Link>
-      ) : (
-        <span className={pillOff} aria-disabled="true">
-          {t('pagination.next')}
-          <ChevronRight className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />
-        </span>
-      )}
-    </nav>
-  );
-}

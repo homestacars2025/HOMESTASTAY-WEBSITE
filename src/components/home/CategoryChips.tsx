@@ -1,158 +1,34 @@
 import { getTranslations } from 'next-intl/server';
-import { CategoryIcon, ExternalArrow } from './CategoryIcon';
-import { Link } from '@/i18n/navigation';
-import { getCatalogueFacets, type StaysFilters } from '@/lib/queries/stays';
-import { STAY_TYPES, type StayType } from '@/lib/stays/filters';
-import { buildStaysQuery } from '@/lib/stays/search-params';
+import { getCatalogueFacets } from '@/lib/queries/stays';
+import { CATEGORIES, CATEGORY_TYPES } from '@/lib/stays/categories';
+import { CategoryRow, type ChipItem } from '@/components/stays/CategoryRow';
 
 /**
- * The unit-type filter row — one chip per raw unit_type, plus ALL.
+ * The homepage chip row: All · Apartment · Cabin · Villa · Hotels · Cars.
+ * Each chip links to /stays?type=…, where the same row filters in place.
  *
- * Plain links to /stays, so a chip both filters and survives a refresh, a
- * shared URL and the back button. No 'use client', no state, no hydration cost
- * on the homepage.
- *
- * Chips toggle: tapping Villa while Apartment is on shows both (unit_type IN
- * (...)); tapping an active chip takes it back off; ALL clears the lot.
- *
- * A chip renders only when the live catalogue holds units of that type — see
- * getCatalogueFacets — so farm and bed stay hidden until the first one is
- * listed. An active chip is always kept, even at zero, because hiding the
- * filter a guest is currently looking at explains nothing about the empty
- * page in front of them.
- *
- * Existing search state rides along: filtering to villas after searching
- * Istanbul keeps ?city=istanbul, so the two AND together. `page` is
- * deliberately dropped — page 4 of apartments is not page 4 of villas.
+ * A category chip renders only when the live catalogue holds bookable units of
+ * its types (getCatalogueFacets, cached and tagged 'units'). No 'use client',
+ * no state — plain links, no hydration cost on the homepage beyond the row.
  */
+export async function CategoryChips() {
+  const [t, { typeCounts }] = await Promise.all([getTranslations('categories'), getCatalogueFacets()]);
 
-interface CategoryChipsProps {
-  /**
-   * Current /stays filters, so a chip preserves the active search.
-   * Omitted on the homepage, where there is no search to preserve.
-   */
-  filters?: StaysFilters;
-  /**
-   * The homepage ends the row with Homesta Cars — another Homesta service,
-   * not a filter — after a thin divider. Off on /stays, where every item in
-   * the row filters the results.
-   */
-  showCars?: boolean;
-}
-
-const CARS_URL = 'https://homestacars.com';
-
-/** English floor for a missing message — see `label` below. */
-const FALLBACK: Record<StayType, string> = {
-  apartment: 'Apartment', villa: 'Villa', studio: 'Studio', suite: 'Suite', room: 'Room',
-  cabin: 'Cabin', farm: 'Farm', bed: 'Bed', other: 'Other',
-};
-
-export async function CategoryChips({ filters = {}, showCars = false }: CategoryChipsProps) {
-  const [t, { typeCounts }] = await Promise.all([
-    getTranslations('categories'),
-    getCatalogueFacets(),
-  ]);
-
-  const active = new Set(filters.types ?? []);
-
-  const visible = STAY_TYPES.filter((type) => typeCounts[type] > 0 || active.has(type));
-
-  /**
-   * A label that can never be a raw key.
-   *
-   * next-intl renders the key path for a missing message, which is exactly how
-   * "CATEGORIES.FARMS" reached production. Every key here exists in all four
-   * locales today; this makes that a fact the code enforces rather than one it
-   * assumes.
-   */
-  const label = (key: string, fallback: string): string =>
-    typeof t.has === 'function' && !t.has(key) ? fallback : t(key);
-
-  /** The same search with `type` switched on or off. */
-  const toggled = (type: StayType): string => {
-    const next = new Set(active);
-    if (next.has(type)) next.delete(type);
-    else next.add(type);
-    const types = STAY_TYPES.filter((x) => next.has(x));
-    return `/stays${buildStaysQuery({ ...filters, types: types.length ? types : undefined })}`;
-  };
-
-  // Nothing to choose between — one type holding everything is not a
-  // filter, it is decoration. Law 2: every element earns its place.
-  if (visible.length < 2) return null;
+  const items: ChipItem[] = [{ key: 'all', label: t('all'), href: '/stays' }];
+  for (const c of CATEGORIES) {
+    const count = CATEGORY_TYPES[c].reduce((sum, type) => sum + (typeCounts[type] ?? 0), 0);
+    if (count > 0) items.push({ key: c, label: t(c), href: `/stays?type=${c}` });
+  }
+  // One category holding everything is not a filter, it is decoration.
+  if (items.length < 3) return null;
 
   return (
-    /* Scrolls sideways on a phone (eight chips do not fit 375px); centred
-       once there is room for the whole row. */
-    <div className="overflow-x-auto scrollbar-none px-4 pb-2">
-      <nav
-        aria-label={t('label')}
-        className="flex flex-row flex-nowrap items-center gap-1 sm:gap-3 w-max mx-auto"
-      >
-        <Chip
-          href={`/stays${buildStaysQuery({ ...filters, types: undefined })}`}
-          icon="all"
-          label={label('all', 'All')}
-          active={active.size === 0}
-        />
-        {visible.map((type) => (
-          <Chip
-            key={type}
-            href={toggled(type)}
-            icon={type}
-            label={label(type, FALLBACK[type])}
-            active={active.has(type)}
-          />
-        ))}
-        {showCars && (
-          <>
-            <span className="mx-1 h-10 w-px shrink-0 bg-rule sm:mx-2" aria-hidden="true" />
-            <a
-              href={CARS_URL}
-              target="_blank"
-              rel="noopener"
-              className="flex flex-col items-center gap-1.5 min-w-14 px-1.5 py-2.5 text-mute hover:text-ink transition-colors duration-[240ms]"
-            >
-              <CategoryIcon name="car" size={28} />
-              <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.09em] leading-none whitespace-nowrap">
-                {label('cars', 'Cars')}
-                <ExternalArrow />
-                <span className="sr-only">{label('newTab', '(opens in a new tab)')}</span>
-              </span>
-            </a>
-          </>
-        )}
-      </nav>
-    </div>
-  );
-}
-
-function Chip({
-  href, icon, label, active,
-}: {
-  href: string;
-  icon: string;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'true' : undefined}
-      // py-2.5 + the 28px icon + label clears the 44px touch target.
-      className={`flex flex-col items-center gap-1.5 min-w-14 px-1.5 py-2.5 transition-colors duration-[240ms] ${
-        active ? 'text-stay' : 'text-mute hover:text-ink'
-      }`}
-    >
-      <CategoryIcon name={icon} size={28} />
-      <span
-        className={`font-mono text-[10px] uppercase tracking-[0.09em] leading-none whitespace-nowrap ${
-          active ? 'font-medium' : 'font-normal'
-        }`}
-      >
-        {label}
-      </span>
-    </Link>
+    <CategoryRow
+      items={items}
+      active="all"
+      ariaLabel={t('label')}
+      carsLabel={t('cars')}
+      newTabLabel={t('newTab')}
+    />
   );
 }

@@ -26,7 +26,19 @@ export function StaysSkeleton() {
       {/* Announced to assistive tech; visually the pulsing cards do the talking. */}
       <span role="status" className="sr-only">{t('loadingResults')}</span>
 
-      {/* Toolbar placeholder — same box as StaysToolbar (44px pills, then the
+      {/* Category row placeholder — the chips now arrive with the results
+          (StaysBrowser), so their row is held here at the same height (icon +
+          label + padding, then the mb-8 gap) to keep the page from jumping. */}
+      <div className="mb-8 flex justify-center gap-3 px-4 pb-2" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5 min-w-14 px-1.5 py-2.5">
+            <div className="h-7 w-7 rounded-[8px] bg-paper-warm animate-pulse" />
+            <div className="h-2.5 w-12 rounded bg-paper-warm animate-pulse" />
+          </div>
+        ))}
+      </div>
+
+      {/* Toolbar placeholder — same box as the toolbar (44px pills, then the
           count line), so the grid lands where it will stay. */}
       <div className="px-4 mb-6" aria-hidden="true">
         <div className="flex items-center justify-between gap-3">
@@ -38,7 +50,7 @@ export function StaysSkeleton() {
         </div>
       </div>
 
-      {/* Card grid placeholder — same columns as StaysGallery */}
+      {/* Card grid placeholder — same columns as the results grid */}
       <div
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4"
         aria-hidden="true"

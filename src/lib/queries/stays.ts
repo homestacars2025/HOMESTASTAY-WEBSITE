@@ -14,7 +14,9 @@ import {
   type StayType,
   type StaysFilters,
 } from '@/lib/stays/filters';
+import { CATEGORY_TYPES, categoryOf, type Category } from '@/lib/stays/categories';
 import type {
+  UnitCardData,
   UnitListing,
   UnitMediaItem,
   UnitPricing,
@@ -614,6 +616,7 @@ export async function getPublicUnits(
 interface Candidate {
   id: string;
   created_at: string;
+  unit_type: string;
   /** unit_info.ad_title — the Turkish source title, the app's sort key. */
   title: string;
   amenities: Record<AmenityFilter, boolean>;
@@ -704,6 +707,96 @@ async function queryPublicUnits(
   return { units, total, amenityCounts };
 }
 
+/** One /stays card plus what the client needs to filter and count it. */
+export interface StayCard extends UnitCardData {
+  /** The chip it falls under; null → shown under All only. */
+  category: Category | null;
+  /** The filterable amenities it has, for the filter sheet's live counts. */
+  amenities: AmenityFilter[];
+}
+
+/**
+ * EVERY unit matching the search, as lean cards, in the search's sort order —
+ * for the /stays browser, which filters by category and pages ON THE CLIENT so
+ * a chip tap is instant (no request, no skeleton).
+ *
+ * The category is deliberately NOT applied here: one load serves all chips.
+ * Dates, guests, city, price and sort still are — availability must stay live.
+ * The no-filter catalogue (the plain /stays index) is identical for everyone,
+ * so it is cached and tagged 'units' like the rest of the inventory; every
+ * other search is fresh.
+ *
+ * Card rows are fetched in parallel batches of 100 ids, keeping each request
+ * URL well within limits for the whole ~340-unit catalogue.
+ */
+export async function getStaysCatalogue(locale: string, filters: StaysFilters): Promise<StayCard[]> {
+  const { category: _category, ...rest } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const unfiltered = Object.values(rest).every((v) => v === undefined);
+  if (unfiltered) {
+    return unstable_cache(
+      () => queryStaysCatalogue(locale, {}),
+      ['stays-catalogue-v1', locale],
+      { tags: ['units'], revalidate: 600 },
+    )();
+  }
+  return queryStaysCatalogue(locale, rest);
+}
+
+async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promise<StayCard[]> {
+  const supabase = createPublicClient();
+  const resolved = await resolveCandidates(supabase, filters);
+  if (!resolved || resolved.candidates.length === 0) return [];
+  const { candidates, quotes } = resolved;
+
+  const ids = candidates.map((c) => c.id);
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
+
+  const results = await Promise.all(
+    batches.map((batch) => cardTrims(supabase.from('units').select(CARD_SELECT).in('id', batch), locale)),
+  );
+  const rows: RawRow[] = [];
+  for (const r of results) {
+    if (r.error) {
+      console.error('[getStaysCatalogue] cards', { message: r.error.message, code: r.error.code });
+      return [];
+    }
+    rows.push(...((r.data ?? []) as RawRow[]));
+  }
+
+  const listings = await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, quotes);
+  const byId = new Map(listings.map((u) => [u.id, u]));
+
+  const cards: StayCard[] = [];
+  for (const c of candidates) {
+    const u = byId.get(c.id);
+    if (!u) continue;
+    const cover = u.media.find((m) => m.is_cover) ?? u.media[0];
+    cards.push({
+      id: u.id,
+      slug: u.slug,
+      ad_title: u.ad_title,
+      unit_name: u.unit_name,
+      city: u.city,
+      region: u.region,
+      municipality: u.municipality,
+      pricing: u.pricing,
+      rating: u.rating,
+      allow_deposit: u.allow_deposit,
+      allow_pay_at_arrival: u.allow_pay_at_arrival,
+      media: cover ? [cover] : [],
+      specifications: {
+        bedrooms: u.specifications.bedrooms,
+        beds: u.specifications.beds,
+        bathrooms: u.specifications.bathrooms,
+      },
+      category: categoryOf(c.unit_type),
+      amenities: AMENITY_FILTERS.filter((a) => c.amenities[a]),
+    });
+  }
+  return cards;
+}
+
 /**
  * How many units a search matches, and the amenity counts inside it — the
  * filter sheet's live "Show 42 stays" while a guest is still adjusting.
@@ -731,7 +824,9 @@ async function resolveCandidates(
   quotes: Map<string, UnitPricing> | undefined;
   amenityCounts: Record<AmenityFilter, number>;
 } | null> {
-  const { types, city, district, guests, checkIn, checkOut, priceMin, priceMax } = filters;
+  const { city, district, guests, checkIn, checkOut, priceMin, priceMax } = filters;
+  // The category chip is a set of unit types (see lib/stays/categories).
+  const types = filters.category ? CATEGORY_TYPES[filters.category] : undefined;
   const amenities = filters.amenities ?? [];
   const sort: SortKey = filters.sort ?? DEFAULT_SORT;
   const wantsAvailability = !!checkIn && !!checkOut;
@@ -761,7 +856,7 @@ async function resolveCandidates(
   // nothing. unit_amenities is always selected (for the counts) but only inner
   // when an amenity is required.
   const select = [
-    'id,created_at',
+    'id,created_at,unit_type',
     'unit_info!inner(ad_title)',
     `properties!inner(archived_at${city ? ',geo_cities:city_id!inner(name)' : ''})`,
     `unit_amenities${amenities.length ? '!inner' : ''}(${AMENITY_FILTERS.join(',')})`,
@@ -781,7 +876,7 @@ async function resolveCandidates(
   // disagrees with it (casing, and at least one unit filed under the wrong city).
   if (city) query = query.ilike('properties.geo_cities.name', likeLiteral(city));
   if (districtId) query = query.eq('properties.district_id', districtId);
-  if (types?.length) query = query.in('unit_type', types);
+  if (types?.length) query = query.in('unit_type', [...types]);
   if (guests) query = query.gte('unit_specifications.max_guests', guests);
   for (const a of amenities) query = query.is(`unit_amenities.${a}`, true);
   if (wantsAvailability) {
@@ -811,6 +906,7 @@ async function resolveCandidates(
       return {
         id: row.id as string,
         created_at: (row.created_at as string) ?? '',
+        unit_type: String(row.unit_type ?? 'other'),
         title: String(one<RawRow>(row.unit_info)?.ad_title ?? '').trim(),
         amenities: Object.fromEntries(
           AMENITY_FILTERS.map((a) => [a, !!am?.[a]]),

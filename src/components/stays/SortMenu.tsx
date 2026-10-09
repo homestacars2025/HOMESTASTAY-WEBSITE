@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronDown } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import { buildStaysQuery } from '@/lib/stays/search-params';
+import { withLiveCategory } from '@/lib/stays/live-category';
 import { DEFAULT_SORT, SORT_KEYS, isSortKey, type StaysFilters } from '@/lib/stays/filters';
 
 /**
@@ -24,7 +25,7 @@ export function SortMenu({ filters }: { filters: StaysFilters }) {
         onChange={(e) => {
           const sort = e.target.value;
           if (!isSortKey(sort)) return;
-          const next = { ...filters, sort: sort === DEFAULT_SORT ? undefined : sort };
+          const next = { ...withLiveCategory(filters), sort: sort === DEFAULT_SORT ? undefined : sort };
           router.push(`/stays${buildStaysQuery(next)}` as '/stays');
         }}
         className="appearance-none bg-transparent font-medium cursor-pointer focus:outline-none"

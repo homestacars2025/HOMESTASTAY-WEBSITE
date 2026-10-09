@@ -44,6 +44,28 @@ export interface UnitPricing {
   nights:      number | null;
 }
 
+/**
+ * What a listing card reads — and nothing else. The /stays browser sends one
+ * of these per unit to the client (~340 rows), so it stays deliberately lean:
+ * the cover image only, three spec fields, the live price.
+ */
+export interface UnitCardData {
+  id: string;
+  slug: string | null;
+  ad_title: string | null;
+  unit_name: string | null;
+  city: string | null;
+  region: string | null;
+  municipality: string | null;
+  pricing: UnitPricing;
+  rating: number | null;
+  allow_deposit: boolean;
+  allow_pay_at_arrival: boolean;
+  /** The cover only (or empty). */
+  media: UnitMediaItem[];
+  specifications: Pick<UnitSpecifications, 'bedrooms' | 'beds' | 'bathrooms'>;
+}
+
 /** Mirrors a row in the unit_media table. Always use public_url for display. */
 export interface UnitMediaItem {
   id: string;

@@ -4,20 +4,23 @@ import { cn } from '@/lib/utils';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { SaveButton } from '@/components/home/SaveButton';
 import { Link } from '@/i18n/navigation';
-import type { UnitListing } from '@/lib/types/unit';
+import type { UnitCardData } from '@/lib/types/unit';
 import { formatPlace } from '@/lib/geo/localize';
 
 interface UnitCardProps {
-  unit: UnitListing;
+  /** A full UnitListing works too — it is a superset of what the card reads. */
+  unit: UnitCardData;
   /** Override width/flex classes. Defaults to w-full (for grid use).
    *  Pass e.g. "flex-none w-[260px] md:w-[280px]" for horizontal scroll. */
   className?: string;
   /** Encoded checkIn/checkOut/guests carried from the search, so the unit page
    *  preselects them instead of making the guest re-pick. '' when absent. */
   searchQuery?: string;
+  /** Above the fold (the first row of a grid): load eagerly, as LCP. */
+  priority?: boolean;
 }
 
-export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
+export function UnitCard({ unit, className, searchQuery, priority = false }: UnitCardProps) {
   const t = useTranslations('card');
   // The badge names a payment mode, so it uses the one name that mode has
   // everywhere else rather than a wording of its own.
@@ -80,6 +83,7 @@ export function UnitCard({ unit, className, searchQuery }: UnitCardProps) {
               src={cover.public_url}
               alt={title}
               fill
+              priority={priority}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               className="object-cover transition-transform duration-[240ms] group-hover:scale-[1.03]"
             />

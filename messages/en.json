@@ -41,7 +41,8 @@
     "other": "Other",
     "label": "Browse by type",
     "cars": "Cars",
-    "newTab": "(opens in a new tab)"
+    "newTab": "(opens in a new tab)",
+    "hotels": "Hotels"
   },
   "filters": {
     "button": "Filters",

@@ -8,6 +8,7 @@ import { useRouter } from '@/i18n/navigation';
 import { PriceRange } from './PriceRange';
 import { countStaysAction } from '@/app/[locale]/stays/filter-actions';
 import { buildStaysQuery } from '@/lib/stays/search-params';
+import { withLiveCategory } from '@/lib/stays/live-category';
 import {
   AMENITY_FILTERS,
   PRICE_MAX,
@@ -131,7 +132,7 @@ export function FiltersSheet({
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       const id = ++request.current;
-      const query = buildStaysQuery(withDraft(filters, next)).replace(/^\?/, '');
+      const query = buildStaysQuery(withDraft(withLiveCategory(filters), next)).replace(/^\?/, '');
       startCounting(async () => {
         try {
           const result = await countStaysAction(query);
@@ -152,7 +153,7 @@ export function FiltersSheet({
 
   function apply() {
     close();
-    router.push(`/stays${buildStaysQuery(withDraft(filters, draft))}` as '/stays');
+    router.push(`/stays${buildStaysQuery(withDraft(withLiveCategory(filters), draft))}` as '/stays');
   }
 
   function clearAll() {

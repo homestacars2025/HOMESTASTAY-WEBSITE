@@ -1,4 +1,5 @@
 import type { UnitTypeEnum } from '@/lib/types/unit';
+import type { Category } from '@/lib/stays/categories';
 
 /**
  * The /stays filter vocabulary — mirrors the mobile app's search filters.
@@ -28,18 +29,6 @@ export function isStayType(value: string): value is StayType {
   return (STAY_TYPES as readonly string[]).includes(value);
 }
 
-/**
- * The folded category keys the chips used to write (?type=apartments).
- *
- * Shared links and indexed URLs still carry them, so they are read back as the
- * types they meant rather than dropped — the page a link promised still opens.
- */
-export const LEGACY_CATEGORY_TYPES: Record<string, readonly StayType[]> = {
-  apartments: ['apartment', 'studio'],
-  villas: ['villa'],
-  cabins: ['cabin'],
-  rooms: ['room', 'suite'],
-};
 
 // ── Amenities ────────────────────────────────────────────────────────────────
 
@@ -93,8 +82,8 @@ export const MAX_GUESTS = 16;
 
 /** Search filters for the /stays index. Every field is optional. */
 export interface StaysFilters {
-  /** unit_type values, OR-ed together. */
-  types?: StayType[];
+  /** The category chip (see lib/stays/categories) — one at a time, or All. */
+  category?: Category;
   /** geo_cities.name, case-insensitive (e.g. "istanbul"). */
   city?: string;
   /**
