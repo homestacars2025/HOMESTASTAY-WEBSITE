@@ -18,10 +18,13 @@ import type { StayCard } from '@/lib/queries/stays';
 export function FavoritesList() {
   const t = useTranslations('favorites');
   const locale = useLocale();
-  const { ids, ready } = useFavorites();
+  const { ids, ready, refresh } = useFavorites();
   const [cards, setCards] = useState<Map<string, StayCard>>(new Map());
   const [loaded, setLoaded] = useState(false);
   const [, startTransition] = useTransition();
+
+  // Re-read on open: a place saved in the app since the last sign-in shows here.
+  useEffect(() => { refresh(); }, [refresh]);
 
   const missing = ids.filter((id) => !cards.has(id));
   const missingKey = missing.join(',');

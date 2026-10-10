@@ -1,22 +1,26 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useIsCustomer } from '@/hooks/useIsCustomer';
 import { track } from '@/lib/analytics/events';
 
 /**
  * Saved places (the ❤ on every card).
  *
- *   signed out  → this browser's localStorage
- *   signed in   → public.customer_favorites (RLS: own rows only); whatever
- *                 was saved while signed out is merged into the account on
- *                 sign-in and the local copy cleared
+ *   signed out, or a host / staff account
+ *               → this browser's localStorage only
+ *   a customer  → public.customer_favorites (RLS: own rows; profile_id is set
+ *                 by the database, never sent from here). The app writes the
+ *                 same table, so the list is re-read on every sign-in and
+ *                 whenever the Saved page opens — a heart added in the app
+ *                 shows here.
  *
- * Until the table exists (supabase/pending/20261010_search_v2_favorites_events
- * .sql) the first read fails and everyone simply keeps the local list — the
- * heart still works and nothing saved is lost; the merge happens on the first
- * sign-in after the table appears.
+ * On a customer's sign-in, whatever was saved in this browser is merged into
+ * the account with ONE call (merge_favorites — skips duplicates and units
+ * that no longer exist); the local copy is cleared only once that call has
+ * succeeded, so a failure never loses a saved place.
  *
  * The account's list is read here, client-side, on purpose: it depends on the
  * browser's own session and on localStorage, which no server render can see.
@@ -47,11 +51,15 @@ interface FavoritesValue {
   ids: string[];
   has: (unitId: string) => boolean;
   toggle: (unitId: string) => void;
-  /** False until the saved list has been read (avoids a flash of empty hearts being trusted). */
+  /** Re-read the saved list (the Saved page calls this when it opens). */
+  refresh: () => void;
+  /** False until the saved list has been read. */
   ready: boolean;
 }
 
-const FavoritesContext = createContext<FavoritesValue>({ ids: [], has: () => false, toggle: () => {}, ready: false });
+const FavoritesContext = createContext<FavoritesValue>({
+  ids: [], has: () => false, toggle: () => {}, refresh: () => {}, ready: false,
+});
 
 export function useFavorites(): FavoritesValue {
   return useContext(FavoritesContext);
@@ -59,53 +67,67 @@ export function useFavorites(): FavoritesValue {
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const user = useAuthUser();
+  const isCustomer = useIsCustomer(user);
   const [ids, setIds] = useState<string[]>([]);
-  const [mode, setMode] = useState<'local' | 'db'>('local');
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    if (user === undefined) return; // auth still loading
-    if (user === null) {
-      setMode('local');
-      setIds(readLocal());
-      setReady(true);
-      return;
+  // Where the list lives. Undecided while auth or the role is still loading.
+  const mode: 'local' | 'account' | null =
+    user === undefined ? null
+      : user === null ? 'local'
+        : isCustomer === null ? null
+          : isCustomer ? 'account' : 'local';
+
+  const loading = useRef(0);
+
+  /** The account's saved list, newest first. Null when it could not be read. */
+  const readAccount = useCallback(async (): Promise<string[] | null> => {
+    const { data, error } = await createClient()
+      .from('customer_favorites')
+      .select('unit_id')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.warn('[favorites] read failed', { code: error.code });
+      return null;
     }
+    return (data ?? []).map((r) => r.unit_id as string);
+  }, []);
+
+  const refresh = useCallback(() => {
+    if (mode === 'local') { setIds(readLocal()); setReady(true); return; }
+    if (mode !== 'account') return;
+    const run = ++loading.current;
+    void readAccount().then((saved) => {
+      if (run !== loading.current || saved === null) return;
+      // Anything still local (a merge that failed) stays visible too.
+      const local = readLocal().filter((id) => !saved.includes(id));
+      setIds([...local, ...saved]);
+      setReady(true);
+    });
+  }, [mode, readAccount]);
+
+  // Sign-in (or the role becoming known): merge the browser's list once, then read.
+  useEffect(() => {
+    if (mode === null) return;
+    if (mode === 'local') { setIds(readLocal()); setReady(true); return; }
 
     let cancelled = false;
+    const run = ++loading.current;
     (async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('customer_favorites')
-        .select('unit_id')
-        .order('created_at', { ascending: false });
-      if (cancelled) return;
-      if (error) {
-        // Table not there yet (or unreadable): keep saving in this browser.
-        setMode('local');
-        setIds(readLocal());
-        setReady(true);
-        return;
-      }
-
-      const saved = (data ?? []).map((r) => r.unit_id as string);
-      const local = readLocal().filter((id) => !saved.includes(id));
+      const local = readLocal();
       if (local.length) {
-        const { error: mergeError } = await supabase
-          .from('customer_favorites')
-          .upsert(local.map((unit_id) => ({ profile_id: user.id, unit_id })), { onConflict: 'profile_id,unit_id', ignoreDuplicates: true });
-        if (!mergeError) writeLocal([]);
-        if (cancelled) return;
-        setIds(mergeError ? saved : [...local, ...saved]);
-      } else {
-        writeLocal([]);
-        setIds(saved);
+        const { error } = await createClient().rpc('merge_favorites', { p_unit_ids: local });
+        if (!error) writeLocal([]);
+        else console.warn('[favorites] merge failed — kept in this browser', { code: error.code });
       }
-      setMode('db');
+      const saved = await readAccount();
+      if (cancelled || run !== loading.current) return;
+      const stillLocal = readLocal().filter((id) => !(saved ?? []).includes(id));
+      setIds([...stillLocal, ...(saved ?? [])]);
       setReady(true);
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [mode, user?.id, readAccount]);
 
   const toggle = useCallback((unitId: string) => {
     if (!UUID.test(unitId)) return;
@@ -114,24 +136,28 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     setIds(next); // optimistic
     track({ event: 'favorite', unit_id: unitId, filters: { on } });
 
-    if (mode === 'local' || !user) {
+    if (mode !== 'account') {
       writeLocal(next);
       return;
     }
     const supabase = createClient();
+    // profile_id is NOT sent: the database fills it with auth.uid().
     const op = on
-      ? supabase.from('customer_favorites').insert({ profile_id: user.id, unit_id: unitId })
-      : supabase.from('customer_favorites').delete().eq('profile_id', user.id).eq('unit_id', unitId);
+      ? supabase.from('customer_favorites').insert({ unit_id: unitId })
+      : supabase.from('customer_favorites').delete().eq('unit_id', unitId);
     void Promise.resolve(op).then(({ error }) => {
-      // 23505: already saved (another tab) — the heart is right as it is.
-      if (error && error.code !== '23505') setIds(ids);
+      // 23505: already saved (the app, another tab) — the heart is right as it is.
+      if (error && error.code !== '23505') {
+        console.warn('[favorites] save failed', { code: error.code });
+        setIds(ids);
+      }
     });
-  }, [ids, mode, user]);
+  }, [ids, mode]);
 
   const value = useMemo<FavoritesValue>(() => {
     const set = new Set(ids);
-    return { ids, has: (id) => set.has(id), toggle, ready };
-  }, [ids, toggle, ready]);
+    return { ids, has: (id) => set.has(id), toggle, refresh, ready };
+  }, [ids, toggle, refresh, ready]);
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
 }

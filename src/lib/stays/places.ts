@@ -1,7 +1,6 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { createPublicClient } from '@/lib/supabase/public';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { districtKey, getRankingIndex } from '@/lib/queries/stays';
 import { distanceKm } from '@/lib/stays/ranking';
 import type { StaysFilters } from '@/lib/stays/filters';
@@ -45,9 +44,8 @@ interface Directory {
 /**
  * Every name a place goes by, from the database: geo_cities and
  * geo_districts in each language, and geo_area_aliases (Taksim, تقسيم,
- * Nişantaşı…). The aliases are read with the service-role client because the
- * table is not granted to anon — a public reference list, read server-side
- * only and cached; nothing else from it leaves this module.
+ * Nişantaşı…). All public reference tables, read with the anon client and
+ * cached.
  */
 const getDirectory = unstable_cache(
   async (): Promise<Directory> => {
@@ -55,7 +53,7 @@ const getDirectory = unstable_cache(
     const [cities, districts, aliases, countries] = await Promise.all([
       pub.from('geo_cities').select('id,name,name_en,name_tr,name_ar').eq('is_active', true),
       pub.from('geo_districts').select('id,name,name_en,name_tr,name_ar,geo_cities:city_id(name)').eq('is_active', true),
-      createAdminClient().from('geo_area_aliases').select('alias,geo_cities:city_id(name),geo_districts:district_id(id,name,name_en,geo_cities:city_id(name))'),
+      pub.from('geo_area_aliases').select('alias,geo_cities:city_id(name),geo_districts:district_id(id,name,name_en,geo_cities:city_id(name))'),
       pub.from('geo_cities').select('geo_countries:country_id(iso_code)').eq('is_active', true),
     ]);
     if (cities.error || districts.error) throw new Error(`place directory: ${cities.error?.message ?? districts.error?.message}`);
@@ -102,7 +100,7 @@ const getDirectory = unstable_cache(
     }
     return { names, countries: [...iso] };
   },
-  ['place-directory-v1'],
+  ['place-directory-v2'],
   { tags: ['units'], revalidate: 600 },
 );
 
