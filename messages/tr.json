@@ -604,7 +604,10 @@
       "decrease": "Azalt",
       "increase": "Artır",
       "quantityFor": "{name} için adet"
-    }
+    },
+    "similarTitle": "Beğenebileceğiniz benzer yerler",
+    "similarPrev": "Önceki yerler",
+    "similarNext": "Daha fazla yer"
   },
   "auth": {
     "signIn": {

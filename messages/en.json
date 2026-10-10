@@ -604,7 +604,10 @@
       "decrease": "Fewer",
       "increase": "More",
       "quantityFor": "Quantity for {name}"
-    }
+    },
+    "similarTitle": "Similar places you may like",
+    "similarPrev": "Previous places",
+    "similarNext": "More places"
   },
   "auth": {
     "signIn": {

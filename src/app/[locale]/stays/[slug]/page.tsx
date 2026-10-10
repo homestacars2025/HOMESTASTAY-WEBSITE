@@ -17,6 +17,8 @@ import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
 import { BookingCard } from '@/components/unit/BookingCard';
 import { UnitViewTracker } from '@/components/analytics/UnitViewTracker';
+import { SimilarPlaces, SimilarPlacesSkeleton } from '@/components/unit/SimilarPlaces';
+import { Suspense } from 'react';
 import { UnitSpecsSection } from '@/components/unit/UnitSpecsSection';
 import { UnitAmenitiesSection } from '@/components/unit/UnitAmenitiesSection';
 import { UnitServicesSection } from '@/components/unit/UnitServicesSection';
@@ -576,6 +578,15 @@ export default async function UnitDetailPage({
             services={services}
           />
         </div>
+
+        {/* ── 8. SIMILAR PLACES — streamed; never holds up the page above. */}
+        <Suspense fallback={<SimilarPlacesSkeleton />}>
+          <SimilarPlaces
+            unitId={unit.id}
+            locale={locale}
+            search={{ checkIn: search.checkIn, checkOut: search.checkOut, guests: search.guests }}
+          />
+        </Suspense>
       </main>
     </div>
   );

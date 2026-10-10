@@ -604,7 +604,10 @@
       "decrease": "Меньше",
       "increase": "Больше",
       "quantityFor": "Количество: {name}"
-    }
+    },
+    "similarTitle": "Похожие варианты, которые могут понравиться",
+    "similarPrev": "Предыдущие",
+    "similarNext": "Ещё варианты"
   },
   "auth": {
     "signIn": {

@@ -604,7 +604,10 @@
       "decrease": "إنقاص",
       "increase": "زيادة",
       "quantityFor": "الكمية لـ {name}"
-    }
+    },
+    "similarTitle": "أماكن مشابهة قد تعجبك",
+    "similarPrev": "الأماكن السابقة",
+    "similarNext": "أماكن أخرى"
   },
   "auth": {
     "signIn": {

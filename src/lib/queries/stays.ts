@@ -15,7 +15,7 @@ import {
   type StaysFilters,
 } from '@/lib/stays/filters';
 import { CATEGORY_TYPES, categoryOf, type Category } from '@/lib/stays/categories';
-import { rankUnits, type QualitySignals, type RankRequest } from '@/lib/stays/ranking';
+import { distanceKm, rankUnits, type QualitySignals, type RankRequest } from '@/lib/stays/ranking';
 import type {
   UnitCardData,
   UnitListing,
@@ -763,30 +763,43 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
   const supabase = createPublicClient();
   const resolved = await resolveCandidates(supabase, filters);
   if (!resolved || resolved.candidates.length === 0) return [];
-  const { candidates, quotes } = resolved;
+  return leanCards(supabase, resolved.candidates, locale, filters.checkIn, filters.checkOut, resolved.quotes);
+}
 
+/**
+ * Lean cards for candidates, in the candidates' order. Card rows in parallel
+ * batches of 100 ids; prices alongside them (not after), unless the caller
+ * already holds them.
+ */
+async function leanCards(
+  supabase: SupabaseClient,
+  candidates: Candidate[],
+  locale: string,
+  checkIn?: string,
+  checkOut?: string,
+  quotes?: Map<string, UnitPricing>,
+): Promise<StayCard[]> {
   const ids = candidates.map((c) => c.id);
+  if (!ids.length) return [];
   const batches: string[][] = [];
   for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
 
-  // Prices are known to be needed for every id already, so they are fetched
-  // alongside the cards instead of after them (one round trip saved).
   const [results, prices] = await Promise.all([
     Promise.all(
       batches.map((batch) => cardTrims(supabase.from('units').select(CARD_SELECT).in('id', batch), locale)),
     ),
-    quotes ?? fetchQuotes(supabase, ids, filters.checkIn, filters.checkOut),
+    quotes ?? fetchQuotes(supabase, ids, checkIn, checkOut),
   ]);
   const rows: RawRow[] = [];
   for (const r of results) {
     if (r.error) {
-      console.error('[getStaysCatalogue] cards', { message: r.error.message, code: r.error.code });
+      console.error('[leanCards] cards', { message: r.error.message, code: r.error.code });
       return [];
     }
     rows.push(...((r.data ?? []) as RawRow[]));
   }
 
-  const listings = await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, prices, false);
+  const listings = await mapCardRows(supabase, rows, locale, checkIn, checkOut, prices, false);
   const byId = new Map(listings.map((u) => [u.id, u]));
 
   const cards: StayCard[] = [];
@@ -818,6 +831,128 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
     });
   }
   return cards;
+}
+
+// ── Similar places ───────────────────────────────────────────────────────────
+
+export interface SimilarRequest {
+  /** From the visitor's URL: the same hard filters as the search they came from. */
+  checkIn?: string;
+  checkOut?: string;
+  guests?: number;
+}
+
+/** How far a similar unit's price may be from this one's. */
+const SIMILAR_PRICE_BAND = 0.35;
+const SIMILAR_CAPACITY_BAND = 2;
+
+/**
+ * "Similar places you may like" — the one function the unit page asks.
+ *
+ *   • same city (the search's hard filters: if the visitor came with dates,
+ *     only units free for them; with guests, only units sleeping that many)
+ *   • similar size: max_guests within ±2 of this unit (or ≥ the searched guests)
+ *   • similar price: within ±35% of this unit's nightly price (the stay's
+ *     average when dated)
+ *   • same category first, then the same district, then the nearest
+ *   • never this unit; at most one other unit of the same property, two of
+ *     any other
+ *
+ * When the strict set is short, units that miss ONE of size/price fill in,
+ * then the rest of the city — the hard filters never relax. Cached per unit
+ * for 5 minutes without dates; live with dates (availability).
+ */
+export async function getSimilarUnits(
+  unitId: string,
+  locale: string,
+  req: SimilarRequest = {},
+  limit = 8,
+): Promise<StayCard[]> {
+  const dated = !!(req.checkIn && req.checkOut);
+  try {
+    if (!dated) {
+      return await unstable_cache(
+        () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
+        ['similar-units-v1', unitId, locale, String(req.guests ?? ''), String(limit)],
+        { tags: ['units'], revalidate: 300 },
+      )();
+    }
+    return await querySimilarUnits(unitId, locale, req, limit);
+  } catch (err) {
+    console.error('[getSimilarUnits]', { unitId, message: err instanceof Error ? err.message : String(err) });
+    return [];
+  }
+}
+
+async function querySimilarUnits(unitId: string, locale: string, req: SimilarRequest, limit: number): Promise<StayCard[]> {
+  const supabase = createPublicClient();
+  const [{ data: base, error }, index] = await Promise.all([
+    supabase
+      .from('units')
+      .select('id,unit_type,property_id,unit_specifications(max_guests),properties!inner(district_id,geo_cities:city_id(name))')
+      .eq('id', unitId)
+      .maybeSingle(),
+    getRankingIndex(),
+  ]);
+  if (error) throw new Error(`similar base: ${error.message}`);
+  const b = base as RawRow | null;
+  const city: string | undefined = b?.properties?.geo_cities?.name;
+  if (!b || !city) return [];
+
+  const resolved = await resolveCandidates(
+    supabase,
+    { city, guests: req.guests, checkIn: req.checkIn, checkOut: req.checkOut },
+    { rank: false },
+  );
+  if (!resolved) return [];
+  const pool = resolved.candidates.filter((c) => c.id !== unitId);
+  if (!pool.length) return [];
+
+  const quotes = await fetchQuotes(supabase, [unitId, ...pool.map((c) => c.id)], req.checkIn, req.checkOut);
+  const basePrice = comparablePrice(quotes.get(unitId));
+  const mg = one<RawRow>(b.unit_specifications)?.max_guests;
+  const baseGuests: number | null = typeof mg === 'number' ? mg : null;
+  const baseCategory = categoryOf(String(b.unit_type ?? 'other'));
+  const baseDistrict: string | null = b.properties?.district_id ?? null;
+  const here = index.units[unitId];
+  const herePoint = here && here.lat !== null && here.lng !== null ? { lat: here.lat, lng: here.lng } : null;
+
+  const scored = pool.map((c) => {
+    const capacityOk = req.guests
+      ? true // already ≥ the searched guests (hard filter)
+      : baseGuests !== null && c.maxGuests !== null && Math.abs(c.maxGuests - baseGuests) <= SIMILAR_CAPACITY_BAND;
+    const p = comparablePrice(quotes.get(c.id));
+    const priceOk = basePrice === null || (p !== null && Math.abs(p - basePrice) <= SIMILAR_PRICE_BAND * basePrice);
+    const f = index.units[c.id];
+    const km = herePoint && f && f.lat !== null && f.lng !== null ? distanceKm(herePoint, { lat: f.lat, lng: f.lng }) : null;
+    return {
+      c,
+      tier: capacityOk && priceOk ? 0 : capacityOk || priceOk ? 1 : 2,
+      sameCategory: baseCategory !== null && categoryOf(c.unit_type) === baseCategory,
+      sameDistrict: baseDistrict !== null && c.districtId === baseDistrict,
+      km,
+    };
+  });
+  scored.sort((x, y) =>
+    x.tier - y.tier ||
+    Number(y.sameCategory) - Number(x.sameCategory) ||
+    Number(y.sameDistrict) - Number(x.sameDistrict) ||
+    (x.km ?? 1e9) - (y.km ?? 1e9) ||
+    (x.c.id < y.c.id ? -1 : x.c.id > y.c.id ? 1 : 0),
+  );
+
+  const perProperty = new Map<string, number>();
+  const picked: Candidate[] = [];
+  for (const s of scored) {
+    if (picked.length >= limit) break;
+    const prop = s.c.propertyId ?? s.c.id;
+    const cap = prop === b.property_id ? 1 : 2;
+    const n = perProperty.get(prop) ?? 0;
+    if (n >= cap) continue;
+    perProperty.set(prop, n + 1);
+    picked.push(s.c);
+  }
+  return leanCards(supabase, picked.map((c) => ({ ...c, longStay: false })), locale, req.checkIn, req.checkOut, quotes);
 }
 
 /**
