@@ -610,7 +610,7 @@ export async function getPublicUnits(
   if (unfiltered && page === 1 && pageSize === LISTING_PAGE_SIZE) {
     return unstable_cache(
       () => queryPublicUnits(locale, {}, 1, LISTING_PAGE_SIZE),
-      ['stays-unfiltered-v3', locale],
+      ['stays-unfiltered-v4', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -730,7 +730,7 @@ export interface StayCard extends UnitCardData {
   category: Category | null;
   /**
    * Where to pin it on the results map: the SAME blurred point the unit page
-   * draws (approximateCoords: 150–350 m off, 3 decimals, server-side) — never the real
+   * draws (approximateCoords: 20–50 m off, 4 decimals, server-side) — never the real
    * address. Null when the unit has no coordinates.
    */
   geo: { lat: number; lng: number } | null;
@@ -760,7 +760,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v2', locale],
+      ['stays-catalogue-v3', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -844,7 +844,7 @@ async function leanCards(
   return cards;
 }
 
-/** The public map point: the unit page's blurred, 3-decimal point — the same one. */
+/** The public map point: the unit page's blurred, 4-decimal point — the same one. */
 function mapPoint(id: string, facts: RankingFacts | undefined): StayCard['geo'] {
   if (!facts || facts.lat === null || facts.lng === null) return null;
   const p = approximateCoords(id, facts.lat, facts.lng);
@@ -892,7 +892,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v2', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v3', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -1524,7 +1524,7 @@ export async function getPublicUnitBySlug(
 ): Promise<UnitListing | null> {
   const cached = await unstable_cache(
     () => queryPublicUnitBySlug(slugOrId, locale),
-    ['unit-by-slug-v2', slugOrId, locale],
+    ['unit-by-slug-v3', slugOrId, locale],
     { tags: ['units'], revalidate: 300 },
   )();
   if (cached) return cached;

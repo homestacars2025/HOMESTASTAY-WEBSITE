@@ -25,8 +25,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
  *     only, so a 300-unit city never puts 300 nodes on screen)
  *   • a pill opens a mini card → the unit page
  *
- * PRIVACY: every point is the unit page's blurred position (150–350 m off,
- * 3 decimals), computed on the server (StayCard.geo). No exact coordinate
+ * PRIVACY: every point is the unit page's blurred position (20–50 m off,
+ * 4 decimals), computed on the server (StayCard.geo). No exact coordinate
  * reaches here.
  *
  * Client-only and loaded on demand: StaysBrowser imports it with
@@ -206,8 +206,8 @@ export default function StaysMap({ units, token, fitKey, activeId, onActive, onU
       initialViewState={{ longitude: 29, latitude: 39.5, zoom: 5 }}
       mapStyle="mapbox://styles/mapbox/streets-v12"
       style={{ width: '100%', height: '100%' }}
-      // Pins are blurred points (150–350 m off); street level is as close as it gets.
-      maxZoom={15}
+      // Pins are blurred points (20–50 m off); the same zoom limit as the unit map.
+      maxZoom={16}
       dragRotate={false}
       touchPitch={false}
       interactiveLayerIds={['stays-clusters']}

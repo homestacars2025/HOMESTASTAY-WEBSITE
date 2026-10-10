@@ -3,13 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import Map, { Layer, NavigationControl, Source, type MapRef } from 'react-map-gl/mapbox';
-import type {
-  FillLayerSpecification,
-  GeoJSONSourceSpecification,
-  LineLayerSpecification,
-} from 'mapbox-gl';
-// The circle is drawn around the *offset* point (150–350 m from the real one),
-// so its 500 m radius always contains the address — never near its centre.
+import type { CircleLayerSpecification, GeoJSONSourceSpecification } from 'mapbox-gl';
+// The circle is drawn around the *offset* point (20–50 m from the real one),
+// so its 80 m radius always contains the address — never exactly at its centre.
 import { APPROX_RADIUS_M } from '@/lib/geo/blur-constants';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -53,35 +49,33 @@ const BASEMAP_CONFIG = {
   basemap: { theme: 'faded', lightPreset: 'day', show3dObjects: false, showPointOfInterestLabels: true, showTransitLabels: true },
 };
 
-/** Never closer than this: street level, not building level. */
-const MAX_ZOOM = 15;
+/** Opens close enough to read the circle, wide enough to see the metro and main roads. */
+const START_ZOOM = 14;
+/** Never closer than this. Zooming out is free. */
+const MAX_ZOOM = 16;
+/** The circle is never drawn smaller than this on screen (diameter, px). */
+const MIN_DIAMETER_PX = 28;
 
 const RTL_PLUGIN = 'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.3.0/mapbox-gl-rtl-text.js';
 
 /**
- * A circle of `radiusM` around a point, as a GeoJSON polygon.
+ * The circle's on-screen radius at every zoom: the true 80 m on the ground,
+ * but never under MIN_DIAMETER_PX across.
  *
- * Drawn as a polygon rather than a `circle` layer because a circle layer sizes
- * itself in screen pixels: it would only match the radius at one zoom level and
- * drift at every other. A polygon is defined in real coordinates, so it covers
- * the same ground however far the guest zooms.
+ * In Web Mercator one pixel covers 156 543·cos(lat)/2^z metres, so the true
+ * radius in pixels is k·2^z with k = R / (156 543·cos lat). An exponential
+ * (base 2) interpolation reproduces k·2^z exactly between two stops, and a
+ * flat segment below the zoom where it reaches the minimum gives the floor.
  */
-function circleAround(longitude: number, latitude: number, radiusM: number): GeoJSONData {
-  const STEPS = 64;
-  // Degrees per metre; the longitude span narrows as latitude approaches the poles.
-  const dLat = radiusM / 110_574;
-  const dLon = radiusM / (111_320 * Math.cos((latitude * Math.PI) / 180));
+type CircleRadius = NonNullable<CircleLayerSpecification['paint']>['circle-radius'];
 
-  const ring: [number, number][] = Array.from({ length: STEPS }, (_, i) => {
-    const theta = (i / STEPS) * 2 * Math.PI;
-    return [longitude + dLon * Math.cos(theta), latitude + dLat * Math.sin(theta)];
-  });
-  ring.push(ring[0]); // GeoJSON rings must close
-
-  return {
-    type: 'FeatureCollection',
-    features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } }],
-  };
+function radiusExpression(latitude: number, radiusM: number): CircleRadius {
+  const minR = MIN_DIAMETER_PX / 2;
+  const k = radiusM / (156_543.03 * Math.cos((latitude * Math.PI) / 180));
+  const zFloor = Math.log2(minR / k); // zoom where the true radius reaches the minimum
+  const atMax = k * 2 ** 22;
+  if (zFloor <= 0) return ['interpolate', ['exponential', 2], ['zoom'], 0, k, 22, atMax];
+  return ['interpolate', ['exponential', 2], ['zoom'], 0, minR, zFloor, minR, 22, atMax];
 }
 
 // A neutral grey area, tinted per base map: grey on the street style, a
@@ -92,19 +86,20 @@ const SHADE = {
   satellite: { color: '#FFFFFF', fill: 0.25, stroke: 0.9, width: 1.5 },
 } as const;
 
-const fillLayer = (k: StyleKey): FillLayerSpecification => ({
-  id: 'location-radius-fill',
-  type: 'fill',
+const circleLayer = (k: StyleKey, latitude: number): CircleLayerSpecification => ({
+  id: 'location-radius',
+  type: 'circle',
   source: 'location-radius',
   slot: 'middle',
-  paint: { 'fill-color': SHADE[k].color, 'fill-opacity': SHADE[k].fill },
-});
-const strokeLayer = (k: StyleKey): LineLayerSpecification => ({
-  id: 'location-radius-stroke',
-  type: 'line',
-  source: 'location-radius',
-  slot: 'middle',
-  paint: { 'line-color': SHADE[k].color, 'line-opacity': SHADE[k].stroke, 'line-width': SHADE[k].width },
+  paint: {
+    'circle-radius': radiusExpression(latitude, APPROX_RADIUS_M),
+    'circle-color': SHADE[k].color,
+    'circle-opacity': SHADE[k].fill,
+    'circle-stroke-color': SHADE[k].color,
+    'circle-stroke-opacity': SHADE[k].stroke,
+    'circle-stroke-width': SHADE[k].width,
+    'circle-pitch-alignment': 'map',
+  },
 });
 
 /** Arabic labels need the RTL shaping plugin; registered once, fetched lazily. */
@@ -116,14 +111,14 @@ function ensureRtlPlugin(locale: string) {
 }
 
 /**
- * Interactive map of the unit's approximate area: a grey 500 m circle around
- * the blurred point, and NOTHING at its centre — no pin, no marker, which
- * would read as the address. The point arrives already blurred and rounded
- * from the server. Zoom stops at street level (15). Client-only, loaded when
- * it scrolls into view (see UnitMapSection).
+ * Interactive map of the unit's approximate area: a grey 80 m circle around
+ * the blurred point (at least 28 px across on screen), and NOTHING at its
+ * centre — no pin, no marker. The point arrives already blurred and rounded
+ * from the server. Client-only, loaded when it scrolls into view (see
+ * UnitMapSection).
  *
- * Opens at district level (zoom 13) so the neighbourhood, metro and malls are
- * in view. +/- and pinch always zoom; the mouse wheel only after the map has
+ * Opens at zoom 14 — the circle is clear and the metro, malls and main roads
+ * are still in view; zooming out is free, zooming in stops at 16. +/- and pinch always zoom; the mouse wheel only after the map has
  * been clicked, so scrolling the page past it never zooms it by accident.
  */
 export default function UnitMap({ latitude, longitude, token, locale, labels }: UnitMapProps) {
@@ -134,7 +129,10 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
 
   ensureRtlPlugin(locale);
 
-  const area = useMemo(() => circleAround(longitude, latitude, APPROX_RADIUS_M), [longitude, latitude]);
+  const point = useMemo<GeoJSONData>(() => ({
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [longitude, latitude] } }],
+  }), [longitude, latitude]);
 
   // Mapbox's own control strings, in the page language.
   const uiStrings = useMemo(() => ({
@@ -169,7 +167,7 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
       <Map
         ref={mapRef}
         mapboxAccessToken={token}
-        initialViewState={{ latitude, longitude, zoom: 13 }}
+        initialViewState={{ latitude, longitude, zoom: START_ZOOM }}
         maxZoom={MAX_ZOOM}
         mapStyle={STYLES[style]}
         // Mapbox-hosted labels in the visitor's language; where a name has no
@@ -190,9 +188,8 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
       >
         <NavigationControl position={locale === 'ar' ? 'top-left' : 'top-right'} showCompass={false} />
 
-        <Source id="location-radius" type="geojson" data={area}>
-          <Layer {...fillLayer(style)} />
-          <Layer {...strokeLayer(style)} />
+        <Source id="location-radius" type="geojson" data={point}>
+          <Layer {...circleLayer(style, latitude)} />
         </Source>
 
       </Map>
