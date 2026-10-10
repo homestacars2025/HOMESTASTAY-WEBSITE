@@ -2,34 +2,37 @@
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import type { UnitMapLabels } from './UnitMap';
 
-// mapbox-gl must never render on the server (it reads `window`), so the map is
-// loaded client-side only — and only once its box nears the viewport, so the
-// map code costs nothing to a guest who never scrolls this far.
-const UnitMap = dynamic(() => import('./UnitMap'), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-paper-warm animate-pulse" />,
-});
+const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+/** The same footprint as the loaded map + chips, so nothing shifts when it arrives. */
+function Placeholder() {
+  return (
+    <div aria-hidden="true">
+      <div className="mb-2 h-[14px] w-28 rounded bg-paper-warm" />
+      <div className="mb-3 flex gap-2 overflow-hidden">
+        {Array.from({ length: 5 }, (_, i) => <div key={i} className="h-11 w-28 shrink-0 rounded-[999px] bg-paper-warm" />)}
+      </div>
+      <div className="h-[300px] md:h-[420px] w-full rounded-[14px] border border-rule bg-paper-warm" />
+    </div>
+  );
+}
 
-/**
- * The map box. Fixed height reserves the space before anything loads (no
- * layout shift); the map itself mounts when the box comes within 300px of the
- * viewport. Renders nothing without coordinates or a token.
- */
+// Google Maps never renders on the server, and its code (and the Maps script)
+// only load once this section nears the viewport.
+const UnitGoogleMap = dynamic(() => import('./UnitGoogleMap'), { ssr: false, loading: Placeholder });
+
 export function UnitMapSection({
+  unitId,
   latitude,
   longitude,
   locale,
-  labels,
 }: {
+  unitId: string;
   /** The blurred point (approximateCoords) — never the address. */
   latitude: number | null;
   longitude: number | null;
   locale: string;
-  labels: UnitMapLabels;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
@@ -45,12 +48,20 @@ export function UnitMapSection({
     return () => io.disconnect();
   }, [near]);
 
-  if (latitude == null || longitude == null || !MAPBOX_TOKEN) return null;
+  if (latitude == null || longitude == null || !GOOGLE_MAPS_KEY) return null;
 
   return (
-    <div ref={box} className="relative h-[300px] md:h-[420px] w-full rounded-[14px] overflow-hidden border border-rule bg-paper-warm">
-      {near && (
-        <UnitMap latitude={latitude} longitude={longitude} token={MAPBOX_TOKEN} locale={locale} labels={labels} />
+    <div ref={box}>
+      {near ? (
+        <UnitGoogleMap
+          unitId={unitId}
+          latitude={latitude}
+          longitude={longitude}
+          apiKey={GOOGLE_MAPS_KEY}
+          locale={locale}
+        />
+      ) : (
+        <Placeholder />
       )}
     </div>
   );

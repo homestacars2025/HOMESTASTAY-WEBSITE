@@ -619,16 +619,24 @@
     "similarTitle": "Similar places you may like",
     "similarPrev": "Previous places",
     "similarNext": "More places",
-    "map": {
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "attribution": "Map data sources",
-      "improve": "Improve this map",
-      "title": "Map of the area",
-      "scrollHint": "Click the map to zoom with the scroll wheel",
-      "nearestStation": "Nearest station:",
+    "nearby": {
+      "title": "What's nearby",
+      "categories": {
+        "supermarket": "Supermarket",
+        "transit": "Metro & transit",
+        "restaurant": "Restaurants",
+        "pharmacy": "Pharmacy",
+        "hospital": "Hospital",
+        "mall": "Mall",
+        "mosque": "Mosque",
+        "atm": "ATM"
+      },
+      "km": "≈ {km} km",
       "walk": "≈ {minutes} min walk",
-      "drive": "≈ {minutes} min drive"
+      "empty": "Nothing of this kind within 1 km.",
+      "error": "Couldn’t load the map right now.",
+      "loading": "Looking nearby…",
+      "searchError": "Couldn’t load nearby places right now."
     }
   },
   "auth": {

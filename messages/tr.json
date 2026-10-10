@@ -619,16 +619,24 @@
     "similarTitle": "Beğenebileceğiniz benzer yerler",
     "similarPrev": "Önceki yerler",
     "similarNext": "Daha fazla yer",
-    "map": {
-      "zoomIn": "Yakınlaştır",
-      "zoomOut": "Uzaklaştır",
-      "attribution": "Harita veri kaynakları",
-      "improve": "Bu haritayı iyileştirin",
-      "title": "Bölge haritası",
-      "scrollHint": "Kaydırma tekerleğiyle yakınlaştırmak için haritaya tıklayın",
-      "nearestStation": "En yakın istasyon:",
+    "nearby": {
+      "title": "Yakında neler var",
+      "categories": {
+        "supermarket": "Market",
+        "transit": "Metro ve ulaşım",
+        "restaurant": "Restoranlar",
+        "pharmacy": "Eczane",
+        "hospital": "Hastane",
+        "mall": "AVM",
+        "mosque": "Cami",
+        "atm": "ATM"
+      },
+      "km": "≈ {km} km",
       "walk": "≈ {minutes} dk yürüme",
-      "drive": "≈ {minutes} dk araçla"
+      "empty": "1 km içinde bu türde bir yer yok.",
+      "error": "Harita şu anda yüklenemedi.",
+      "loading": "Yakında aranıyor…",
+      "searchError": "Yakındaki yerler şu anda yüklenemedi."
     }
   },
   "auth": {
