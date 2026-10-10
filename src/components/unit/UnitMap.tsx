@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from 'react-map-gl/mapbox';
 import type {
@@ -144,14 +144,24 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
   }), [labels]);
 
   /**
-   * The attribution's "Improve this map" link has no locale key — its text is
-   * set here once Mapbox has drawn it (it redraws on style changes, hence on
-   * every idle). The © lines are names and stay as they are.
+   * The attribution's "Improve this map" link has no locale key, and Mapbox
+   * redraws it whenever it likes (style loads, resizes) — so its text is set
+   * again every time the container changes. The © lines are names and stay.
    */
   const localiseAttribution = useCallback(() => {
     const el = mapRef.current?.getContainer().querySelector<HTMLAnchorElement>('.mapbox-improve-map');
     if (el && el.textContent !== labels.improve) el.textContent = labels.improve;
   }, [labels.improve]);
+
+  const observer = useRef<MutationObserver | null>(null);
+  const watchAttribution = useCallback(() => {
+    const root = mapRef.current?.getContainer();
+    if (!root || observer.current) return;
+    localiseAttribution();
+    observer.current = new MutationObserver(localiseAttribution);
+    observer.current.observe(root, { subtree: true, childList: true, characterData: true });
+  }, [localiseAttribution]);
+  useEffect(() => () => observer.current?.disconnect(), []);
 
   return (
     <div className="relative h-full w-full" onClick={() => !wheel && setWheel(true)}>
@@ -173,6 +183,7 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
         dragRotate={false}
         touchPitch={false}
         pitchWithRotate={false}
+        onLoad={watchAttribution}
         onIdle={localiseAttribution}
       >
         <NavigationControl position={locale === 'ar' ? 'top-left' : 'top-right'} showCompass={false} />
