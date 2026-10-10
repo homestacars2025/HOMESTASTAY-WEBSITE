@@ -64,6 +64,9 @@ export interface UnitCardData {
   /** The cover only (or empty). */
   media: UnitMediaItem[];
   specifications: Pick<UnitSpecifications, 'bedrooms' | 'beds' | 'bathrooms'>;
+  /** Set when the unit is a long stay (min ≥ 7 nights) on a search without
+   *  dates: the card says so, since it is ranked last rather than hidden. */
+  long_stay_min?: number | null;
 }
 
 /** Mirrors a row in the unit_media table. Always use public_url for display. */

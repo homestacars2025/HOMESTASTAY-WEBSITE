@@ -16,6 +16,7 @@ import { ChevronLeft, Languages } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
 import { BookingCard } from '@/components/unit/BookingCard';
+import { UnitViewTracker } from '@/components/analytics/UnitViewTracker';
 import { UnitSpecsSection } from '@/components/unit/UnitSpecsSection';
 import { UnitAmenitiesSection } from '@/components/unit/UnitAmenitiesSection';
 import { UnitServicesSection } from '@/components/unit/UnitServicesSection';
@@ -289,7 +290,8 @@ export default async function UnitDetailPage({
       <Header />
 
       {/* pb-32 on mobile leaves room above the fixed bottom booking bar */}
-      <main className="max-w-screen-xl mx-auto px-4 pt-6 pb-32 lg:pb-16">
+      <main className="max-w-screen-xl mx-auto px-4 pt-6 pb-32 lg:pb-16" data-unit-page={unit.id}>
+        <UnitViewTracker unitId={unit.id} title={unit.ad_title} nightlyUsd={unit.pricing.nightly_usd} city={unit.city} />
 
         {/* Back link.
             It used to be a bare '/stays', so pressing it wiped the search the

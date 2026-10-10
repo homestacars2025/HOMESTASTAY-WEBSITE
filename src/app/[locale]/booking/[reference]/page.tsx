@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AlertCircle, Clock, ShieldCheck, Wallet } from 'lucide-react';
 import { Header } from '@/components/home/Header';
+import { PurchaseTracker } from '@/components/analytics/PurchaseTracker';
 import { Link } from '@/i18n/navigation';
 import { loadBookingServices } from '@/lib/booking/booking-services';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -82,7 +83,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // PostgREST returns them only when named explicitly. The status is the
     // one answer to "is this paid?" — paid_at alone cannot tell a deposit
     // booking (money in, cash still due) from a fully paid one.
-    .select('id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, owner_decision, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, services_total_usd, customers(email, nationality, phone)')
+    .select('id, unit_id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, owner_decision, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, services_total_usd, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -285,6 +286,14 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
       <Header />
 
       <main className="max-w-[600px] mx-auto px-4 pt-12 pb-24">
+        {/* Meta Purchase — only once money is in (paid_at), valued at the booking. */}
+        {booking.paid_at && typeof booking.unit_id === 'string' && num(booking.total_amount_usd) !== null && (
+          <PurchaseTracker
+            reference={String(booking.booking_reference)}
+            unitId={booking.unit_id}
+            valueUsd={num(booking.total_amount_usd)!}
+          />
+        )}
         {/* Reference — large, first, because it is the one thing a guest
             needs to quote back to us if anything goes wrong. */}
         <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-mute mb-3">

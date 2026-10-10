@@ -7,6 +7,7 @@ import { UnitCard } from '@/components/home/UnitCard';
 import { CategoryRow, type ChipItem, type ChipKey } from './CategoryRow';
 import { FiltersSheet, type DistrictOption } from './FiltersSheet';
 import { SortMenu } from './SortMenu';
+import { SearchTracker } from '@/components/analytics/SearchTracker';
 import { CATEGORIES } from '@/lib/stays/categories';
 import { AMENITY_FILTERS, type AmenityFilter, type StaysFilters } from '@/lib/stays/filters';
 import { buildStaysQueryWithPage } from '@/lib/stays/search-params';
@@ -120,6 +121,7 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
 
   return (
     <>
+      <SearchTracker filters={filters} category={category} ids={filtered.slice(0, 24).map((c) => c.id)} />
       <div className="mb-8">
         <CategoryRow
           items={items}
@@ -146,7 +148,15 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4">
           {visible.map((unit, i) => (
-            <UnitCard key={unit.id} unit={unit} searchQuery={searchQuery} priority={safePage === 1 && i < EAGER} prefetchOnIntent />
+            <UnitCard
+              key={unit.id}
+              unit={unit}
+              searchQuery={searchQuery}
+              priority={safePage === 1 && i < EAGER}
+              prefetchOnIntent
+              source="results"
+              position={(safePage - 1) * PAGE_SIZE + i + 1}
+            />
           ))}
         </div>
       )}

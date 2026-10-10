@@ -26,7 +26,9 @@
     "guestsIncrement": "زيادة الضيوف",
     "cta": "ابحث عن إقامات",
     "whereRequired": "اختر وجهتك أولًا.",
-    "editSearch": "تعديل"
+    "editSearch": "تعديل",
+    "placeSearch": "مدينة أو منطقة",
+    "searchFor": "ابحث عن «{place}»"
   },
   "categories": {
     "all": "الكل",
@@ -104,7 +106,8 @@
       "bedrooms": "{count, plural, zero {بدون غرف نوم} one {غرفة نوم واحدة} two {غرفتا نوم} few {# غرف نوم} many {# غرفة نوم} other {# غرفة نوم}}",
       "beds": "{count, plural, zero {بدون أسرّة} one {سرير واحد} two {سريران} few {# أسرّة} many {# سريرًا} other {# سرير}}",
       "bathrooms": "{count, plural, zero {بدون حمّام} one {حمّام واحد} two {حمّامان} few {# حمّامات} many {# حمّامًا} other {# حمّام}}"
-    }
+    },
+    "longStay": "إقامة طويلة · {count, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}} كحد أدنى"
   },
   "pages": {
     "home": {
@@ -133,6 +136,24 @@
         "previous": "السابق",
         "next": "التالي",
         "status": "صفحة {current} من {total}"
+      },
+      "place": {
+        "area": "نعرض أماكن في {city} — {place} أولاً، ثم الأقرب.",
+        "near": "لا توجد أماكن في {place} بعد — نعرض {city} على بُعد {km} كم.",
+        "unknown": "لم نجد «{place}» — نعرض كل الأماكن."
+      },
+      "suggest": {
+        "titleGuests": "لا توجد أماكن لـ {guests} ضيوف في {city}",
+        "titleCity": "لا توجد أماكن في {city} تطابق هذا البحث",
+        "body": "هذه عمليات بحث فيها أماكن — بنقرة واحدة:",
+        "largestLabel": "الأكبر هنا",
+        "largest": "تتسع لـ {guests} · {count, plural, zero {لا أماكن} one {مكان واحد} two {مكانان} few {# أماكن} many {# مكانًا} other {# مكان}}",
+        "datesLabel": "تواريخ قريبة",
+        "nearbyLabel": "مدن قريبة",
+        "loosenLabel": "فلاتر أقل",
+        "loosen": "بدون المرافق والسعر · {count, plural, zero {لا أماكن} one {مكان واحد} two {مكانان} few {# أماكن} many {# مكانًا} other {# مكان}}",
+        "places": "{count, plural, zero {لا أماكن} one {مكان واحد} two {مكانان} few {# أماكن} many {# مكانًا} other {# مكان}}",
+        "km": "{km} كم"
       }
     },
     "destinations": {
@@ -655,7 +676,8 @@
       "signOut": "تسجيل الخروج",
       "myBookings": "حجوزاتي",
       "wallet": "محفظتي",
-      "account": "الحساب"
+      "account": "الحساب",
+      "favorites": "المحفوظة"
     },
     "authGate": {
       "title": "سجّل الدخول للمتابعة",
@@ -1262,5 +1284,10 @@
       "unavailable": "إضافة الهاتف غير متاحة حالياً.",
       "generic": "حدث خطأ ما. حاول مرة أخرى."
     }
+  },
+  "favorites": {
+    "title": "المحفوظة",
+    "empty": "لم تحفظ شيئًا بعد. اضغط ♡ على أي مكان ليبقى هنا.",
+    "browse": "تصفّح الإقامات"
   }
 }

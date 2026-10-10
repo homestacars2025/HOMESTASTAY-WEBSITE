@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocale, useTranslations } from 'next-intl';
 import { Search, Calendar, Users, ChevronDown, X } from 'lucide-react';
@@ -12,6 +12,7 @@ import { withLiveCategory } from '@/lib/stays/live-category';
 import type { StaysFilters } from '@/lib/stays/filters';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { GuestsStepper } from '@/components/shared/GuestsStepper';
+import { normalizePlace } from '@/lib/stays/place-text';
 import type { DateRange } from './DateRangePicker';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -114,6 +115,15 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
    */
   const [activeIndex, setActiveIndex] = useState(-1);
 
+  /**
+   * What the guest typed in the Where panel. It filters the city list; and a
+   * place that is not on it — "Taksim", "تقسيم", "Kartepe" — can still be
+   * searched as text: the results page resolves it (an area of a city, or the
+   * nearest city with places) and says what it is showing.
+   */
+  const [placeText, setPlaceText] = useState('');
+  const [freePlace, setFreePlace] = useState('');
+
   const containerRef = useRef<HTMLDivElement>(null);
   const whoRef       = useRef<HTMLButtonElement>(null);   // anchor for guests panel
   const panelRef     = useRef<HTMLDivElement>(null);
@@ -124,12 +134,35 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
   /** One path for picking a city, so the validation message always clears. */
   const chooseCity = useCallback((id: string) => {
     setCityId(id);
+    setFreePlace('');
+    setPlaceText('');
     setShowWhereError(false);
     setOpenPanel(null);
     setActiveIndex(-1);
   }, []);
 
   const selectedCity = cities.find((c) => c.id === cityId);
+  const hasPlace = !!selectedCity || freePlace !== '';
+  const placeLabel = selectedCity ? selectedCity.localizedName : freePlace;
+
+  const typed = normalizePlace(placeText);
+  const shown = useMemo(
+    () => (typed
+      ? cities.filter((c) => normalizePlace(c.localizedName).includes(typed) || normalizePlace(c.name).includes(typed))
+      : cities),
+    [cities, typed],
+  );
+  // Offer the text itself unless it IS one of the listed cities.
+  const offerFree = placeText.trim().length >= 2
+    && !shown.some((c) => normalizePlace(c.localizedName) === typed || normalizePlace(c.name) === typed);
+
+  const chooseFree = useCallback(() => {
+    setFreePlace(placeText.trim());
+    setCityId('');
+    setShowWhereError(false);
+    setOpenPanel(null);
+    setActiveIndex(-1);
+  }, [placeText]);
   const dateLabel    = formatRange(dateRange, locale);
 
   // Run the search: state -> /stays?city=…&guests=…&checkIn=…&checkOut=…
@@ -144,7 +177,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
     // The button is not inertly disabled: a dead control explains nothing.
     // Clicking without a city opens the Where panel AND states why, so the
     // next action is obvious instead of guessable.
-    if (!selectedCity) {
+    if (!hasPlace) {
       setShowWhereError(true);
       setOpenPanel('city');
       return;
@@ -155,8 +188,8 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
     const refine = initial?.refine ? withLiveCategory(refineRest) : refineRest;
     const query = buildStaysQuery({
       ...refine,
-      district: selectedCity.id === initial?.cityId ? district : undefined,
-      city: selectedCity.name,
+      district: selectedCity && selectedCity.id === initial?.cityId ? district : undefined,
+      city: selectedCity ? selectedCity.name : freePlace,
       guests,
       checkIn: dateRange.from ? toISODate(dateRange.from) : undefined,
       checkOut: dateRange.to ? toISODate(dateRange.to) : undefined,
@@ -164,7 +197,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
     setShowWhereError(false);
     setOpenPanel(null);
     router.push(`/stays${query}`);
-  }, [router, selectedCity, guests, dateRange, initial?.refine, initial?.cityId]);
+  }, [router, selectedCity, hasPlace, freePlace, guests, dateRange, initial?.refine, initial?.cityId]);
   // Show guest count in the Who field only after user changes from the default
   const guestLabel   = guests > 1 ? t('guestCount', { count: guests }) : null;
 
@@ -224,7 +257,13 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
       // Arrow/Enter/Home/End drive the city list. Focus stays on the trigger
       // button (it is the combobox), so the keys are read here and the list is
       // told which option is current through aria-activedescendant.
-      if (openPanel !== 'city' || cities.length === 0) return;
+      if (openPanel !== 'city') return;
+      if (e.key === 'Enter' && activeIndex < 0 && offerFree) {
+        e.preventDefault(); // search the typed place as text
+        chooseFree();
+        return;
+      }
+      if (shown.length === 0) return;
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault(); // or the page scrolls under the open list
@@ -232,15 +271,15 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
           const step = e.key === 'ArrowDown' ? 1 : -1;
           // From "nothing highlighted", Down goes to the first item and Up to
           // the last, which is what every native listbox does.
-          if (i < 0) return step === 1 ? 0 : cities.length - 1;
-          return (i + step + cities.length) % cities.length;
+          if (i < 0) return step === 1 ? 0 : shown.length - 1;
+          return (i + step + shown.length) % shown.length;
         });
-      } else if (e.key === 'Home' || e.key === 'End') {
+      } else if ((e.key === 'Home' || e.key === 'End') && !(e.target instanceof HTMLInputElement)) {
         e.preventDefault();
-        setActiveIndex(e.key === 'Home' ? 0 : cities.length - 1);
-      } else if (e.key === 'Enter' && activeIndex >= 0) {
+        setActiveIndex(e.key === 'Home' ? 0 : shown.length - 1);
+      } else if (e.key === 'Enter' && activeIndex >= 0 && shown[activeIndex]) {
         e.preventDefault(); // this Enter picks a city, it does not submit
-        chooseCity(cities[activeIndex].id);
+        chooseCity(shown[activeIndex].id);
       }
     }
 
@@ -291,7 +330,7 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
       window.removeEventListener('resize', reposition);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [openPanel, cities, activeIndex, chooseCity, measurePanel]);
+  }, [openPanel, shown, offerFree, chooseFree, activeIndex, chooseCity, measurePanel]);
 
   /**
    * Keep the keyboard cursor inside the scroll viewport.
@@ -329,13 +368,29 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
    * the page, which moves the bar the panel is anchored to.
    */
   const renderCityList = (listId: string) => (
+    <>
+    <div className="px-4 pt-3 pb-2 border-b border-rule">
+      <input
+        type="text"
+        inputMode="search"
+        autoComplete="off"
+        value={placeText}
+        onChange={(e) => { setPlaceText(e.target.value); setActiveIndex(-1); }}
+        placeholder={t('placeSearch')}
+        aria-label={t('placeSearch')}
+        aria-controls={listId}
+        autoFocus
+        enterKeyHint="search"
+        className="w-full bg-transparent py-1.5 text-base md:text-sm text-ink placeholder:text-mute focus:outline-none"
+      />
+    </div>
     <div
       id={listId}
       role="listbox"
       aria-label={t('whereLabel')}
       className="max-h-[min(60vh,360px)] overflow-y-auto overscroll-contain"
     >
-      {cities.map((city, index) => (
+      {shown.map((city, index) => (
         <button
           key={city.id}
           id={`${listId}-${index}`}
@@ -357,7 +412,17 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
           {city.localizedName}
         </button>
       ))}
+      {offerFree && (
+        <button
+          type="button"
+          onClick={chooseFree}
+          className="w-full flex items-center gap-2 px-5 py-3.5 text-sm text-start text-ink transition-colors duration-[240ms] hover:bg-paper-warm"
+        >
+          {t('searchFor', { place: placeText.trim() })}
+        </button>
+      )}
     </div>
+    </>
   );
 
   const CityPanelContent = (
@@ -422,8 +487,8 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
       <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute leading-none mb-1">
         {t('whereLabel')}
       </p>
-      <p className={`text-sm truncate ${selectedCity ? 'text-ink' : 'text-mute'}`}>
-        {selectedCity ? selectedCity.localizedName : t('wherePlaceholder')}
+      <p className={`text-sm truncate ${hasPlace ? 'text-ink' : 'text-mute'}`}>
+        {hasPlace ? placeLabel : t('wherePlaceholder')}
       </p>
     </div>
   );
@@ -491,8 +556,8 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
               <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-0.5">
                 {t('whereLabel')}
               </p>
-              <p className={`text-sm truncate ${selectedCity ? 'text-ink' : 'text-mute'}`}>
-                {selectedCity ? selectedCity.localizedName : t('wherePlaceholder')}
+              <p className={`text-sm truncate ${hasPlace ? 'text-ink' : 'text-mute'}`}>
+                {hasPlace ? placeLabel : t('wherePlaceholder')}
               </p>
             </div>
             <ChevronDown
@@ -587,9 +652,9 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
               // clickable so it can EXPLAIN the requirement. A disabled button
               // that silently ignores taps is the version guests file support
               // tickets about.
-              aria-disabled={!selectedCity}
+              aria-disabled={!hasPlace}
               className={`w-full flex items-center justify-center gap-2 bg-stay text-white rounded-[999px] py-3 text-sm font-medium transition-opacity duration-[240ms] ${
-                selectedCity ? 'hover:opacity-90 active:opacity-80' : 'opacity-50'
+                hasPlace ? 'hover:opacity-90 active:opacity-80' : 'opacity-50'
               }`}
             >
               <Search className="w-4 h-4" />
@@ -658,9 +723,9 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
             <button
               type="button"
               onClick={runSearch}
-              aria-disabled={!selectedCity}
+              aria-disabled={!hasPlace}
               className={`flex items-center gap-2 bg-stay text-white rounded-[999px] px-5 py-3 text-sm font-medium whitespace-nowrap transition-opacity duration-[240ms] ${
-                selectedCity ? 'hover:opacity-90 active:opacity-80' : 'opacity-50'
+                hasPlace ? 'hover:opacity-90 active:opacity-80' : 'opacity-50'
               }`}
             >
               <Search className="w-4 h-4" />

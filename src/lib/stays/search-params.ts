@@ -84,6 +84,10 @@ export function parseStaysSearchParams(params: RawParams): StaysFilters {
   const district = single(params.district)?.toLowerCase();
   if (city && district) filters.district = district;
 
+  // A soft area (ranking only) — also meaningless without its city.
+  const area = single(params.area)?.toLowerCase();
+  if (city && area) filters.area = area;
+
   // The category chip. Old links still land correctly: ?type=studio means
   // Apartment, ?type=room / suite mean Hotels, plural keys are understood, and
   // anything unknown is All — never an empty page (see parseCategory).
@@ -139,6 +143,7 @@ export function buildStaysQuery(filters: StaysFilters): string {
   if (filters.category) q.set('type', filters.category);
   if (filters.city) q.set('city', filters.city);
   if (filters.city && filters.district) q.set('district', filters.district);
+  if (filters.city && filters.area) q.set('area', filters.area);
   if (filters.guests && filters.guests > MIN_GUESTS) q.set('guests', String(filters.guests));
   if (filters.checkIn && filters.checkOut) {
     q.set('checkIn', filters.checkIn);

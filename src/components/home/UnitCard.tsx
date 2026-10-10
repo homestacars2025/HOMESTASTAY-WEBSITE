@@ -22,9 +22,12 @@ interface UnitCardProps {
   /** Prefetch the unit page on hover/touch/focus rather than in the viewport —
    *  for grids that swap cards in place without a request. */
   prefetchOnIntent?: boolean;
+  /** For the unit_click event: where the card is (1-based) and which list. */
+  position?: number;
+  source?: 'results' | 'home' | 'city' | 'similar' | 'map';
 }
 
-export function UnitCard({ unit, className, searchQuery, priority = false, prefetchOnIntent = false }: UnitCardProps) {
+export function UnitCard({ unit, className, searchQuery, priority = false, prefetchOnIntent = false, position, source }: UnitCardProps) {
   const t = useTranslations('card');
   // The badge names a payment mode, so it uses the one name that mode has
   // everywhere else rather than a wording of its own.
@@ -77,7 +80,14 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
   const CardLink = prefetchOnIntent ? IntentLink : Link;
 
   return (
-    <CardLink href={href as '/stays/[slug]'} className={cn('block cursor-pointer group', className ?? 'w-full')}>
+    <CardLink
+      href={href as '/stays/[slug]'}
+      className={cn('block cursor-pointer group', className ?? 'w-full')}
+      // Read by EventTracker (one delegated listener) for unit_click.
+      data-unit={unit.id}
+      data-pos={position}
+      data-src={source}
+    >
       <article>
         {/* Image */}
         {/* aspect-[4/3] reserves the box before the photo arrives, so nothing
@@ -159,6 +169,14 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
               )}
             </>
           )}
+
+          {/* A long stay (min 7+ nights) is ranked last on a search without
+              dates rather than hidden — this line says why it is there. */}
+          {unit.long_stay_min ? (
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-mute">
+              {t('longStay', { count: unit.long_stay_min })}
+            </p>
+          ) : null}
         </div>
       </article>
     </CardLink>

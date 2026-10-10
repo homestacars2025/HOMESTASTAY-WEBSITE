@@ -26,7 +26,9 @@
     "guestsIncrement": "More guests",
     "cta": "Search stays",
     "whereRequired": "Choose where you’re going first.",
-    "editSearch": "Edit"
+    "editSearch": "Edit",
+    "placeSearch": "City or area",
+    "searchFor": "Search “{place}”"
   },
   "categories": {
     "all": "All",
@@ -104,7 +106,8 @@
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
       "beds": "{count, plural, one {# bed} other {# beds}}",
       "bathrooms": "{count, plural, one {# bath} other {# baths}}"
-    }
+    },
+    "longStay": "Long stays · min {count} nights"
   },
   "pages": {
     "home": {
@@ -133,6 +136,24 @@
         "previous": "Previous",
         "next": "Next",
         "status": "Page {current} of {total}"
+      },
+      "place": {
+        "area": "Showing places in {city} — {place} first, then nearby.",
+        "near": "No places in {place} yet — showing {city}, {km} km away.",
+        "unknown": "We couldn’t find “{place}” — showing all places."
+      },
+      "suggest": {
+        "titleGuests": "No places for {guests} guests in {city}",
+        "titleCity": "No places in {city} match this search",
+        "body": "These searches have places — one tap away:",
+        "largestLabel": "Largest here",
+        "largest": "Sleep {guests} · {count, plural, one {# place} other {# places}}",
+        "datesLabel": "Nearby dates",
+        "nearbyLabel": "Nearby cities",
+        "loosenLabel": "Fewer filters",
+        "loosen": "Without amenities and price · {count, plural, one {# place} other {# places}}",
+        "places": "{count, plural, one {# place} other {# places}}",
+        "km": "{km} km"
       }
     },
     "destinations": {
@@ -655,7 +676,8 @@
       "signOut": "Sign out",
       "myBookings": "My bookings",
       "wallet": "My wallet",
-      "account": "Account"
+      "account": "Account",
+      "favorites": "Saved"
     },
     "authGate": {
       "title": "Sign in to continue",
@@ -1262,5 +1284,10 @@
       "unavailable": "Adding a phone is not available right now.",
       "generic": "Something went wrong. Please try again."
     }
+  },
+  "favorites": {
+    "title": "Saved",
+    "empty": "Nothing saved yet. Tap the ♡ on any place to keep it here.",
+    "browse": "Browse stays"
   }
 }

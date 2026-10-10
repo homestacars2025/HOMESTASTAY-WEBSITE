@@ -26,7 +26,9 @@
     "guestsIncrement": "Misafir artır",
     "cta": "Konaklama ara",
     "whereRequired": "Önce nereye gideceğinizi seçin.",
-    "editSearch": "Düzenle"
+    "editSearch": "Düzenle",
+    "placeSearch": "Şehir veya bölge",
+    "searchFor": "“{place}” için ara"
   },
   "categories": {
     "all": "Tümü",
@@ -104,7 +106,8 @@
       "bedrooms": "{count, plural, other {# yatak odası}}",
       "beds": "{count, plural, other {# yatak}}",
       "bathrooms": "{count, plural, other {# banyo}}"
-    }
+    },
+    "longStay": "Uzun konaklama · en az {count} gece"
   },
   "pages": {
     "home": {
@@ -133,6 +136,24 @@
         "previous": "Önceki",
         "next": "Sonraki",
         "status": "Sayfa {current} / {total}"
+      },
+      "place": {
+        "area": "{city} konaklamaları gösteriliyor — önce {place}, sonra yakındakiler.",
+        "near": "{place} için henüz konaklama yok — {km} km uzaklıktaki {city} gösteriliyor.",
+        "unknown": "“{place}” bulunamadı — tüm konaklamalar gösteriliyor."
+      },
+      "suggest": {
+        "titleGuests": "{city} için {guests} misafirlik yer yok",
+        "titleCity": "{city} için bu aramaya uyan yer yok",
+        "body": "Bu aramalarda yer var — tek dokunuşla:",
+        "largestLabel": "Buradaki en büyükler",
+        "largest": "{guests} kişilik · {count} yer",
+        "datesLabel": "Yakın tarihler",
+        "nearbyLabel": "Yakın şehirler",
+        "loosenLabel": "Daha az filtre",
+        "loosen": "Olanaklar ve fiyat olmadan · {count} yer",
+        "places": "{count} yer",
+        "km": "{km} km"
       }
     },
     "destinations": {
@@ -655,7 +676,8 @@
       "signOut": "Çıkış yap",
       "myBookings": "Rezervasyonlarım",
       "wallet": "Cüzdanım",
-      "account": "Hesap"
+      "account": "Hesap",
+      "favorites": "Kaydedilenler"
     },
     "authGate": {
       "title": "Devam etmek için giriş yapın",
@@ -1262,5 +1284,10 @@
       "unavailable": "Telefon ekleme şu anda kullanılamıyor.",
       "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
     }
+  },
+  "favorites": {
+    "title": "Kaydedilenler",
+    "empty": "Henüz kaydedilen yok. Bir yeri burada tutmak için ♡ simgesine dokunun.",
+    "browse": "Konaklamalara göz at"
   }
 }

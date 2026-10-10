@@ -13,6 +13,10 @@ import { pickLocalizedName } from '@/lib/geo/localize';
 import { SearchBarWrapper } from '@/components/home/SearchBarWrapper';
 import { Link } from '@/i18n/navigation';
 import { getCatalogueFacets, getStaysCatalogue, type StaysFilters } from '@/lib/queries/stays';
+import { applyPlace, resolvePlace, type PlaceMatch } from '@/lib/stays/places';
+import { getEmptySuggestions } from '@/lib/stays/suggestions';
+import { EmptySuggestions } from '@/components/stays/EmptySuggestions';
+import { localizedCityName } from '@/lib/geo/city-name';
 import {
   parseStaysSearchParams,
   parseStaysPage,
@@ -97,7 +101,13 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
 
   // Params are visitor-editable, so anything invalid degrades to "no filter"
   // rather than erroring or emptying the page.
-  const filters = parseStaysSearchParams(rawParams);
+  // The place is resolved before anything else reads it: İstanbul, ISTANBUL
+  // and إسطنبول are Istanbul; Taksim is Istanbul with Beyoğlu ranked first;
+  // Kartepe is the nearest city with places; nonsense is "all places" — each
+  // with the note below saying what is shown. Never an empty page for spelling.
+  const parsed = parseStaysSearchParams(rawParams);
+  const place = parsed.city ? await resolvePlace(parsed.city) : null;
+  const filters = applyPlace(parsed, place);
   const page = parseStaysPage(rawParams);
 
   // Old category links still land on the right chip: ?type=studio becomes
@@ -121,6 +131,8 @@ export default async function StaysPage({ searchParams }: { searchParams: Search
         <div className="px-4 mb-6">
           <SearchBarWrapper filters={filters} collapsible />
         </div>
+
+        <PlaceNote place={place} locale={locale} />
 
         {/* The results stream in their own boundary so the header + search bar
             never freeze. Keyed by the active filters/page so a new search shows
@@ -167,22 +179,10 @@ async function StaysResults({
 
   if (cards.length === 0) {
     // A search that matched nothing is not the same as an empty catalogue:
-    // offering "become a host" here would answer a question nobody asked.
+    // offering "become a host" here would answer a question nobody asked. It
+    // gets the nearest searches that DO have places instead.
     return isFiltered ? (
-      <>
-      <div className="px-4 py-20 text-center max-w-md mx-auto">
-        <h2 className="text-lg font-medium text-ink mb-2 tracking-[-0.015em]">
-          {t('searchEmpty.title')}
-        </h2>
-        <p className="text-ink-soft leading-relaxed mb-6">{t('searchEmpty.body')}</p>
-        <Link
-          href="/stays"
-          className="inline-flex items-center gap-1.5 bg-ink text-white rounded-[999px] px-6 py-2.5 text-sm font-medium transition-opacity duration-[240ms] hover:opacity-80"
-        >
-          {t('searchEmpty.cta')}
-        </Link>
-      </div>
-      </>
+      <EmptySuggestions locale={locale} filters={shared} suggestions={await getEmptySuggestions(shared)} />
     ) : (
       <div className="px-4 py-20 text-center max-w-md mx-auto">
         <h2 className="text-lg font-medium text-ink mb-2 tracking-[-0.015em]">
@@ -211,3 +211,26 @@ async function StaysResults({
   );
 }
 
+/**
+ * What the place in the search was taken to mean, when it was not simply a
+ * city: an area ("Taksim first"), the nearest city with places, or nothing.
+ */
+async function PlaceNote({ place, locale }: { place: PlaceMatch | null; locale: string }) {
+  if (!place || place.kind === 'exact') return null;
+  const t = await getTranslations({ locale, namespace: 'pages.stays.place' });
+  const text = place.kind === 'unknown'
+    ? t('unknown', { place: place.query })
+    : place.kind === 'near'
+      ? t('near', { place: place.query, city: await localizedCityName(place.city, locale), km: place.km })
+      : null;
+  if (place.kind === 'area') {
+    return (
+      <p role="status" className="px-4 -mt-2 mb-6 text-sm text-ink-soft">
+        {t('area', { city: await localizedCityName(place.city, locale), place: place.label })}
+      </p>
+    );
+  }
+  return (
+    <p role="status" className="px-4 -mt-2 mb-6 text-sm text-ink-soft">{text}</p>
+  );
+}

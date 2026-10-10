@@ -26,7 +26,9 @@
     "guestsIncrement": "Увеличить количество гостей",
     "cta": "Найти жильё",
     "whereRequired": "Сначала выберите направление.",
-    "editSearch": "Изменить"
+    "editSearch": "Изменить",
+    "placeSearch": "Город или район",
+    "searchFor": "Искать «{place}»"
   },
   "categories": {
     "all": "Все",
@@ -104,7 +106,8 @@
       "bedrooms": "{count, plural, one {# спальня} few {# спальни} many {# спален} other {# спальни}}",
       "beds": "{count, plural, one {# кровать} few {# кровати} many {# кроватей} other {# кровати}}",
       "bathrooms": "{count, plural, one {# ванная} few {# ванные} many {# ванных} other {# ванной}}"
-    }
+    },
+    "longStay": "Долгое проживание · от {count, plural, one {# ночи} few {# ночей} many {# ночей} other {# ночи}}"
   },
   "pages": {
     "home": {
@@ -133,6 +136,24 @@
         "previous": "Назад",
         "next": "Вперёд",
         "status": "Страница {current} из {total}"
+      },
+      "place": {
+        "area": "Показываем жильё в городе {city} — сначала {place}, затем рядом.",
+        "near": "В {place} пока нет жилья — показываем {city}, в {km} км.",
+        "unknown": "Не нашли «{place}» — показываем всё жильё."
+      },
+      "suggest": {
+        "titleGuests": "Нет жилья на {guests} гостей: {city}",
+        "titleCity": "Нет жилья по этому запросу: {city}",
+        "body": "В этих поисках есть варианты — в одно касание:",
+        "largestLabel": "Самые большие здесь",
+        "largest": "До {guests} гостей · {count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}}",
+        "datesLabel": "Соседние даты",
+        "nearbyLabel": "Города рядом",
+        "loosenLabel": "Меньше фильтров",
+        "loosen": "Без удобств и цены · {count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}}",
+        "places": "{count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}}",
+        "km": "{km} км"
       }
     },
     "destinations": {
@@ -655,7 +676,8 @@
       "signOut": "Выйти",
       "myBookings": "Мои бронирования",
       "wallet": "Мой кошелёк",
-      "account": "Аккаунт"
+      "account": "Аккаунт",
+      "favorites": "Сохранённое"
     },
     "authGate": {
       "title": "Войдите, чтобы продолжить",
@@ -1262,5 +1284,10 @@
       "unavailable": "Добавление телефона сейчас недоступно.",
       "generic": "Что-то пошло не так. Попробуйте ещё раз."
     }
+  },
+  "favorites": {
+    "title": "Сохранённое",
+    "empty": "Пока ничего не сохранено. Нажмите ♡ на любом жилье, чтобы оно появилось здесь.",
+    "browse": "Смотреть жильё"
   }
 }

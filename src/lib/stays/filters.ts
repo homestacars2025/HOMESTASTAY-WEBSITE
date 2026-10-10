@@ -93,6 +93,13 @@ export interface StaysFilters {
    * handful of units only.
    */
   district?: string;
+  /**
+   * An AREA the guest asked for by name (Taksim → beyoglu): geo_districts
+   * name_en, lowercased, like `district` — but SOFT. It never removes a unit;
+   * it ranks that area first and the rest of the city by distance from it
+   * (see lib/stays/ranking). Set by place resolution, not by the filter sheet.
+   */
+  area?: string;
   /** Minimum sleeping capacity — matches units with max_guests >= this. */
   guests?: number;
   /** ISO YYYY-MM-DD. Both dates are required for the availability filter to apply. */

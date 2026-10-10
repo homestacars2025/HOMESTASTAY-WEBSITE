@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useIsCustomer } from '@/hooks/useIsCustomer';
-import { LogOut, ChevronDown, BookOpen, Wallet, UserRound } from 'lucide-react';
+import { LogOut, ChevronDown, BookOpen, Wallet, UserRound, Heart } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface UserMenuProps {
@@ -87,6 +87,14 @@ export function UserMenu({ user }: UserMenuProps) {
           >
             <UserRound className="w-4 h-4 text-mute shrink-0" />
             {t('account')}
+          </Link>
+          <Link
+            href="/account/favorites"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-paper-warm transition-colors duration-[240ms]"
+          >
+            <Heart className="w-4 h-4 text-mute shrink-0" />
+            {t('favorites')}
           </Link>
           <Link
             href="/my-bookings"

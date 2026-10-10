@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useAuthUser } from '@/hooks/useAuthUser';
-import { useAuthGate } from '@/contexts/AuthGateContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 
 interface SaveButtonProps {
   unitId: string;
@@ -16,42 +14,28 @@ interface SaveButtonProps {
   floating?: boolean;
 }
 
+/**
+ * The ❤. Saves for everyone — signed out it is kept in this browser and moved
+ * into the account at sign-in (see FavoritesContext) — so it never asks a guest
+ * to sign in just to remember a place.
+ */
 export function SaveButton({ unitId, floating = true }: SaveButtonProps) {
-  const [saved, setSaved] = useState(false);
-  const t              = useTranslations('card');
-  const user           = useAuthUser();
-  const { openAuthGate } = useAuthGate();
-
-  // After returning from sign-in, resume the pending save action for this unit
-  useEffect(() => {
-    if (!user) return;
-    try {
-      const raw = sessionStorage.getItem('auth_pending_action');
-      if (!raw) return;
-      const action = JSON.parse(raw) as { type: string; unitId: string };
-      if (action.type === 'save' && action.unitId === unitId) {
-        setSaved(true);
-        sessionStorage.removeItem('auth_pending_action');
-      }
-    } catch {
-      // non-fatal
-    }
-  }, [user, unitId]);
+  const t = useTranslations('card');
+  const { has, toggle } = useFavorites();
+  const saved = has(unitId);
 
   function handleClick(e: React.MouseEvent) {
+    // The button sits inside the card's link: saving must not open the unit.
     e.preventDefault();
     e.stopPropagation();
-    if (user === undefined) return; // auth state still loading
-    if (!user) {
-      openAuthGate({ type: 'save', unitId });
-      return;
-    }
-    setSaved((s) => !s);
+    toggle(unitId);
   }
 
   return (
     <button
+      type="button"
       onClick={handleClick}
+      aria-pressed={saved}
       aria-label={saved ? t('unsave') : t('save')}
       className={`${floating ? 'absolute top-3 end-3 ' : ''}w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-transform duration-[240ms] hover:scale-110 active:scale-95`}
     >

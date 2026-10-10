@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { track } from '@/lib/analytics/events';
+import { trackInitiateCheckout } from '@/lib/analytics/meta-pixel';
 import { useTranslations, useLocale } from 'next-intl';
 import { Calendar } from 'lucide-react';
 import { BrandMark } from '@/components/brand/BrandMark';
@@ -174,6 +176,18 @@ export function BookingCard({
   const explainKey = `homesta:modes-explained:${unitId}`;
 
   function handleReserve() {
+    // reserve_click + Meta InitiateCheckout. The value is the stay's quoted
+    // total when dates are set, otherwise the nightly rate.
+    track({
+      event: 'reserve_click',
+      unit_id: unitId,
+      check_in: dateRange.from ? toISODate(dateRange.from) : undefined,
+      check_out: dateRange.to ? toISODate(dateRange.to) : undefined,
+      guests,
+    }, { now: true });
+    const value = quote.total_usd ?? quote.nightly_usd;
+    if (value !== null) trackInitiateCheckout({ contentId: unitId, value, currency: 'USD' });
+
     const offered = [allowFullPrepay, allowDeposit, allowPayAtArrival].filter(Boolean).length;
     if (offered < 2) {
       setModalOpen(true);

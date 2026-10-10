@@ -14,6 +14,8 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { graph, organizationSchema, websiteSchema } from '@/lib/seo/schema';
 import { MetaPixel } from '@/components/analytics/MetaPixel';
 import { Clarity } from '@/components/analytics/Clarity';
+import { EventTracker } from '@/components/analytics/EventTracker';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import '@/styles/globals.css';
 import { CANONICAL_URL } from '@/lib/config/urls';
 
@@ -100,13 +102,16 @@ export default async function LocaleLayout({ children, params }: Props) {
             once per page. */}
         <MetaPixel />
         <Clarity />
+        <EventTracker />
         <NextIntlClientProvider messages={messages}>
           <MotionProvider>
             <AuthGateProvider>
-              <PageTransition>
-                {children}
-              </PageTransition>
-              <SiteFooter />
+              <FavoritesProvider>
+                <PageTransition>
+                  {children}
+                </PageTransition>
+                <SiteFooter />
+              </FavoritesProvider>
             </AuthGateProvider>
           </MotionProvider>
         </NextIntlClientProvider>

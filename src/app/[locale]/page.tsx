@@ -12,7 +12,7 @@ import { WhyHomesta } from '@/components/home/WhyHomesta';
 import { HowItWorks } from '@/components/home/HowItWorks';
 import { FadeUp } from '@/components/motion/FadeUp';
 import { MotionCard } from '@/components/motion/MotionCard';
-import { getRandomFeaturedUnits } from '@/lib/queries/stays';
+import { getStaysCatalogue } from '@/lib/queries/stays';
 
 // Random real listings are picked per request — keep it dynamic so the rails
 // refresh for each visitor instead of freezing at build time.
@@ -76,11 +76,19 @@ export default async function HomePage() {
     getLocale(),
   ]);
 
-  // One fetch → two disjoint rails. getRandomFeaturedUnits returns up to 12
-  // shuffled real units; the first 6 feed "Featured", the next feed "More stays".
-  const pool = await getRandomFeaturedUnits(locale, 12);
-  const featured = pool.slice(0, 6);
-  const moreStays = pool.slice(6, 12);
+  // One cached fetch → two disjoint rails. The catalogue arrives in the
+  // site's recommended order (lib/stays/ranking, with no request: small,
+  // short-stay, complete listings first, at most two per property in a row),
+  // so "Featured" is its top six. "More stays" stays a per-request shuffle of
+  // the rest, so the page still changes between visits.
+  const catalogue = await getStaysCatalogue(locale, {});
+  const featured = catalogue.slice(0, 6);
+  const rest = catalogue.slice(6).filter((u) => !u.long_stay_min);
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  const moreStays = rest.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -156,9 +164,9 @@ export default async function HomePage() {
                 className="flex gap-4 overflow-x-auto px-4 pb-3 scrollbar-none"
                 style={{ scrollSnapType: 'x mandatory' }}
               >
-                {featured.map((unit) => (
+                {featured.map((unit, i) => (
                   <MotionCard key={unit.id} className="flex-none w-[260px] md:w-[280px]">
-                    <UnitCard unit={unit} />
+                    <UnitCard unit={unit} source="home" position={i + 1} />
                   </MotionCard>
                 ))}
                 <div className="w-1 shrink-0" aria-hidden="true" />
@@ -183,9 +191,9 @@ export default async function HomePage() {
                 className="flex gap-4 overflow-x-auto px-4 pb-3 scrollbar-none"
                 style={{ scrollSnapType: 'x mandatory' }}
               >
-                {moreStays.map((unit) => (
+                {moreStays.map((unit, i) => (
                   <MotionCard key={unit.id} className="flex-none w-[260px] md:w-[280px]">
-                    <UnitCard unit={unit} />
+                    <UnitCard unit={unit} source="home" position={i + 1} />
                   </MotionCard>
                 ))}
                 <div className="w-1 shrink-0" aria-hidden="true" />

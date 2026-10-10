@@ -15,6 +15,7 @@ import {
   type StaysFilters,
 } from '@/lib/stays/filters';
 import { CATEGORY_TYPES, categoryOf, type Category } from '@/lib/stays/categories';
+import { rankUnits, type QualitySignals, type RankRequest } from '@/lib/stays/ranking';
 import type {
   UnitCardData,
   UnitListing,
@@ -612,14 +613,24 @@ export async function getPublicUnits(
   return queryPublicUnits(locale, filters, page, pageSize);
 }
 
-/** One row of the narrow candidate query — enough to filter, count and sort. */
+/** One row of the narrow candidate query — enough to filter, count, rank and sort. */
 interface Candidate {
   id: string;
   created_at: string;
   unit_type: string;
-  /** unit_info.ad_title — the Turkish source title, the app's sort key. */
+  /** unit_info.ad_title — the Turkish source title. */
   title: string;
   amenities: Record<AmenityFilter, boolean>;
+  maxGuests: number | null;
+  minNights: number;
+  propertyId: string | null;
+  districtId: string | null;
+  /** geo_cities.name — the canonical city, for "nearby cities" suggestions. */
+  city: string | null;
+  /** Set by the recommended ranking (see lib/stays/ranking). */
+  score?: number;
+  longStay?: boolean;
+  reasons?: string[];
 }
 
 /** Whole nights between two ISO dates (both already validated as real dates). */
@@ -703,7 +714,9 @@ async function queryPublicUnits(
     (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
   );
 
-  const units = await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, quotes);
+  const longStay = new Map(candidates.map((c) => [c.id, c.longStay ? c.minNights : null]));
+  const units = (await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, quotes))
+    .map((u) => ({ ...u, long_stay_min: longStay.get(u.id) ?? null }));
   return { units, total, amenityCounts };
 }
 
@@ -752,9 +765,14 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
   const batches: string[][] = [];
   for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
 
-  const results = await Promise.all(
-    batches.map((batch) => cardTrims(supabase.from('units').select(CARD_SELECT).in('id', batch), locale)),
-  );
+  // Prices are known to be needed for every id already, so they are fetched
+  // alongside the cards instead of after them (one round trip saved).
+  const [results, prices] = await Promise.all([
+    Promise.all(
+      batches.map((batch) => cardTrims(supabase.from('units').select(CARD_SELECT).in('id', batch), locale)),
+    ),
+    quotes ?? fetchQuotes(supabase, ids, filters.checkIn, filters.checkOut),
+  ]);
   const rows: RawRow[] = [];
   for (const r of results) {
     if (r.error) {
@@ -764,7 +782,7 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
     rows.push(...((r.data ?? []) as RawRow[]));
   }
 
-  const listings = await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, quotes);
+  const listings = await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, prices);
   const byId = new Map(listings.map((u) => [u.id, u]));
 
   const cards: StayCard[] = [];
@@ -790,6 +808,7 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
         beds: u.specifications.beds,
         bathrooms: u.specifications.bathrooms,
       },
+      long_stay_min: c.longStay ? c.minNights : null,
       category: categoryOf(c.unit_type),
       amenities: AMENITY_FILTERS.filter((a) => c.amenities[a]),
     });
@@ -806,61 +825,60 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
 export async function countPublicUnits(
   filters: StaysFilters,
 ): Promise<Pick<StaysPage, 'total' | 'amenityCounts'>> {
-  const resolved = await resolveCandidates(createPublicClient(), filters);
+  // Counting only: no order needed, so the ranking is skipped.
+  const resolved = await resolveCandidates(createPublicClient(), filters, { rank: false });
   if (!resolved) return { total: 0, amenityCounts: ZERO_AMENITY_COUNTS };
   return { total: resolved.candidates.length, amenityCounts: resolved.amenityCounts };
+}
+
+/**
+ * The bare match list for a search — no cards, no order. For the empty-search
+ * suggestions, which only need to know what WOULD match a looser search.
+ */
+export async function matchUnits(
+  filters: StaysFilters,
+): Promise<{ id: string; city: string | null; maxGuests: number | null }[] | null> {
+  const resolved = await resolveCandidates(createPublicClient(), filters, { rank: false });
+  return resolved ? resolved.candidates.map((c) => ({ id: c.id, city: c.city, maxGuests: c.maxGuests })) : null;
 }
 
 /**
  * Steps 1–4: every unit matching `filters`, sorted, with the amenity counts
  * and any quotes fetched on the way. Null when the search must fail closed or
  * errored (logged) — the caller shows nothing rather than something wrong.
+ *
+ * The availability lookup, the candidate query and the (cached) ranking index
+ * run AT ONCE: blocked units and the district are filtered here in code rather
+ * than in the candidate query, so neither waits on the other.
  */
 async function resolveCandidates(
   supabase: SupabaseClient,
   filters: StaysFilters,
+  { rank = true }: { rank?: boolean } = {},
 ): Promise<{
   candidates: Candidate[];
   quotes: Map<string, UnitPricing> | undefined;
   amenityCounts: Record<AmenityFilter, number>;
 } | null> {
-  const { city, district, guests, checkIn, checkOut, priceMin, priceMax } = filters;
+  const { city, district, area, guests, checkIn, checkOut, priceMin, priceMax } = filters;
   // The category chip is a set of unit types (see lib/stays/categories).
   const types = filters.category ? CATEGORY_TYPES[filters.category] : undefined;
   const amenities = filters.amenities ?? [];
   const sort: SortKey = filters.sort ?? DEFAULT_SORT;
   const wantsAvailability = !!checkIn && !!checkOut;
-
-  // 1 ── Availability.
-  let blocked: string[] = [];
-  if (wantsAvailability) {
-    const ids = await blockedUnitIds(supabase, checkIn, checkOut);
-    if (ids === null) return null; // fail closed — see blockedUnitIds
-    blocked = ids;
-  }
-
-  // 2 ── District. Read from properties.district_id, never from
-  // unit_info.region (filled on a handful of units — filtering on it would
-  // hide most of the district). An unknown district, or one with no visible
-  // units, can only match nothing.
-  let districtId: string | null = null;
-  if (city && district) {
-    const facets = await getCatalogueFacets();
-    const match = facets.districtsByCity[city.toLowerCase()]?.find((d) => d.key === district);
-    if (!match) return { candidates: [], quotes: undefined, amenityCounts: { ...ZERO_AMENITY_COUNTS } };
-    districtId = match.id;
-  }
+  const wantsRank = rank && sort === 'recommended';
+  const needsIndex = wantsRank || !!(city && district);
 
   // 3 ── Candidates. Embeds are made INNER exactly when they filter the parent;
   // without !inner PostgREST nulls the embed and the filter silently does
   // nothing. unit_amenities is always selected (for the counts) but only inner
   // when an amenity is required.
   const select = [
-    'id,created_at,unit_type',
+    'id,created_at,unit_type,min_nights,property_id',
     'unit_info!inner(ad_title)',
-    `properties!inner(archived_at${city ? ',geo_cities:city_id!inner(name)' : ''})`,
+    `properties!inner(archived_at,district_id,geo_cities:city_id${city ? '!inner' : ''}(name))`,
     `unit_amenities${amenities.length ? '!inner' : ''}(${AMENITY_FILTERS.join(',')})`,
-    ...(guests ? ['unit_specifications!inner(max_guests)'] : []),
+    `unit_specifications${guests ? '!inner' : ''}(max_guests)`,
   ].join(',');
 
   let query = supabase
@@ -875,7 +893,6 @@ async function resolveCandidates(
   // dropdown and the unit card both read. unit_info.city is free text and
   // disagrees with it (casing, and at least one unit filed under the wrong city).
   if (city) query = query.ilike('properties.geo_cities.name', likeLiteral(city));
-  if (districtId) query = query.eq('properties.district_id', districtId);
   if (types?.length) query = query.in('unit_type', [...types]);
   if (guests) query = query.gte('unit_specifications.max_guests', guests);
   for (const a of amenities) query = query.is(`unit_amenities.${a}`, true);
@@ -884,9 +901,15 @@ async function resolveCandidates(
     // it, so it is not a result (same as the app). A null min_nights is 1.
     query = query.or(`min_nights.is.null,min_nights.lte.${nightsBetween(checkIn, checkOut)}`);
   }
-  if (blocked.length > 0) query = query.not('id', 'in', `(${blocked.join(',')})`);
 
-  const { data, error } = await query;
+  // 1 + 3 (+ the index) together.
+  const [blocked, { data, error }, index] = await Promise.all([
+    wantsAvailability ? blockedUnitIds(supabase, checkIn, checkOut) : Promise.resolve([] as string[]),
+    query,
+    needsIndex ? getRankingIndex() : Promise.resolve(EMPTY_INDEX),
+  ]);
+
+  if (blocked === null) return null; // fail closed — see blockedUnitIds
 
   if (error) {
     console.error('[getPublicUnits] candidates', {
@@ -899,10 +922,25 @@ async function resolveCandidates(
     return null;
   }
 
+  // 2 ── District (a hard filter) and area (soft — ranking only), by key.
+  // Read from properties.district_id, never from unit_info.region (filled on
+  // a handful of units — filtering on it would hide most of the district). An
+  // unknown district, or one with no visible units, can only match nothing.
+  const cityKey = city?.toLowerCase() ?? '';
+  const districtId = city && district ? index.districtIdByKey[`${cityKey}/${district}`] ?? null : null;
+  if (city && district && !districtId) {
+    return { candidates: [], quotes: undefined, amenityCounts: { ...ZERO_AMENITY_COUNTS } };
+  }
+  const areaId = city && area ? index.districtIdByKey[`${cityKey}/${area}`] ?? null : null;
+
+  const blockedSet = new Set(blocked);
   let candidates: Candidate[] = ((data ?? []) as RawRow[])
     .filter(hasAdTitle)
+    .filter((row) => !blockedSet.has(row.id as string))
+    .filter((row) => !districtId || row.properties?.district_id === districtId)
     .map((row) => {
       const am = one<RawRow>(row.unit_amenities);
+      const mg = one<RawRow>(row.unit_specifications)?.max_guests;
       return {
         id: row.id as string,
         created_at: (row.created_at as string) ?? '',
@@ -911,6 +949,11 @@ async function resolveCandidates(
         amenities: Object.fromEntries(
           AMENITY_FILTERS.map((a) => [a, !!am?.[a]]),
         ) as Record<AmenityFilter, boolean>,
+        maxGuests: typeof mg === 'number' ? mg : null,
+        minNights: typeof row.min_nights === 'number' && row.min_nights > 0 ? row.min_nights : 1,
+        propertyId: (row.property_id as string) ?? null,
+        districtId: (row.properties?.district_id as string) ?? null,
+        city: (row.properties?.geo_cities?.name as string) ?? null,
       };
     });
 
@@ -945,7 +988,42 @@ async function resolveCandidates(
     for (const a of AMENITY_FILTERS) if (c.amenities[a]) amenityCounts[a] += 1;
   }
 
-  // Sort, then tiebreak on id. ~260 units share ~110 prices; without the
+  if (wantsRank) {
+    const area = areaId ? index.districts[areaId] : null;
+    const request: RankRequest = {
+      guests,
+      nights: wantsAvailability ? nightsBetween(checkIn, checkOut) : null,
+      areaDistrictId: areaId,
+      areaName: area?.name ?? null,
+      areaCenter: area?.center ?? null,
+    };
+    const byIdMap = new Map(candidates.map((c) => [c.id, c]));
+    const ranked = rankUnits(
+      candidates.map((c) => {
+        const facts = index.units[c.id];
+        return {
+          id: c.id,
+          propertyId: c.propertyId,
+          maxGuests: c.maxGuests,
+          minNights: c.minNights,
+          districtId: c.districtId,
+          lat: facts?.lat ?? null,
+          lng: facts?.lng ?? null,
+          quality: facts?.quality ?? NO_QUALITY,
+        };
+      }),
+      request,
+    );
+    candidates = ranked.map((r) => ({
+      ...byIdMap.get(r.id)!,
+      score: r.score,
+      longStay: r.longStay,
+      reasons: r.reasons,
+    }));
+    return { candidates, quotes, amenityCounts };
+  }
+
+  // Price / newest. Tiebreak on id: ~260 units share ~110 prices; without the
   // tiebreak equal-priced units reshuffle between requests and a guest paging
   // through sees some twice and others never. Missing prices sort last in both
   // directions (nullsFirst: false).
@@ -966,16 +1044,170 @@ async function resolveCandidates(
       case 'newest':
         if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1;
         break;
-      default: {
-        const t = a.title.localeCompare(b.title, 'tr');
-        if (t !== 0) return t;
-      }
+      default:
+        break;
     }
     return byId(a, b);
   };
   candidates.sort(compare);
 
   return { candidates, quotes, amenityCounts };
+}
+
+// ── Ranking index ────────────────────────────────────────────────────────────
+
+/** Per-unit facts the ranking reads that a search query does not carry. */
+export interface RankingFacts {
+  /** Exact coordinates — SERVER ONLY (distances); never sent to a browser. */
+  lat: number | null;
+  lng: number | null;
+  quality: QualitySignals;
+}
+
+export interface IndexDistrict {
+  id: string;
+  key: string;
+  /** geo_cities.name, lowercased. */
+  city: string;
+  name: string;
+  /** Mean of its units' coordinates. */
+  center: { lat: number; lng: number } | null;
+  count: number;
+}
+
+export interface IndexCity {
+  /** geo_cities.name — the canonical value ?city= carries. */
+  name: string;
+  count: number;
+  center: { lat: number; lng: number } | null;
+}
+
+export interface RankingIndex {
+  units: Record<string, RankingFacts>;
+  districts: Record<string, IndexDistrict>;
+  /** `${city}/${key}` → district id (lowercased city, name_en key). */
+  districtIdByKey: Record<string, string>;
+  /** Cities that hold visible units, keyed by lowercased name. */
+  cities: Record<string, IndexCity>;
+}
+
+const NO_QUALITY: QualitySignals = {
+  photos: 0, hasDescription: false, amenities: 0, hasRules: false, hasPrice: false, realCover: false,
+};
+
+const EMPTY_INDEX: RankingIndex = { units: {}, districts: {}, districtIdByKey: {}, cities: {} };
+
+const ALL_AMENITY_COLUMNS = Object.keys(EMPTY_AMENITIES);
+
+/** The ?district= / ?area= key: name_en lowercased (ASCII, so URLs stay clean). */
+export function districtKey(d: { id: string; name?: string | null; name_en?: string | null }): string {
+  return String(d.name_en || d.name || d.id).trim().toLowerCase();
+}
+
+/**
+ * What the ranking and the place search need to know about the visible
+ * catalogue: listing quality, where each unit is, and the centre of every
+ * city and district that holds units. Identical for every visitor, so it is
+ * cached and tagged 'units' like the rest of the inventory (an edit drops
+ * it). Exact coordinates live only in this server-side cache.
+ *
+ * Never throws: a failure gives the empty index, and ranking then falls back
+ * to guests and nights fit alone rather than failing the search.
+ */
+export async function getRankingIndex(): Promise<RankingIndex> {
+  try {
+    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v2'], { tags: ['units'], revalidate: 600 })();
+  } catch (err) {
+    console.error('[getRankingIndex]', { message: err instanceof Error ? err.message : String(err) });
+    return EMPTY_INDEX;
+  }
+}
+
+async function queryRankingIndex(): Promise<RankingIndex> {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from('units')
+    .select(
+      'id,unit_info!inner(ad_title,latitude,longitude),unit_media(count),unit_rules(id),' +
+        // Descriptions are counted, not fetched: only whether one exists matters.
+        'unit_translations(count),' +
+        `unit_amenities(${ALL_AMENITY_COLUMNS.join(',')}),` +
+        'properties!inner(archived_at,geo_cities:city_id(name),geo_districts:district_id(id,name,name_en))',
+    )
+    .eq('status', 'available')
+    .is('archived_at', null)
+    .not('unit_info.ad_title', 'is', null)
+    .is('properties.archived_at', null)
+    .not('unit_translations.ad_description', 'is', null);
+
+  // Thrown, not returned: unstable_cache must not keep a failure for 10 minutes.
+  if (error) throw new Error(`ranking index: ${error.message}`);
+
+  const rows = ((data ?? []) as RawRow[]).filter(hasAdTitle);
+  const quotes = await fetchQuotes(supabase, rows.map((r) => r.id as string));
+
+  const index: RankingIndex = { units: {}, districts: {}, districtIdByKey: {}, cities: {} };
+  // Centres are MEDIANS, not means: one unit with a wrong pin (a Sapanca
+  // listing is pinned in Rize, ~900 km off) would drag a mean far enough to
+  // break every distance measured from it. A median ignores it.
+  const points = new Map<string, { lats: number[]; lngs: number[] }>();
+  const addTo = (key: string, lat: number, lng: number) => {
+    const p = points.get(key) ?? { lats: [], lngs: [] };
+    p.lats.push(lat); p.lngs.push(lng);
+    points.set(key, p);
+  };
+  const median = (xs: number[]) => {
+    const s = [...xs].sort((a, b) => a - b);
+    const m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+
+  for (const r of rows) {
+    const info = one<RawRow>(r.unit_info);
+    const lat = typeof info?.latitude === 'number' ? info.latitude : null;
+    const lng = typeof info?.longitude === 'number' ? info.longitude : null;
+    const am = one<RawRow>(r.unit_amenities);
+    const photos = Number(one<RawRow>(r.unit_media)?.count ?? 0);
+    const quote = quotes.get(r.id as string);
+
+    index.units[r.id as string] = {
+      lat,
+      lng,
+      quality: {
+        photos,
+        hasDescription: Number(one<RawRow>(r.unit_translations)?.count ?? 0) > 0,
+        amenities: am ? ALL_AMENITY_COLUMNS.filter((c) => am[c] === true).length : 0,
+        hasRules: !!one<RawRow>(r.unit_rules),
+        hasPrice: !!quote && quote.nightly_usd !== null,
+        realCover: photos > 0,
+      },
+    };
+
+    const cityName: string | null = r.properties?.geo_cities?.name ?? null;
+    if (cityName) {
+      const ck = cityName.toLowerCase();
+      const c = (index.cities[ck] ??= { name: cityName, count: 0, center: null });
+      c.count += 1;
+      if (lat !== null && lng !== null) addTo(`c:${ck}`, lat, lng);
+
+      const d = r.properties?.geo_districts;
+      if (d?.id) {
+        const entry = (index.districts[d.id] ??= {
+          id: d.id, key: districtKey(d), city: ck, name: d.name_en || d.name || '', center: null, count: 0,
+        });
+        entry.count += 1;
+        index.districtIdByKey[`${ck}/${entry.key}`] = d.id;
+        if (lat !== null && lng !== null) addTo(`d:${d.id}`, lat, lng);
+      }
+    }
+  }
+
+  for (const [key, p] of points) {
+    const center = { lat: median(p.lats), lng: median(p.lngs) };
+    if (key.startsWith('c:')) index.cities[key.slice(2)].center = center;
+    else index.districts[key.slice(2)].center = center;
+  }
+  return index;
 }
 
 // ── Catalogue facets ─────────────────────────────────────────────────────────
@@ -1179,65 +1411,4 @@ async function queryPublicUnitBySlug(
     quotes.get(row.id as string) ?? EMPTY_PRICING,
     countryNames,
   );
-}
-
-/**
- * A random selection of publicly visible units for homepage rails, resolved for
- * `locale`. Reuses the same strict visibility filter as the index (so nothing
- * pending/archived leaks) and the same locale-aware mapping. Shuffled with
- * Fisher-Yates at request time; call twice for two independent rails, or pass a
- * larger limit and slice disjoint halves.
- */
-/** All publicly-visible units as trimmed cards — no limit, no dates. The
- *  homepage's random pool. Cached (see getRandomFeaturedUnits): the whole set
- *  is small once trimmed, and caching it means the intercontinental fetch
- *  happens once per window, not per visitor. */
-async function queryAllAvailableCards(locale: string): Promise<UnitListing[]> {
-  const supabase = createPublicClient();
-  let query = supabase
-    .from('units')
-    .select(CARD_SELECT)
-    .eq('status', 'available')
-    .is('archived_at', null)
-    .not('unit_info.ad_title', 'is', null)
-    .is('properties.archived_at', null);
-
-  query = cardTrims(query, locale);
-
-  const { data, error } = await query
-    .order('property_id', { ascending: true })
-    .order('unit_name', { ascending: true });
-
-  if (error) {
-    console.error('[queryAllAvailableCards]', { message: error.message, code: error.code });
-    return [];
-  }
-  return mapCardRows(supabase, (data ?? []) as RawRow[], locale);
-}
-
-/** The pool, cached and tagged so /api/revalidate can drop it on any unit edit. */
-function getPoolCached(locale: string): Promise<UnitListing[]> {
-  return unstable_cache(
-    () => queryAllAvailableCards(locale),
-    ['stays-pool', locale],
-    { tags: ['units'], revalidate: 600 },
-  )();
-}
-
-/**
- * Random featured units for the homepage rails. Shuffles a CACHED pool, so the
- * transcontinental fetch is amortised across a whole revalidation window while
- * each visitor still gets a fresh random order (the shuffle is per-request,
- * over cached data — no query cost).
- */
-export async function getRandomFeaturedUnits(
-  locale: string = SOURCE_LOCALE,
-  limit: number = 12,
-): Promise<UnitListing[]> {
-  const pool = [...(await getPoolCached(locale))];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  return pool.slice(0, limit);
 }
