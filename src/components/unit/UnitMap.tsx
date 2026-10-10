@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Map, { Source, Layer } from 'react-map-gl/mapbox';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from 'react-map-gl/mapbox';
 import type {
   FillLayerSpecification,
   GeoJSONSourceSpecification,
@@ -17,22 +18,52 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 // so derive the shape from the source spec rather than pull in @types/geojson.
 type GeoJSONData = NonNullable<GeoJSONSourceSpecification['data']>;
 
+export interface UnitMapLabels {
+  street: string;
+  satellite: string;
+  zoomIn: string;
+  zoomOut: string;
+  attribution: string;
+  improve: string;
+  map: string;
+  scrollHint: string;
+}
+
 interface UnitMapProps {
+  /** The BLURRED point (approximateCoords, server-side) — never the address. */
   latitude: number;
   longitude: number;
   token: string;
-  labels: {
-    street: string;
-    satellite: string;
-  };
+  /** Page locale: map labels follow it (Mapbox localisation; local name as fallback). */
+  locale: string;
+  labels: UnitMapLabels;
 }
 
+/**
+ * Mapbox Standard, quietened: the "faded" theme, daylight, no 3D — clean
+ * enough to sit beside the photos, and it still names the metro, the malls
+ * and the main roads, which is what a guest reads a map for.
+ */
 const STYLES = {
-  street: 'mapbox://styles/mapbox/streets-v12',
-  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
+  street: 'mapbox://styles/mapbox/standard',
+  satellite: 'mapbox://styles/mapbox/standard-satellite',
 } as const;
-
 type StyleKey = keyof typeof STYLES;
+
+const BASEMAP_CONFIG = {
+  basemap: { theme: 'faded', lightPreset: 'day', show3dObjects: false, showPointOfInterestLabels: true, showTransitLabels: true },
+};
+
+const STAY = '#E52851';
+
+/**
+ * The tinted area drawn on the map. At district zoom (13) the 100 m privacy
+ * radius would sit entirely under the house marker, so the area is drawn
+ * wider. Wider can only blur MORE: it is centred on the same offset point and
+ * still contains the real address (never further than APPROX_RADIUS_M away).
+ */
+const AREA_RADIUS_M = Math.max(APPROX_RADIUS_M, 400);
+const RTL_PLUGIN = 'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.3.0/mapbox-gl-rtl-text.js';
 
 /**
  * A circle of `radiusM` around a point, as a GeoJSON polygon.
@@ -60,81 +91,124 @@ function circleAround(longitude: number, latitude: number, radiusM: number): Geo
   };
 }
 
-// The shading is tinted per base map: black reads clearly on the light street
-// style but disappears into dark satellite imagery, so satellite gets a white
-// wash and a firmer outline instead.
-const SHADE = {
-  street: { color: '#000000', fill: 0.15, stroke: 0.3, width: 1 },
-  satellite: { color: '#FFFFFF', fill: 0.25, stroke: 0.9, width: 2 },
-} as const;
-
-const fillLayer = (s: StyleKey): FillLayerSpecification => ({
+// Brand-tinted area, under the labels (the Standard style's "middle" slot).
+const fillLayer: FillLayerSpecification = {
   id: 'location-radius-fill',
   type: 'fill',
   source: 'location-radius',
-  paint: { 'fill-color': SHADE[s].color, 'fill-opacity': SHADE[s].fill },
-});
-
-const strokeLayer = (s: StyleKey): LineLayerSpecification => ({
+  slot: 'middle',
+  paint: { 'fill-color': STAY, 'fill-opacity': 0.15 },
+};
+const strokeLayer: LineLayerSpecification = {
   id: 'location-radius-stroke',
   type: 'line',
   source: 'location-radius',
-  paint: {
-    'line-color': SHADE[s].color,
-    'line-opacity': SHADE[s].stroke,
-    'line-width': SHADE[s].width,
-  },
-});
+  slot: 'middle',
+  paint: { 'line-color': STAY, 'line-opacity': 0.9, 'line-width': 1.5 },
+};
+
+/** Arabic labels need the RTL shaping plugin; registered once, fetched lazily. */
+function ensureRtlPlugin(locale: string) {
+  if (locale !== 'ar') return;
+  try {
+    if (mapboxgl.getRTLTextPluginStatus() === 'unavailable') mapboxgl.setRTLTextPlugin(RTL_PLUGIN, null, true);
+  } catch { /* already registered */ }
+}
 
 /**
- * Interactive Mapbox map showing the unit's approximate area — a shaded circle
- * over the neighbourhood, with no exact pin. Client-only — mapbox-gl touches
- * `window`, so this is always loaded via a dynamic ssr:false import (see
+ * Interactive map of the unit's approximate area — a soft brand-tinted circle
+ * with a house marker at its centre. Both sit on the blurred point; there is
+ * no exact pin anywhere. Client-only, loaded when it scrolls into view (see
  * UnitMapSection).
+ *
+ * Opens at district level (zoom 13) so the neighbourhood, metro and malls are
+ * in view. +/- and pinch always zoom; the mouse wheel only after the map has
+ * been clicked, so scrolling the page past it never zooms it by accident.
  */
-export default function UnitMap({ latitude, longitude, token, labels }: UnitMapProps) {
+export default function UnitMap({ latitude, longitude, token, locale, labels }: UnitMapProps) {
   const [style, setStyle] = useState<StyleKey>('street');
+  const [wheel, setWheel] = useState(false);
+  const mapRef = useRef<MapRef>(null);
   const next: StyleKey = style === 'street' ? 'satellite' : 'street';
 
-  const area = useMemo(
-    () => circleAround(longitude, latitude, APPROX_RADIUS_M),
-    [longitude, latitude],
-  );
+  ensureRtlPlugin(locale);
+
+  const area = useMemo(() => circleAround(longitude, latitude, AREA_RADIUS_M), [longitude, latitude]);
+
+  // Mapbox's own control strings, in the page language.
+  const uiStrings = useMemo(() => ({
+    'NavigationControl.ZoomIn': labels.zoomIn,
+    'NavigationControl.ZoomOut': labels.zoomOut,
+    'AttributionControl.ToggleAttribution': labels.attribution,
+    'Map.Title': labels.map,
+  }), [labels]);
+
+  /**
+   * The attribution's "Improve this map" link has no locale key — its text is
+   * set here once Mapbox has drawn it (it redraws on style changes, hence on
+   * every idle). The © lines are names and stay as they are.
+   */
+  const localiseAttribution = useCallback(() => {
+    const el = mapRef.current?.getContainer().querySelector<HTMLAnchorElement>('.mapbox-improve-map');
+    if (el && el.textContent !== labels.improve) el.textContent = labels.improve;
+  }, [labels.improve]);
 
   return (
-    <Map
-      mapboxAccessToken={token}
-      // 16 → 15.5 on 12 Sep 2026 — the camera only; the 100 m circle is
-      // unchanged. At 16 the frame was 703 m wide against a 200 m circle, so the
-      // map sat pressed against it with no ring of context. Rendered at 16, 15.5,
-      // 15 and 14.5 before choosing: at 15 the building footprints inside the
-      // circle stop resolving and it flattens into a grey blob, and those
-      // footprints are what make it read as a place rather than a marker. 15.5
-      // keeps them and adds a full ring of named streets around it.
-      //
-      // Still not building-level in the sense that would matter: the centre is
-      // offset 40–70 m, so the reader sees the block, not the door.
-      initialViewState={{ latitude, longitude, zoom: 15.5 }}
-      mapStyle={STYLES[style]}
-      style={{ width: '100%', height: '100%' }}
-      // Touch pan/zoom and scroll zoom are on by default; keep rotation off so
-      // the map can never end up off-north on a phone.
-      dragRotate={false}
-      touchPitch={false}
-    >
-      <Source id="location-radius" type="geojson" data={area}>
-        <Layer {...fillLayer(style)} />
-        <Layer {...strokeLayer(style)} />
-      </Source>
+    <div className="relative h-full w-full" onClick={() => !wheel && setWheel(true)}>
+      <Map
+        ref={mapRef}
+        mapboxAccessToken={token}
+        initialViewState={{ latitude, longitude, zoom: 13 }}
+        mapStyle={STYLES[style]}
+        // Mapbox-hosted labels in the visitor's language; where a name has no
+        // translation Mapbox falls back to the local one. Turkish is the local
+        // language here, so 'tr' simply reads the map as published.
+        language={locale}
+        locale={uiStrings}
+        // Standard-style configuration (theme, light, no 3D), passed at creation.
+        {...({ config: BASEMAP_CONFIG } as object)}
+        style={{ width: '100%', height: '100%' }}
+        scrollZoom={wheel}
+        // Keep rotation off so the map can never end up off-north on a phone.
+        dragRotate={false}
+        touchPitch={false}
+        pitchWithRotate={false}
+        onIdle={localiseAttribution}
+      >
+        <NavigationControl position={locale === 'ar' ? 'top-left' : 'top-right'} showCompass={false} />
+
+        <Source id="location-radius" type="geojson" data={area}>
+          <Layer {...fillLayer} />
+          <Layer {...strokeLayer} />
+        </Source>
+
+        <Marker longitude={longitude} latitude={latitude} anchor="center">
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white ring-2 ring-stay shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+          >
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke={STAY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
+            </svg>
+          </span>
+        </Marker>
+      </Map>
 
       <button
         type="button"
-        onClick={() => setStyle(next)}
-        // inset-inline-end keeps the control on the trailing edge in Arabic too.
-        className="absolute end-3 top-3 z-10 rounded-full bg-white/95 px-3 py-2 text-xs font-medium text-ink shadow-sm ring-1 ring-rule transition-colors duration-240 hover:bg-paper-warm"
+        onClick={(e) => { e.stopPropagation(); setStyle(next); }}
+        // The leading corner — opposite the zoom buttons in both directions.
+        className="absolute top-3 start-3 z-10 rounded-full bg-white/95 px-3 py-2 text-xs font-medium text-ink shadow-sm ring-1 ring-rule transition-colors duration-[240ms] hover:bg-paper-warm"
       >
         {labels[next]}
       </button>
-    </Map>
+
+      {!wheel && (
+        <p className="pointer-events-none absolute bottom-3 inset-x-0 mx-auto w-max max-w-[80%] rounded-full bg-white/90 px-3 py-1 text-[11px] text-ink-soft shadow-sm hidden md:block">
+          {labels.scrollHint}
+        </p>
+      )}
+    </div>
   );
 }

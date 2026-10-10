@@ -618,7 +618,18 @@
     },
     "similarTitle": "Similar places you may like",
     "similarPrev": "Previous places",
-    "similarNext": "More places"
+    "similarNext": "More places",
+    "map": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "attribution": "Map data sources",
+      "improve": "Improve this map",
+      "title": "Map of the area",
+      "scrollHint": "Click the map to zoom with the scroll wheel",
+      "nearestStation": "Nearest station:",
+      "walk": "≈ {minutes} min walk",
+      "drive": "≈ {minutes} min drive"
+    }
   },
   "auth": {
     "signIn": {

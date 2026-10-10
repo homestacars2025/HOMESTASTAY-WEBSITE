@@ -618,7 +618,18 @@
     },
     "similarTitle": "Beğenebileceğiniz benzer yerler",
     "similarPrev": "Önceki yerler",
-    "similarNext": "Daha fazla yer"
+    "similarNext": "Daha fazla yer",
+    "map": {
+      "zoomIn": "Yakınlaştır",
+      "zoomOut": "Uzaklaştır",
+      "attribution": "Harita veri kaynakları",
+      "improve": "Bu haritayı iyileştirin",
+      "title": "Bölge haritası",
+      "scrollHint": "Kaydırma tekerleğiyle yakınlaştırmak için haritaya tıklayın",
+      "nearestStation": "En yakın istasyon:",
+      "walk": "≈ {minutes} dk yürüme",
+      "drive": "≈ {minutes} dk araçla"
+    }
   },
   "auth": {
     "signIn": {

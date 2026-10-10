@@ -1,10 +1,12 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin } from 'lucide-react';
+import type { UnitMapLabels } from './UnitMap';
 
 // mapbox-gl must never render on the server (it reads `window`), so the map is
-// loaded client-side only. A "use client" boundary is required for ssr:false.
+// loaded client-side only — and only once its box nears the viewport, so the
+// map code costs nothing to a guest who never scrolls this far.
 const UnitMap = dynamic(() => import('./UnitMap'), {
   ssr: false,
   loading: () => <div className="h-full w-full bg-paper-warm animate-pulse" />,
@@ -12,57 +14,44 @@ const UnitMap = dynamic(() => import('./UnitMap'), {
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-interface UnitMapSectionProps {
-  latitude: number | null;
-  longitude: number | null;
-  city: string | null;
-  country: string | null;
-  labels: {
-    whereYoullBe: string;
-    street: string;
-    satellite: string;
-  };
-}
-
+/**
+ * The map box. Fixed height reserves the space before anything loads (no
+ * layout shift); the map itself mounts when the box comes within 300px of the
+ * viewport. Renders nothing without coordinates or a token.
+ */
 export function UnitMapSection({
   latitude,
   longitude,
-  city,
-  country,
+  locale,
   labels,
-}: UnitMapSectionProps) {
-  // No coordinates → no section at all (do not render an empty map).
-  if (latitude == null || longitude == null) return null;
-  // No token → Mapbox would paint a broken grey box, so hide the section too.
-  if (!MAPBOX_TOKEN) return null;
+}: {
+  /** The blurred point (approximateCoords) — never the address. */
+  latitude: number | null;
+  longitude: number | null;
+  locale: string;
+  labels: UnitMapLabels;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
 
-  const place = [city, country].filter(Boolean).join(', ');
+  useEffect(() => {
+    const el = box.current;
+    if (!el || near) return;
+    const io = new IntersectionObserver(
+      (entries) => { if (entries.some((e) => e.isIntersecting)) { setNear(true); io.disconnect(); } },
+      { rootMargin: '300px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
+
+  if (latitude == null || longitude == null || !MAPBOX_TOKEN) return null;
 
   return (
-    <section aria-labelledby="where-heading">
-      <h2
-        id="where-heading"
-        className="text-base font-medium text-ink mb-1 tracking-[-0.015em]"
-      >
-        {labels.whereYoullBe}
-      </h2>
-
-      {place && (
-        <p className="flex items-center gap-2 text-sm text-ink-soft mb-4">
-          <MapPin className="w-[18px] h-[18px] text-mute shrink-0" />
-          {place}
-        </p>
+    <div ref={box} className="relative h-[300px] md:h-[420px] w-full rounded-[14px] overflow-hidden border border-rule bg-paper-warm">
+      {near && (
+        <UnitMap latitude={latitude} longitude={longitude} token={MAPBOX_TOKEN} locale={locale} labels={labels} />
       )}
-
-      {/* Fixed aspect box reserves space before the map loads (no layout shift). */}
-      <div className="relative h-[280px] md:h-[400px] w-full rounded-[14px] overflow-hidden border border-rule">
-        <UnitMap
-          latitude={latitude}
-          longitude={longitude}
-          token={MAPBOX_TOKEN}
-          labels={{ street: labels.street, satellite: labels.satellite }}
-        />
-      </div>
-    </section>
+    </div>
   );
 }

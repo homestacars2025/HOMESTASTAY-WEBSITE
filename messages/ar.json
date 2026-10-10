@@ -618,7 +618,18 @@
     },
     "similarTitle": "أماكن مشابهة قد تعجبك",
     "similarPrev": "الأماكن السابقة",
-    "similarNext": "أماكن أخرى"
+    "similarNext": "أماكن أخرى",
+    "map": {
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "attribution": "مصادر بيانات الخريطة",
+      "improve": "حسّن هذه الخريطة",
+      "title": "خريطة المنطقة",
+      "scrollHint": "انقر على الخريطة للتكبير بعجلة الفأرة",
+      "nearestStation": "أقرب محطة:",
+      "walk": "≈ {minutes} د سيرًا",
+      "drive": "≈ {minutes} د بالسيارة"
+    }
   },
   "auth": {
     "signIn": {

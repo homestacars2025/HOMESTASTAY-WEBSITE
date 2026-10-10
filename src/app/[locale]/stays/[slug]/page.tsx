@@ -24,8 +24,7 @@ import { UnitAmenitiesSection } from '@/components/unit/UnitAmenitiesSection';
 import { UnitServicesSection } from '@/components/unit/UnitServicesSection';
 import { UnitRulesSection } from '@/components/unit/UnitRulesSection';
 import { UnitCancellationSection } from '@/components/unit/UnitCancellationSection';
-import { UnitLocationSection } from '@/components/unit/UnitLocationSection';
-import { UnitMapSection } from '@/components/unit/UnitMapSection';
+import { UnitWhereSection } from '@/components/unit/UnitWhereSection';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { Link } from '@/i18n/navigation';
 import { getPublicUnitBySlug } from '@/lib/queries/stays';
@@ -528,33 +527,15 @@ export default async function UnitDetailPage({
               </>
             )}
 
-            {/* ── 6. LOCATION ─────────────────────────────────────────────── */}
+            {/* ── 6. WHERE YOU'LL BE — area line, map (lazy), nearest station ── */}
             <FadeUp>
-            <UnitLocationSection
-              region={unit.region}
-              municipality={unit.municipality}
-              city={unit.city}
-              country={unit.country}
-              labels={{ locationTitle: t('locationTitle') }}
+            <UnitWhereSection
+              unitId={unit.id}
+              locale={locale}
+              area={[unit.region ?? unit.municipality, unit.city, unit.country]}
+              latitude={unit.latitude}
+              longitude={unit.longitude}
             />
-            </FadeUp>
-
-            {/* ── 7. WHERE YOU'LL BE (interactive map) ─────────────────────── */}
-            {/* Renders only when the unit has coordinates; hidden otherwise. */}
-            <FadeUp>
-            <div className="mt-6">
-              <UnitMapSection
-                latitude={unit.latitude}
-                longitude={unit.longitude}
-                city={unit.city}
-                country={unit.country}
-                labels={{
-                  whereYoullBe: t('whereYoullBe'),
-                  street:       t('mapStreet'),
-                  satellite:    t('mapSatellite'),
-                }}
-              />
-            </div>
             </FadeUp>
           </div>
 
