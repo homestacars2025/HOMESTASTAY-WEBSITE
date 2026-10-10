@@ -546,10 +546,14 @@ async function mapCardRows(
   checkOut?: string,
   /** Quotes the caller already holds (the price filter/sort fetched them) — skips a second RPC. */
   prefetchedQuotes?: Map<string, UnitPricing>,
+  /** False for lean cards, which never show the policy — saves a round trip. */
+  withPolicies = true,
 ): Promise<UnitListing[]> {
   const rows = data.filter(hasAdTitle);
   const [policies, quotes, countryNames] = await Promise.all([
-    fetchPolicies(supabase, rows.map((r) => r.cancellation_policy_id), locale),
+    withPolicies
+      ? fetchPolicies(supabase, rows.map((r) => r.cancellation_policy_id), locale)
+      : Promise.resolve(new Map<string, UnitCancellationPolicy>()),
     prefetchedQuotes ?? fetchQuotes(supabase, rows.map((r) => r.id as string), checkIn, checkOut),
     // One cached lookup for the whole page, not one per unit.
     countryNamesByIso(),
@@ -782,7 +786,7 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
     rows.push(...((r.data ?? []) as RawRow[]));
   }
 
-  const listings = await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, prices);
+  const listings = await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, prices, false);
   const byId = new Map(listings.map((u) => [u.id, u]));
 
   const cards: StayCard[] = [];
