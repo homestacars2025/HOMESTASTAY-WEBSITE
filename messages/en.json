@@ -154,6 +154,17 @@
         "loosen": "Without amenities and price · {count, plural, one {# place} other {# places}}",
         "places": "{count, plural, one {# place} other {# places}}",
         "km": "{km} km"
+      },
+      "map": {
+        "toggle": "List or map",
+        "list": "List",
+        "map": "Map",
+        "searchArea": "Search this area",
+        "area": "Map area",
+        "clearArea": "Clear map area",
+        "notShown": "{count, plural, one {# place} other {# places}} not shown on the map",
+        "sleeps": "Sleeps {count}",
+        "close": "Close"
       }
     },
     "destinations": {

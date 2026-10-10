@@ -154,6 +154,17 @@
         "loosen": "Olanaklar ve fiyat olmadan · {count} yer",
         "places": "{count} yer",
         "km": "{km} km"
+      },
+      "map": {
+        "toggle": "Liste veya harita",
+        "list": "Liste",
+        "map": "Harita",
+        "searchArea": "Bu bölgede ara",
+        "area": "Harita alanı",
+        "clearArea": "Harita alanını temizle",
+        "notShown": "{count} yer haritada gösterilmiyor",
+        "sleeps": "{count} kişilik",
+        "close": "Kapat"
       }
     },
     "destinations": {

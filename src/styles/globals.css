@@ -264,3 +264,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .filter-sheet[open], .filter-sheet[open]::backdrop { animation: none; }
 }
+
+/* Results-map mini card (StaysMap): the card is the popup, edge to edge. */
+.hs-map-popup .mapboxgl-popup-content {
+  padding: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+.hs-map-popup .mapboxgl-popup-tip {
+  display: none;
+}

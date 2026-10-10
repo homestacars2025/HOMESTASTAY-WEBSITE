@@ -728,6 +728,14 @@ async function queryPublicUnits(
 export interface StayCard extends UnitCardData {
   /** The chip it falls under; null → shown under All only. */
   category: Category | null;
+  /**
+   * Where to pin it on the results map: the SAME blurred point the unit page
+   * draws (approximateCoords, offset server-side and rounded) — never the real
+   * address. Null when the unit has no coordinates.
+   */
+  geo: { lat: number; lng: number } | null;
+  /** max_guests, for the map's mini card. */
+  guests: number | null;
   /** The filterable amenities it has, for the filter sheet's live counts. */
   amenities: AmenityFilter[];
 }
@@ -784,11 +792,12 @@ async function leanCards(
   const batches: string[][] = [];
   for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
 
-  const [results, prices] = await Promise.all([
+  const [results, prices, index] = await Promise.all([
     Promise.all(
       batches.map((batch) => cardTrims(supabase.from('units').select(CARD_SELECT).in('id', batch), locale)),
     ),
     quotes ?? fetchQuotes(supabase, ids, checkIn, checkOut),
+    getRankingIndex(),
   ]);
   const rows: RawRow[] = [];
   for (const r of results) {
@@ -827,10 +836,20 @@ async function leanCards(
       },
       long_stay_min: c.longStay ? c.minNights : null,
       category: categoryOf(c.unit_type),
+      geo: mapPoint(c.id, index.units[c.id]),
+      guests: c.maxGuests,
       amenities: AMENITY_FILTERS.filter((a) => c.amenities[a]),
     });
   }
   return cards;
+}
+
+/** The public map point: the unit page's blurred offset, rounded to ~10 m. */
+function mapPoint(id: string, facts: RankingFacts | undefined): StayCard['geo'] {
+  if (!facts || facts.lat === null || facts.lng === null) return null;
+  const p = approximateCoords(id, facts.lat, facts.lng);
+  if (p.latitude === null || p.longitude === null) return null;
+  return { lat: Math.round(p.latitude * 1e4) / 1e4, lng: Math.round(p.longitude * 1e4) / 1e4 };
 }
 
 // ── Similar places ───────────────────────────────────────────────────────────
@@ -886,36 +905,32 @@ export async function getSimilarUnits(
 
 async function querySimilarUnits(unitId: string, locale: string, req: SimilarRequest, limit: number): Promise<StayCard[]> {
   const supabase = createPublicClient();
-  const [{ data: base, error }, index] = await Promise.all([
-    supabase
-      .from('units')
-      .select('id,unit_type,property_id,unit_specifications(max_guests),properties!inner(district_id,geo_cities:city_id(name))')
-      .eq('id', unitId)
-      .maybeSingle(),
-    getRankingIndex(),
-  ]);
-  if (error) throw new Error(`similar base: ${error.message}`);
-  const b = base as RawRow | null;
-  const city: string | undefined = b?.properties?.geo_cities?.name;
+  // This unit's facts come from the cached index — no query of their own.
+  const index = await getRankingIndex();
+  const b = index.units[unitId];
+  const city = b?.city;
   if (!b || !city) return [];
 
-  const resolved = await resolveCandidates(
-    supabase,
-    { city, guests: req.guests, checkIn: req.checkIn, checkOut: req.checkOut },
-    { rank: false },
-  );
+  // Prices for every unit of the city, fetched beside the search rather than
+  // after it — the city's members are known from the index already.
+  const cityIds = Object.keys(index.units).filter((id) => index.units[id].city === city);
+  const [resolved, quotes] = await Promise.all([
+    resolveCandidates(
+      supabase,
+      { city, guests: req.guests, checkIn: req.checkIn, checkOut: req.checkOut },
+      { rank: false },
+    ),
+    fetchQuotes(supabase, cityIds, req.checkIn, req.checkOut),
+  ]);
   if (!resolved) return [];
   const pool = resolved.candidates.filter((c) => c.id !== unitId);
   if (!pool.length) return [];
 
-  const quotes = await fetchQuotes(supabase, [unitId, ...pool.map((c) => c.id)], req.checkIn, req.checkOut);
   const basePrice = comparablePrice(quotes.get(unitId));
-  const mg = one<RawRow>(b.unit_specifications)?.max_guests;
-  const baseGuests: number | null = typeof mg === 'number' ? mg : null;
-  const baseCategory = categoryOf(String(b.unit_type ?? 'other'));
-  const baseDistrict: string | null = b.properties?.district_id ?? null;
-  const here = index.units[unitId];
-  const herePoint = here && here.lat !== null && here.lng !== null ? { lat: here.lat, lng: here.lng } : null;
+  const baseGuests = b.maxGuests;
+  const baseCategory = categoryOf(b.unitType);
+  const baseDistrict = b.districtId;
+  const herePoint = b.lat !== null && b.lng !== null ? { lat: b.lat, lng: b.lng } : null;
 
   const scored = pool.map((c) => {
     const capacityOk = req.guests
@@ -946,7 +961,7 @@ async function querySimilarUnits(unitId: string, locale: string, req: SimilarReq
   for (const s of scored) {
     if (picked.length >= limit) break;
     const prop = s.c.propertyId ?? s.c.id;
-    const cap = prop === b.property_id ? 1 : 2;
+    const cap = prop === b.propertyId ? 1 : 2;
     const n = perProperty.get(prop) ?? 0;
     if (n >= cap) continue;
     perProperty.set(prop, n + 1);
@@ -1201,6 +1216,12 @@ export interface RankingFacts {
   lat: number | null;
   lng: number | null;
   quality: QualitySignals;
+  /** What "similar places" compares against, without a query of its own. */
+  city: string | null;
+  unitType: string;
+  propertyId: string | null;
+  districtId: string | null;
+  maxGuests: number | null;
 }
 
 export interface IndexDistrict {
@@ -1255,7 +1276,7 @@ export function districtKey(d: { id: string; name?: string | null; name_en?: str
  */
 export async function getRankingIndex(): Promise<RankingIndex> {
   try {
-    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v2'], { tags: ['units'], revalidate: 600 })();
+    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v3'], { tags: ['units'], revalidate: 600 })();
   } catch (err) {
     console.error('[getRankingIndex]', { message: err instanceof Error ? err.message : String(err) });
     return EMPTY_INDEX;
@@ -1267,7 +1288,8 @@ async function queryRankingIndex(): Promise<RankingIndex> {
   const { data, error } = await supabase
     .from('units')
     .select(
-      'id,unit_info!inner(ad_title,latitude,longitude),unit_media(count),unit_rules(id),' +
+      'id,unit_type,property_id,unit_specifications(max_guests),' +
+        'unit_info!inner(ad_title,latitude,longitude),unit_media(count),unit_rules(id),' +
         // Descriptions are counted, not fetched: only whether one exists matters.
         'unit_translations(count),' +
         `unit_amenities(${ALL_AMENITY_COLUMNS.join(',')}),` +
@@ -1309,9 +1331,15 @@ async function queryRankingIndex(): Promise<RankingIndex> {
     const photos = Number(one<RawRow>(r.unit_media)?.count ?? 0);
     const quote = quotes.get(r.id as string);
 
+    const spec = one<RawRow>(r.unit_specifications);
     index.units[r.id as string] = {
       lat,
       lng,
+      city: r.properties?.geo_cities?.name ?? null,
+      unitType: String(r.unit_type ?? 'other'),
+      propertyId: (r.property_id as string) ?? null,
+      districtId: r.properties?.geo_districts?.id ?? null,
+      maxGuests: typeof spec?.max_guests === 'number' ? spec.max_guests : null,
       quality: {
         photos,
         hasDescription: Number(one<RawRow>(r.unit_translations)?.count ?? 0) > 0,

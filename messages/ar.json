@@ -154,6 +154,17 @@
         "loosen": "بدون المرافق والسعر · {count, plural, zero {لا أماكن} one {مكان واحد} two {مكانان} few {# أماكن} many {# مكانًا} other {# مكان}}",
         "places": "{count, plural, zero {لا أماكن} one {مكان واحد} two {مكانان} few {# أماكن} many {# مكانًا} other {# مكان}}",
         "km": "{km} كم"
+      },
+      "map": {
+        "toggle": "قائمة أو خريطة",
+        "list": "القائمة",
+        "map": "الخريطة",
+        "searchArea": "ابحث في هذه المنطقة",
+        "area": "منطقة الخريطة",
+        "clearArea": "إزالة منطقة الخريطة",
+        "notShown": "{count, plural, zero {لا أماكن} one {مكان واحد} two {مكانان} few {# أماكن} many {# مكانًا} other {# مكان}} غير معروضة على الخريطة",
+        "sleeps": "تتسع لـ {count}",
+        "close": "إغلاق"
       }
     },
     "destinations": {
