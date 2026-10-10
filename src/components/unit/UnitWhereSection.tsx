@@ -77,9 +77,10 @@ async function NearbyLine({ unitId, locale, latitude, longitude }: { unitId: str
     <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft min-h-5">
       <TrainFront className="w-[18px] h-[18px] text-mute shrink-0" aria-hidden="true" />
       <span>
-        {t('nearestStation')} <span className="text-ink">{nearby.name}</span>
+        {/* <bdi>: a Latin station name inside Arabic text must not reorder the line. */}
+        {t('nearestStation')} <bdi className="text-ink">{nearby.name}</bdi>
         {' · '}
-        {t(nearby.mode === 'walk' ? 'walk' : 'drive', { minutes: nearby.minutes })}
+        <bdi>{t(nearby.mode === 'walk' ? 'walk' : 'drive', { minutes: nearby.minutes })}</bdi>
       </span>
     </p>
   );
