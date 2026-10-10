@@ -210,8 +210,8 @@ export interface UnitListing {
   district_id: string | null;
   /** geo_countries.id. */
   country_id: string | null;
-  // Blurred by approximateCoords, NOT unit_info's real values: 300-500m off the
-  // true address, deterministic per unit. This type describes a public listing,
+  // Blurred by approximateCoords, NOT unit_info's real values: 150–350 m off the
+  // true address, rounded to 3 decimals, deterministic per unit. This type describes a public listing,
   // so the exact point must never be assigned here. full_address and
   // google_maps_url are absent for the same reason — both identify the property
   // exactly, and are withheld until a booking is confirmed.

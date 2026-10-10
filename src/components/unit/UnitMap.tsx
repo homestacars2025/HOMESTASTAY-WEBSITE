@@ -2,16 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
-import Map, { Layer, Marker, NavigationControl, Source, type MapRef } from 'react-map-gl/mapbox';
+import Map, { Layer, NavigationControl, Source, type MapRef } from 'react-map-gl/mapbox';
 import type {
   FillLayerSpecification,
   GeoJSONSourceSpecification,
   LineLayerSpecification,
 } from 'mapbox-gl';
-// The circle is drawn around the *offset* point, so its radius is tied to the
-// offset applied in approximateCoords — wide enough to still contain the real
-// address, or it would point guests at an area the stay isn't in.
-import { APPROX_RADIUS_M } from '@/lib/geo/approximate';
+// The circle is drawn around the *offset* point (150–350 m from the real one),
+// so its 500 m radius always contains the address — never near its centre.
+import { APPROX_RADIUS_M } from '@/lib/geo/blur-constants';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // mapbox-gl bundles its own GeoJSON types but doesn't re-export FeatureCollection,
@@ -54,15 +53,9 @@ const BASEMAP_CONFIG = {
   basemap: { theme: 'faded', lightPreset: 'day', show3dObjects: false, showPointOfInterestLabels: true, showTransitLabels: true },
 };
 
-const STAY = '#E52851';
+/** Never closer than this: street level, not building level. */
+const MAX_ZOOM = 15;
 
-/**
- * The tinted area drawn on the map. At district zoom (13) the 100 m privacy
- * radius would sit entirely under the house marker, so the area is drawn
- * wider. Wider can only blur MORE: it is centred on the same offset point and
- * still contains the real address (never further than APPROX_RADIUS_M away).
- */
-const AREA_RADIUS_M = Math.max(APPROX_RADIUS_M, 400);
 const RTL_PLUGIN = 'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.3.0/mapbox-gl-rtl-text.js';
 
 /**
@@ -91,21 +84,28 @@ function circleAround(longitude: number, latitude: number, radiusM: number): Geo
   };
 }
 
-// Brand-tinted area, under the labels (the Standard style's "middle" slot).
-const fillLayer: FillLayerSpecification = {
+// A neutral grey area, tinted per base map: grey on the street style, a
+// white wash on satellite imagery, where grey would disappear. Under the
+// labels (the Standard style's "middle" slot).
+const SHADE = {
+  street: { color: '#6B6B70', fill: 0.2, stroke: 0.55, width: 1 },
+  satellite: { color: '#FFFFFF', fill: 0.25, stroke: 0.9, width: 1.5 },
+} as const;
+
+const fillLayer = (k: StyleKey): FillLayerSpecification => ({
   id: 'location-radius-fill',
   type: 'fill',
   source: 'location-radius',
   slot: 'middle',
-  paint: { 'fill-color': STAY, 'fill-opacity': 0.15 },
-};
-const strokeLayer: LineLayerSpecification = {
+  paint: { 'fill-color': SHADE[k].color, 'fill-opacity': SHADE[k].fill },
+});
+const strokeLayer = (k: StyleKey): LineLayerSpecification => ({
   id: 'location-radius-stroke',
   type: 'line',
   source: 'location-radius',
   slot: 'middle',
-  paint: { 'line-color': STAY, 'line-opacity': 0.9, 'line-width': 1.5 },
-};
+  paint: { 'line-color': SHADE[k].color, 'line-opacity': SHADE[k].stroke, 'line-width': SHADE[k].width },
+});
 
 /** Arabic labels need the RTL shaping plugin; registered once, fetched lazily. */
 function ensureRtlPlugin(locale: string) {
@@ -116,10 +116,11 @@ function ensureRtlPlugin(locale: string) {
 }
 
 /**
- * Interactive map of the unit's approximate area — a soft brand-tinted circle
- * with a house marker at its centre. Both sit on the blurred point; there is
- * no exact pin anywhere. Client-only, loaded when it scrolls into view (see
- * UnitMapSection).
+ * Interactive map of the unit's approximate area: a grey 500 m circle around
+ * the blurred point, and NOTHING at its centre — no pin, no marker, which
+ * would read as the address. The point arrives already blurred and rounded
+ * from the server. Zoom stops at street level (15). Client-only, loaded when
+ * it scrolls into view (see UnitMapSection).
  *
  * Opens at district level (zoom 13) so the neighbourhood, metro and malls are
  * in view. +/- and pinch always zoom; the mouse wheel only after the map has
@@ -133,7 +134,7 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
 
   ensureRtlPlugin(locale);
 
-  const area = useMemo(() => circleAround(longitude, latitude, AREA_RADIUS_M), [longitude, latitude]);
+  const area = useMemo(() => circleAround(longitude, latitude, APPROX_RADIUS_M), [longitude, latitude]);
 
   // Mapbox's own control strings, in the page language.
   const uiStrings = useMemo(() => ({
@@ -169,6 +170,7 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
         ref={mapRef}
         mapboxAccessToken={token}
         initialViewState={{ latitude, longitude, zoom: 13 }}
+        maxZoom={MAX_ZOOM}
         mapStyle={STYLES[style]}
         // Mapbox-hosted labels in the visitor's language; where a name has no
         // translation Mapbox falls back to the local one. Turkish is the local
@@ -189,21 +191,10 @@ export default function UnitMap({ latitude, longitude, token, locale, labels }: 
         <NavigationControl position={locale === 'ar' ? 'top-left' : 'top-right'} showCompass={false} />
 
         <Source id="location-radius" type="geojson" data={area}>
-          <Layer {...fillLayer} />
-          <Layer {...strokeLayer} />
+          <Layer {...fillLayer(style)} />
+          <Layer {...strokeLayer(style)} />
         </Source>
 
-        <Marker longitude={longitude} latitude={latitude} anchor="center">
-          <span
-            aria-hidden="true"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white ring-2 ring-stay shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-          >
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke={STAY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 10.5 12 3l9 7.5" />
-              <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
-            </svg>
-          </span>
-        </Marker>
       </Map>
 
       <button

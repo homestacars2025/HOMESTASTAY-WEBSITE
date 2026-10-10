@@ -59,7 +59,7 @@ export async function getNearbyStation(unitId: string, lat: number, lng: number,
   try {
     return await unstable_cache(
       () => query(unitId, lat, lng, locale),
-      ['unit-nearby-v1', unitId, locale],
+      ['unit-nearby-v2', unitId, locale],
       { revalidate: 30 * 24 * 3600 },
     )();
   } catch (err) {
