@@ -122,8 +122,9 @@ function htmlOverlay(pos: google.maps.LatLngLiteral, z = 1): HtmlOverlay {
 const missingIcons = new Set<NearbyCategory>();
 
 /**
- * The 3D icon for a category (/icons/nearby/<key>.webp), or the line icon
- * while the file does not exist yet.
+ * The 3D icon for a category — Microsoft Fluent Emoji 3D (MIT; see
+ * public/icons/nearby/README.md). 48 px file for small sizes (sharp at 2×),
+ * 96 px above that. Falls back to the line icon if a file is ever missing.
  */
 function NearbyIcon({ cat, size }: { cat: NearbyCategory; size: number }) {
   const [missing, setMissing] = useState(missingIcons.has(cat));
@@ -133,7 +134,7 @@ function NearbyIcon({ cat, size }: { cat: NearbyCategory; size: number }) {
     // A tiny local asset at a fixed size; next/image adds nothing here.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`/icons/nearby/${cat}.webp`}
+      src={size > 24 ? `/icons/nearby/${cat}.webp` : `/icons/nearby/${cat}-48.webp`}
       alt=""
       width={size}
       height={size}
@@ -167,7 +168,7 @@ function LazyThumb({ src, cat }: { src: string | null; cat: NearbyCategory }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" width={44} height={44} className="h-full w-full object-cover" />
       ) : (
-        <NearbyIcon cat={cat} size={22} />
+        <NearbyIcon cat={cat} size={24} />
       )}
     </span>
   );
