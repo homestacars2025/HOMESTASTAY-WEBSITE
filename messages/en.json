@@ -636,7 +636,8 @@
       "empty": "Nothing of this kind within 1 km.",
       "error": "Couldn’t load the map right now.",
       "loading": "Looking nearby…",
-      "searchError": "Couldn’t load nearby places right now."
+      "searchError": "Couldn’t load nearby places right now.",
+      "stayArea": "Your stay is in this area"
     }
   },
   "auth": {

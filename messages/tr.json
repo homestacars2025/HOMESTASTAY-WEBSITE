@@ -636,7 +636,8 @@
       "empty": "1 km içinde bu türde bir yer yok.",
       "error": "Harita şu anda yüklenemedi.",
       "loading": "Yakında aranıyor…",
-      "searchError": "Yakındaki yerler şu anda yüklenemedi."
+      "searchError": "Yakındaki yerler şu anda yüklenemedi.",
+      "stayArea": "Konaklamanız bu bölgede"
     }
   },
   "auth": {

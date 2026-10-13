@@ -9,13 +9,16 @@ import {
 } from 'lucide-react';
 import { loadGoogleMaps } from '@/lib/maps/google';
 import { APPROX_RADIUS_M } from '@/lib/geo/blur-constants';
+import { BrandMark } from '@/components/brand/BrandMark';
 
 /**
  * The unit page map (Google Maps JS) and "What's nearby".
  *
- * PRIVACY — unchanged: the point arrives already blurred on the server (20–50 m
- * off, 4 decimals). The map draws a grey 80 m circle around it (never under
- * 28 px across) and NOTHING at its centre. Max zoom 16.
+ * PRIVACY: the point arrives already blurred on the server (20–50 m off, 4
+ * decimals). The map draws the 80 m circle around it and the Homesta badge
+ * CENTRED on it (48–56 px, anchored at its middle, not a pin tip — it marks an
+ * area, never a door). Max zoom 16. Other businesses (hotels included) are
+ * hidden from the base map, so no competitor shows on our listing.
  *
  * NEARBY: a chip tap runs ONE Places (New) Nearby Search from the browser,
  * centred on the blurred point, 1 km, 8 results, and only the fields shown
@@ -76,13 +79,102 @@ const MAX_ZOOM = 16;
 const MIN_DIAMETER_PX = 28;
 const SEARCH_RADIUS_M = 1000;
 
-/** Clean, light base map: muted colours, labels kept, business clutter thinned. */
+/**
+ * Clean, light base map. poi.business is OFF — hotels and every shop,
+ * restaurant and brand — so a competitor never appears on our listing.
+ * Transit, parks, places of worship, landmarks, hospitals and street names
+ * stay. (A styles array, not a cloud Map ID: no Map ID is configured, and a
+ * Map ID would ignore this array.)
+ */
 const LIGHT_STYLE: google.maps.MapTypeStyle[] = [
   { elementType: 'geometry', stylers: [{ saturation: -35 }, { lightness: 8 }] },
-  { featureType: 'poi.business', stylers: [{ visibility: 'simplified' }] },
+  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
   { featureType: 'road', elementType: 'geometry', stylers: [{ saturation: -60 }, { lightness: 20 }] },
   { featureType: 'water', elementType: 'geometry', stylers: [{ saturation: -20 }, { lightness: 15 }] },
 ];
+
+/** An HTML element on the map, centred on a point (React renders into `el`). */
+type HtmlOverlay = google.maps.OverlayView & { el: HTMLDivElement };
+let HtmlOverlayClass: (new (pos: google.maps.LatLngLiteral, z: number) => HtmlOverlay) | null = null;
+function htmlOverlay(pos: google.maps.LatLngLiteral, z = 1): HtmlOverlay {
+  if (!HtmlOverlayClass) {
+    HtmlOverlayClass = class extends google.maps.OverlayView {
+      el: HTMLDivElement;
+      constructor(private pos: google.maps.LatLngLiteral, z: number) {
+        super();
+        this.el = document.createElement('div');
+        this.el.style.position = 'absolute';
+        this.el.style.transform = 'translate(-50%, -50%)'; // centred, not a pin tip
+        this.el.style.zIndex = String(z);
+      }
+      onAdd() { this.getPanes()?.overlayMouseTarget.appendChild(this.el); }
+      draw() {
+        const p = this.getProjection()?.fromLatLngToDivPixel(this.pos);
+        if (p) { this.el.style.left = `${p.x}px`; this.el.style.top = `${p.y}px`; }
+      }
+      onRemove() { this.el.remove(); }
+    };
+  }
+  return new HtmlOverlayClass(pos, z);
+}
+
+/** Keys whose 3D icon file is missing — asked once per page, then the line icon. */
+const missingIcons = new Set<NearbyCategory>();
+
+/**
+ * The 3D icon for a category (/icons/nearby/<key>.webp), or the line icon
+ * while the file does not exist yet.
+ */
+function NearbyIcon({ cat, size }: { cat: NearbyCategory; size: number }) {
+  const [missing, setMissing] = useState(missingIcons.has(cat));
+  const Line = CATEGORY_ICON[cat];
+  if (missing) return <Line style={{ width: size * 0.75, height: size * 0.75 }} aria-hidden="true" />;
+  return (
+    // A tiny local asset at a fixed size; next/image adds nothing here.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/icons/nearby/${cat}.webp`}
+      alt=""
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+      className="object-contain"
+      onError={() => { missingIcons.add(cat); setMissing(true); }}
+    />
+  );
+}
+
+/**
+ * A result thumbnail that is only requested when its row is actually on
+ * screen — each one is a billed Place Photo request.
+ */
+function LazyThumb({ src, cat }: { src: string | null; cat: NearbyCategory }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !src || show) return;
+    const io = new IntersectionObserver((e) => {
+      if (e.some((x) => x.isIntersecting)) { setShow(true); io.disconnect(); }
+    }, { threshold: 0.5 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [src, show]);
+  return (
+    <span ref={ref} className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-paper-warm grid place-items-center text-mute">
+      {src && show ? (
+        // A Google-hosted thumbnail: next/image would proxy (and re-bill) it.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" width={44} height={44} className="h-full w-full object-cover" />
+      ) : (
+        <NearbyIcon cat={cat} size={22} />
+      )}
+    </span>
+  );
+}
+
+/** Thumbnails per chip: the nearest few get one, the rest show the icon. */
+const MAX_PHOTOS = 6;
 
 function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const r = Math.PI / 180;
@@ -124,6 +216,8 @@ export default function UnitGoogleMap({
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [selected, setSelected] = useState<string | null>(null);
   const [pinHosts, setPinHosts] = useState<{ id: string; el: HTMLDivElement }[]>([]);
+  const [stayHost, setStayHost] = useState<HTMLDivElement | null>(null);
+  const [stayLabel, setStayLabel] = useState(false);
   const rtl = locale === 'ar';
   const center = { lat: latitude, lng: longitude };
 
@@ -152,11 +246,11 @@ export default function UnitGoogleMap({
           map,
           center: { lat: latitude, lng: longitude },
           radius: APPROX_RADIUS_M,
-          strokeColor: '#6B6B70',
-          strokeOpacity: 0.55,
-          strokeWeight: 1,
-          fillColor: '#6B6B70',
-          fillOpacity: 0.2,
+          strokeColor: '#E52851',
+          strokeOpacity: 0.4,
+          strokeWeight: 1.5,
+          fillColor: '#E52851',
+          fillOpacity: 0.12,
           clickable: false,
         });
         // The true 80 m, but never under MIN_DIAMETER_PX on screen.
@@ -170,6 +264,10 @@ export default function UnitGoogleMap({
         map.addListener('click', () => {
           if (window.matchMedia('(hover: hover)').matches) map.setOptions({ gestureHandling: 'greedy' });
         });
+        // Our badge, centred on the blurred point, above the circle.
+        const stay = htmlOverlay({ lat: latitude, lng: longitude }, 2);
+        stay.setMap(map);
+        setStayHost(stay.el);
         mapRef.current = map;
         setReady(true);
       } catch {
@@ -192,24 +290,11 @@ export default function UnitGoogleMap({
     overlays.current = [];
     if (!map || !places.length) { setPinHosts([]); return; }
 
-    class HtmlPin extends google.maps.OverlayView {
-      constructor(private pos: google.maps.LatLngLiteral, public el: HTMLDivElement) { super(); }
-      onAdd() { this.getPanes()?.overlayMouseTarget.appendChild(this.el); }
-      draw() {
-        const p = this.getProjection()?.fromLatLngToDivPixel(this.pos);
-        if (p) { this.el.style.left = `${p.x}px`; this.el.style.top = `${p.y}px`; }
-      }
-      onRemove() { this.el.remove(); }
-    }
-
     const hosts = places.map((p) => {
-      const el = document.createElement('div');
-      el.style.position = 'absolute';
-      el.style.transform = 'translate(-50%, -50%)';
-      const o = new HtmlPin({ lat: p.lat, lng: p.lng }, el);
+      const o = htmlOverlay({ lat: p.lat, lng: p.lng }, 1);
       o.setMap(map);
       overlays.current.push(o);
-      return { id: p.id, el };
+      return { id: p.id, el: o.el };
     });
     setPinHosts(hosts);
 
@@ -239,7 +324,7 @@ export default function UnitGoogleMap({
         language: locale,
         region: 'tr',
       });
-      const list: NearbyPlace[] = found.flatMap((p) => {
+      const list: NearbyPlace[] = found.flatMap((p, i) => {
         const loc = p.location;
         if (!loc || !p.displayName) return [];
         const pos = { lat: loc.lat(), lng: loc.lng() };
@@ -249,7 +334,9 @@ export default function UnitGoogleMap({
           lat: pos.lat,
           lng: pos.lng,
           metres: metresBetween({ lat: latitude, lng: longitude }, pos),
-          photo: p.photos?.[0]?.getURI({ maxWidth: 160, maxHeight: 160 }) ?? null,
+          // Smallest useful size, nearest MAX_PHOTOS only. getURI builds a URL;
+          // the billed request happens when LazyThumb actually shows it.
+          photo: i < MAX_PHOTOS ? p.photos?.[0]?.getURI({ maxWidth: 96, maxHeight: 96 }) ?? null : null,
         }];
       });
       cache.set(key, list);
@@ -267,7 +354,6 @@ export default function UnitGoogleMap({
     mapRef.current?.panTo({ lat: p.lat, lng: p.lng });
   }
 
-  const Icon = category ? CATEGORY_ICON[category] : null;
   const km = (m: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(Math.max(0.1, Math.round(m / 100) / 10));
   const walk = (m: number) => Math.max(1, Math.round((m * 1.3) / 80));
 
@@ -277,7 +363,6 @@ export default function UnitGoogleMap({
       <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.1em] rtl:tracking-normal rtl:font-sans text-mute">{t('title')}</p>
       <div className="-mx-4 px-4 mb-3 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {NEARBY_CATEGORIES.map((c) => {
-          const I = CATEGORY_ICON[c];
           const on = c === category;
           return (
             <button
@@ -289,7 +374,7 @@ export default function UnitGoogleMap({
                 on ? 'border-ink bg-ink text-white' : 'border-rule bg-white text-ink-soft hover:border-ink-soft hover:text-ink'
               }`}
             >
-              <I className="w-4 h-4" aria-hidden="true" />
+              <NearbyIcon cat={c} size={20} />
               {t(`categories.${c}`)}
             </button>
           );
@@ -311,20 +396,47 @@ export default function UnitGoogleMap({
       </div>
 
       {/* Pins for the results, rendered into Google's overlay layer. */}
-      {Icon && pinHosts.map(({ id, el }) => createPortal(
+      {category && pinHosts.map(({ id, el }) => createPortal(
         <button
           type="button"
           aria-label={places.find((p) => p.id === id)?.name}
           onClick={() => setSelected(id)}
-          className={`flex h-8 w-8 items-center justify-center rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.2)] ring-1 transition-transform duration-[240ms] ${
-            selected === id ? 'scale-125 bg-ink text-white ring-ink' : 'bg-white text-ink ring-black/10'
+          className={`flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-transform duration-[240ms] ${
+            selected === id ? 'scale-125 ring-2 ring-ink' : 'ring-1 ring-black/10'
           }`}
         >
-          <Icon className="w-4 h-4" aria-hidden="true" />
+          <NearbyIcon cat={category} size={24} />
         </button>,
         el,
         id,
       ))}
+
+      {/* Our stay: the Homesta badge, centred on the blurred point. */}
+      {stayHost && createPortal(
+        <div className="relative">
+          <button
+            type="button"
+            aria-label={t('stayArea')}
+            // Tap toggles; hover only for a real mouse (a tap also emits mouse
+            // events, which would open and immediately close it).
+            onClick={() => setStayLabel((v) => !v)}
+            onPointerEnter={(e) => { if (e.pointerType === 'mouse') setStayLabel(true); }}
+            onPointerLeave={(e) => { if (e.pointerType === 'mouse') setStayLabel(false); }}
+            className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full border-[3px] border-white bg-stay text-white shadow-[0_2px_6px_rgba(0,0,0,0.18)]"
+          >
+            <BrandMark className="h-6 w-6 md:h-7 md:w-7" />
+          </button>
+          {stayLabel && (
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full start-1/2 mb-2 -translate-x-1/2 rtl:translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-3 py-1.5 text-xs font-medium text-white shadow-sm"
+            >
+              {t('stayArea')}
+            </span>
+          )}
+        </div>,
+        stayHost,
+      )}
 
       {category && (
         <div className="mt-3" aria-live="polite">
@@ -333,7 +445,6 @@ export default function UnitGoogleMap({
           {status === 'idle' && places.length === 0 && <p className="text-sm text-mute">{t('empty')}</p>}
           {(Object.keys(loaded) as NearbyCategory[]).map((cat) => {
             const list = loaded[cat] ?? [];
-            const ListIcon = CATEGORY_ICON[cat];
             const shown = status === 'idle' && cat === category && list.length > 0;
             return (
               <ul key={cat} hidden={!shown} className="divide-y divide-rule rounded-[14px] border border-rule bg-white">
@@ -344,13 +455,7 @@ export default function UnitGoogleMap({
                       onClick={() => choose(p)}
                       className={`flex w-full items-center gap-3 px-3 py-2.5 text-start transition-colors duration-[240ms] ${selected === p.id ? 'bg-paper-warm' : 'hover:bg-paper-warm'}`}
                     >
-                      <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-paper-warm grid place-items-center text-mute">
-                        {p.photo ? (
-                          // A Google-hosted thumbnail: next/image would proxy (and re-bill) it.
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.photo} alt="" width={44} height={44} loading="lazy" className="h-full w-full object-cover" />
-                        ) : <ListIcon className="w-4 h-4" aria-hidden="true" />}
-                      </span>
+                      <LazyThumb src={p.photo} cat={cat} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-ink"><bdi>{p.name}</bdi></span>
                         <span className="block text-xs text-mute">{t(`categories.${cat}`)}</span>
