@@ -219,8 +219,8 @@ export default async function HotelPage({ params, searchParams }: Props) {
                           </p>
                         )}
                         {dated && r.availability === 'ok' && <p className="mt-1 text-xs font-medium text-ink">{t('available')}</p>}
-                        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-                          <div className="text-sm">
+                        <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
+                          <div className="min-w-[8rem] flex-1 text-sm">
                             {nightly !== null && (
                               <>
                                 <span className="font-semibold text-stay">${Math.round(nightly * 100) / 100}</span>
