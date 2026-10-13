@@ -279,7 +279,7 @@
         "listingLinkPlaceholder": "https://airbnb.com/rooms/…",
         "submit": "Başvuru gönder",
         "sending": "Gönderiliyor…",
-        "applyingAs": "<b>{email}</b> olarak başvuruyorsunuz"
+        "optional": "(isteğe bağlı)"
       },
       "unitTypes": {
         "apartment": "Daire",
@@ -291,7 +291,13 @@
       "success": {
         "title": "Başvurunuz alındı!",
         "body": "Teşekkürler, {name}. Bilgilerinizi inceleyip en kısa sürede sizinle iletişime geçeceğiz.",
-        "back": "Ana sayfaya dön"
+        "back": "Ana sayfaya dön",
+        "thanks": "Teşekkürler!",
+        "within24h": "Ekibimiz 24 saat içinde WhatsApp üzerinden sizinle iletişime geçecek.",
+        "whatsapp": "WhatsApp'tan yazın",
+        "whatsappText": "Merhaba! Homesta Stay'de mülkümü listelemek için başvuru gönderdim.",
+        "alreadyHost": "Zaten ev sahibi misiniz?",
+        "signIn": "Giriş yapın"
       },
       "error": {
         "required": "Lütfen tüm zorunlu alanları doldurun.",
@@ -299,13 +305,8 @@
         "phoneInvalid": "Lütfen geçerli bir telefon numarası girin.",
         "unitsMin": "Birim sayısı en az 1 olmalıdır.",
         "generic": "Bir hata oluştu. Lütfen tekrar deneyin.",
-        "signin": "Başvurunuzu göndermek için lütfen tekrar giriş yapın."
-      },
-      "signedOut": {
-        "title": "Homesta hesabınızla başvurun",
-        "body": "Önce giriş yapın veya ücretsiz bir hesap oluşturun — başvurunuz bu hesaba bağlanır ve onaylandığında aynı hesap ev sahibi portalınızı açar.",
-        "signUp": "Hesap oluştur",
-        "signIn": "Giriş yap"
+        "captcha": "Robot olmadığınızı doğrulayamadık. Lütfen tekrar deneyin.",
+        "rateLimited": "Bağlantınızdan çok fazla başvuru gönderildi. Lütfen bir saat sonra tekrar deneyin ya da bize WhatsApp'tan yazın."
       },
       "staffNote": "Ekip hesapları ev sahibi başvurusu yapamaz. Lütfen kişisel bir misafir hesabı kullanın.",
       "status": {

@@ -1,105 +1,167 @@
 'use server';
 
 import { after } from 'next/server';
+import { headers } from 'next/headers';
 import { Resend } from 'resend';
 import { CONTACT_EMAIL } from '@/lib/config/social';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { allow, clientIp, ipForLog } from '@/lib/security/rate-limit';
+import { TURNSTILE_ACTION_HOST_LEAD, verifyTurnstile } from '@/lib/security/turnstile';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /**
- * The host application. No email field: the application belongs to the
- * signed-in account, and the account's verified email is the contact address.
+ * The public "List your property" form. No account needed — anyone can send
+ * it. City / district travel as geo ids (the server resolves the names), the
+ * district as free text only when it isn't in the list.
  */
 export type HostFormData = {
-  name:          string;
-  phone:         string;
-  unitType:      string;
-  unitsCount:    number;
-  city:          string;
-  district:      string;
-  contactMethod: string;
-  note:          string;
-  listingLink:   string;
+  name:           string;
+  phone:          string;
+  email:          string;
+  unitType:       string;
+  unitsCount:     number;
+  cityId:         string;
+  /** A geo_districts id, or '' (none / typed by hand). */
+  districtId:     string;
+  districtManual: string;
+  contactMethod:  string;
+  note:           string;
+  listingLink:    string;
+  captchaToken:   string | null;
+  /** Honeypot — hidden from people; a bot that fills it gets a fake success. */
+  website:        string;
 };
 
 export type SubmitResult =
-  | { ok: true;  status: 'under_review' | 'already_host'; name: string }
-  | { ok: false; error: 'signin' | 'required' | 'phoneInvalid' | 'unitsMin' | 'generic' };
+  | { ok: true }
+  | { ok: false; error: 'required' | 'emailInvalid' | 'phoneInvalid' | 'unitsMin' | 'captcha' | 'rateLimited' | 'generic' };
 
-const VALID_UNIT_TYPES  = new Set(['apartment', 'villa', 'cabin', 'hotel', 'farm']);
-const VALID_CONTACTS    = new Set(['whatsapp', 'phone', 'email']);
+const VALID_UNIT_TYPES = new Set(['apartment', 'villa', 'cabin', 'hotel', 'farm']);
+const VALID_CONTACTS   = new Set(['whatsapp', 'phone', 'email']);
+const EMAIL_RE         = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const E164_RE          = /^\+[1-9][0-9]{6,14}$/;
+const UUID_RE          = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const HOUR             = 60 * 60 * 1000;
 
 // ── Action ────────────────────────────────────────────────────────────────────
 
 /**
- * "Become a host" — an application on the SAME account.
+ * Inserts the lead into leads_suppliers with the service role (source
+ * 'website', stage / priority from their DB defaults). The database notifies
+ * the team (Hosts CRM + admin) for every website lead on its own.
  *
- * Calls submit_host_application() as the signed-in user (session client, RLS
- * and auth.uid() apply): the database binds the lead to the account, keeps one
- * open application per account (re-submitting updates it), and refuses anyone
- * who is not a signed-in customer. Nothing is inserted with the service role
- * any more. The team approves in their own tools, which turns this same
- * account into an owner — sign-in then routes it to the host portal.
+ * A signed-in visitor's lead is also linked to their account
+ * (applicant_profile_id), so the account-linked flow — "Application under
+ * review", approval turning the account into a host — keeps working.
+ *
+ * Guards: honeypot, Cloudflare Turnstile, 5 sends / hour per IP (in memory,
+ * per instance — see rate-limit.ts).
  */
 export async function submitHostApplication(data: HostFormData): Promise<SubmitResult> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'signin' };
+  const ip = clientIp(await headers());
+
+  if (typeof data.website === 'string' && data.website.trim() !== '') {
+    console.warn('[hostForm] honeypot filled — dropped', { ip: ipForLog(ip) });
+    return { ok: true };
+  }
 
   // Server-side validation (defence in depth)
-  const name     = data.name.trim();
-  const city     = data.city.trim();
-  const district = data.district.trim();
-  const note     = data.note.trim();
-  const link     = data.listingLink.trim();
-  const phone    = data.phone.trim();
+  const name     = str(data.name).trim().slice(0, 120);
+  const phone    = str(data.phone).trim();
+  const email    = str(data.email).trim().toLowerCase().slice(0, 200);
+  const note     = str(data.note).trim().slice(0, 2000);
+  const link     = str(data.listingLink).trim().slice(0, 500);
+  const typed    = str(data.districtManual).trim().slice(0, 120);
+  const units    = Number(data.unitsCount);
 
-  if (!name || !phone || !data.unitType || !city || !data.contactMethod) {
+  if (!name || !phone || !data.unitType || !UUID_RE.test(str(data.cityId)) || !data.contactMethod) {
     return { ok: false, error: 'required' };
   }
-  if (!phone.startsWith('+') || phone.replace(/\D/g, '').length < 7) {
-    return { ok: false, error: 'phoneInvalid' };
-  }
+  if (!E164_RE.test(phone)) return { ok: false, error: 'phoneInvalid' };
+  if (email && !EMAIL_RE.test(email)) return { ok: false, error: 'emailInvalid' };
   if (!VALID_UNIT_TYPES.has(data.unitType))    return { ok: false, error: 'required' };
   if (!VALID_CONTACTS.has(data.contactMethod)) return { ok: false, error: 'required' };
-  if (!Number.isInteger(data.unitsCount) || data.unitsCount < 1) return { ok: false, error: 'unitsMin' };
+  if (!Number.isInteger(units) || units < 1 || units > 10_000) return { ok: false, error: 'unitsMin' };
 
-  const { data: result, error } = await supabase.rpc('submit_host_application', {
-    p_contact_name:      name.slice(0, 120),
-    p_phone:             phone,
-    p_property_type:     data.unitType,
-    p_units_count:       data.unitsCount,
-    p_city:              city.slice(0, 120),
-    p_district:          district.slice(0, 120) || null,
-    p_company_name:      null,
-    p_preferred_contact: data.contactMethod,
-    p_listing_url:       link.slice(0, 500) || null,
-    p_note:              note.slice(0, 2000) || null,
-  });
+  if (!allow(`host-lead:${ip}`, 5, HOUR)) {
+    console.warn('[hostForm] rate limited', { ip: ipForLog(ip) });
+    return { ok: false, error: 'rateLimited' };
+  }
+  if (!(await verifyTurnstile(data.captchaToken, ip, TURNSTILE_ACTION_HOST_LEAD))) {
+    return { ok: false, error: 'captcha' };
+  }
 
-  if (error) {
-    console.error('[hostForm] submit_host_application failed', { code: error.code, message: error.message });
+  const admin = createAdminClient();
+
+  // City → city_id (+ its country), district → district_id + its name. The
+  // district must belong to the city; a typed district is kept as text.
+  const { data: city } = await admin
+    .from('geo_cities').select('id, name, country_id').eq('id', data.cityId).maybeSingle();
+  if (!city) return { ok: false, error: 'required' };
+
+  let district: { id: string; name: string } | null = null;
+  if (UUID_RE.test(str(data.districtId))) {
+    const { data: d } = await admin
+      .from('geo_districts').select('id, name').eq('id', data.districtId).eq('city_id', city.id).maybeSingle();
+    district = d ?? null;
+  }
+  const districtName = district?.name ?? typed;
+
+  // Signed in? Link the lead to the account (the visitor never chooses this).
+  const session = await createClient();
+  const { data: { user } } = await session.auth.getUser();
+
+  // 'farm' has no supplier_type value → 'other' + supplier_type_other
+  const supplierType      = data.unitType === 'farm' ? 'other' : data.unitType;
+  const supplierTypeOther = data.unitType === 'farm' ? 'farm'  : null;
+
+  const noteLines: string[] = [`Preferred contact: ${data.contactMethod}`];
+  if (note) noteLines.push(`Note: ${note}`);
+  if (link) noteLines.push(`Listing: ${link}`);
+
+  const { data: lead, error } = await admin
+    .from('leads_suppliers')
+    .insert({
+      slug:                 `host-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      contact_name:         name,
+      phone,
+      email:                email || (user?.email ?? null),
+      supplier_type:        supplierType,
+      supplier_type_other:  supplierTypeOther,
+      units_count:          units,
+      country_id:           city.country_id ?? null,
+      city_id:              city.id,
+      district_id:          district?.id ?? null,
+      district:             districtName || null,
+      source:               'website',
+      // stage / priority: DB defaults ('new' / 'medium')
+      notes:                noteLines.join('\n'),
+      whatsapp_number:      data.contactMethod === 'whatsapp' ? phone : null,
+      tags:                 [`preferred_contact:${data.contactMethod}`],
+      applicant_profile_id: user?.id ?? null,
+    })
+    .select('id')
+    .single();
+
+  if (error || !lead) {
+    console.error('[hostForm] insert failed', { code: error?.code, message: error?.message });
     return { ok: false, error: 'generic' };
   }
 
-  const row = (Array.isArray(result) ? result[0] : result) as
-    | { status?: string; lead_id?: string; updated?: boolean }
-    | null;
-  const status = row?.status === 'already_host' ? 'already_host' : 'under_review';
+  // The team's email, after the response — a slow email must not hold the
+  // visitor's screen, and after() survives the function returning.
+  after(() => sendNotificationEmail({
+    name, phone, email: email || (user?.email ?? ''), data,
+    city: city.name, district: districtName, note, link, leadId: lead.id, signedIn: !!user,
+  }));
 
-  // The team's heads-up, after the response — a slow email must not hold the
-  // guest's screen, and after() survives the function returning (a bare
-  // promise did not).
-  if (status === 'under_review') {
-    const email = user.email ?? '';
-    after(() => sendNotificationEmail({
-      name, phone, email, data, city, district, note, link,
-      leadId: row?.lead_id ?? null, updated: row?.updated === true,
-    }));
-  }
+  return { ok: true };
+}
 
-  return { ok: true, status, name };
+function str(v: unknown): string {
+  return typeof v === 'string' ? v : '';
 }
 
 // ── Email ─────────────────────────────────────────────────────────────────────
@@ -118,10 +180,10 @@ const CONTACT_LABELS: Record<string, string> = {
 };
 
 async function sendNotificationEmail({
-  name, phone, email, data, city, district, note, link, leadId, updated,
+  name, phone, email, data, city, district, note, link, leadId, signedIn,
 }: {
-  leadId:   string | null;
-  updated:  boolean;
+  leadId:   string;
+  signedIn: boolean;
   name:     string;
   phone:    string;
   email:    string;
@@ -148,19 +210,20 @@ async function sendNotificationEmail({
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:32px 16px;background:#F2EEE6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;border:1px solid #E2DED4;">
-    <p style="margin:0 0 4px;font-size:12px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8C8881;">${updated ? 'Host application updated' : 'New Host Application'}</p>
+    <p style="margin:0 0 4px;font-size:12px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8C8881;">New Host Application</p>
     <h1 style="margin:0 0 24px;font-size:22px;font-weight:500;color:#0E0E10;letter-spacing:-0.03em;">${escHtml(name)}</h1>
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #E2DED4;">
       ${row('Full name',         escHtml(name))}
       ${row('Phone',             escHtml(phone))}
-      ${row('Email',             escHtml(email))}
+      ${email ? row('Email', escHtml(email)) : ''}
       ${row('Unit type',         UNIT_TYPE_LABELS[data.unitType] ?? data.unitType)}
       ${row('Number of units',   String(data.unitsCount))}
       ${row('City',              escHtml(city))}
       ${district ? row('District', escHtml(district)) : ''}
       ${row('Preferred contact', CONTACT_LABELS[data.contactMethod] ?? data.contactMethod)}
       ${note ? row('Note', escHtml(note).replace(/\n/g, '<br>')) : ''}
-      ${leadId ? row('Lead id', escHtml(leadId)) : ''}
+      ${row('Lead id', escHtml(leadId))}
+      ${signedIn ? row('Account', 'Signed in — linked to their account') : ''}
       ${link ? row('Listing link', `<a href="${escHtml(link)}" style="color:#E52851;">${escHtml(link)}</a>`) : ''}
     </table>
     <p style="margin:24px 0 0;font-size:12px;color:#8C8881;">Submitted via homestastay.com — host application form</p>
@@ -171,7 +234,7 @@ async function sendNotificationEmail({
     await resend.emails.send({
       from:    'noreply@homestastay.com',
       to:      CONTACT_EMAIL,
-      subject: `${updated ? 'Host application updated' : 'New host application'} — ${name}`,
+      subject: `New host application — ${name}`,
       html,
     });
   } catch (err) {

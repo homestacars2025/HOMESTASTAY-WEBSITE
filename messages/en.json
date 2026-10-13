@@ -279,7 +279,7 @@
         "listingLinkPlaceholder": "https://airbnb.com/rooms/…",
         "submit": "Send application",
         "sending": "Sending…",
-        "applyingAs": "Applying as <b>{email}</b>"
+        "optional": "(optional)"
       },
       "unitTypes": {
         "apartment": "Apartment",
@@ -291,7 +291,13 @@
       "success": {
         "title": "Application received!",
         "body": "Thank you, {name}. We'll review your details and be in touch very soon.",
-        "back": "Back to home"
+        "back": "Back to home",
+        "thanks": "Thanks!",
+        "within24h": "Our team will contact you within 24 hours on WhatsApp.",
+        "whatsapp": "Message us on WhatsApp",
+        "whatsappText": "Hi! I just applied to list my property on Homesta Stay.",
+        "alreadyHost": "Already a host?",
+        "signIn": "Sign in"
       },
       "error": {
         "required": "Please fill in all required fields.",
@@ -299,13 +305,8 @@
         "phoneInvalid": "Please enter a valid phone number.",
         "unitsMin": "Number of units must be at least 1.",
         "generic": "Something went wrong. Please try again.",
-        "signin": "Please sign in again to send your application."
-      },
-      "signedOut": {
-        "title": "Apply with your Homesta account",
-        "body": "Sign in or create a free account first — your application is linked to it, and once approved, the same account opens your host portal.",
-        "signUp": "Create an account",
-        "signIn": "Sign in"
+        "captcha": "We couldn't confirm you're human. Please try again.",
+        "rateLimited": "Too many applications from your connection. Please try again in an hour, or message us on WhatsApp."
       },
       "staffNote": "Team accounts can’t apply to host. Please use a personal guest account.",
       "status": {

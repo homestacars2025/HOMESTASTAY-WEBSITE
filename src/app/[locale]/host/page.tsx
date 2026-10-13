@@ -7,8 +7,8 @@ import { Header } from '@/components/home/Header';
 import { FadeUp } from '@/components/motion/FadeUp';
 import { HostForm } from '@/components/host/HostForm';
 import { HostApplicationStatus, type HostApplicationState } from '@/components/host/HostApplicationStatus';
-import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { HOSTS_WHATSAPP } from '@/lib/config/social';
 import { accountKind } from '@/lib/auth/account-role';
 import { getHostGeoData } from '@/lib/data/cities';
 
@@ -66,6 +66,8 @@ export default async function HostPage({ params }: { params: Promise<{ locale: s
     getHostGeoData(locale),
     readApplicant(),
   ]);
+  // Turnstile guards the public form (the server fails closed without it).
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
   const localizedCities = geoData.cities.map((c) => ({
     id:            c.id,
@@ -115,36 +117,20 @@ export default async function HostPage({ params }: { params: Promise<{ locale: s
 
         {/* ── Form ─────────────────────────────────────────────────────── */}
         <FadeUp delay={0.06}>
-          {applicant.kind === 'signed-out' ? (
-            /* Applying needs an account: the application becomes this
-               account's, and approval turns the same account into a host. */
-            <div className="flex flex-col items-center text-center gap-4 py-6">
-              <h2 className="text-xl font-medium tracking-[-0.025em] text-ink">{t('signedOut.title')}</h2>
-              <p className="text-sm text-ink-soft leading-relaxed max-w-sm">{t('signedOut.body')}</p>
-              <div className="flex w-full max-w-sm flex-col gap-3 mt-2">
-                <Link
-                  href="/sign-up?returnUrl=%2Fhost"
-                  className="inline-flex min-h-11 items-center justify-center rounded-[999px] bg-stay text-white text-sm font-medium px-6 py-3 transition-opacity duration-[240ms] hover:opacity-90"
-                >
-                  {t('signedOut.signUp')}
-                </Link>
-                <Link
-                  href="/sign-in?returnUrl=%2Fhost"
-                  className="inline-flex min-h-11 items-center justify-center rounded-[999px] border border-rule text-ink text-sm font-medium px-6 py-3 transition-colors duration-[240ms] hover:bg-paper-warm"
-                >
-                  {t('signedOut.signIn')}
-                </Link>
-              </div>
-            </div>
-          ) : applicant.kind === 'staff' ? (
+          {applicant.kind === 'staff' ? (
             <p className="text-sm text-ink-soft leading-relaxed text-center py-6">{t('staffNote')}</p>
-          ) : applicant.state ? (
+          ) : applicant.kind === 'account' && applicant.state ? (
             <HostApplicationStatus state={applicant.state} />
           ) : (
+            /* Open to everyone — no account needed to apply. A signed-in
+               visitor's lead is linked to their account on the server. */
             <HostForm
               cities={localizedCities}
               districtsByCityId={geoData.districtsByCityId}
-              prefill={applicant.prefill}
+              prefill={applicant.kind === 'account' ? applicant.prefill : EMPTY_PREFILL}
+              signedIn={applicant.kind === 'account'}
+              siteKey={siteKey}
+              hostsWhatsapp={HOSTS_WHATSAPP}
             />
           )}
         </FadeUp>
@@ -153,6 +139,8 @@ export default async function HostPage({ params }: { params: Promise<{ locale: s
     </div>
   );
 }
+
+const EMPTY_PREFILL = { name: '', phone: '', email: '' };
 
 type Applicant =
   | { kind: 'signed-out' }

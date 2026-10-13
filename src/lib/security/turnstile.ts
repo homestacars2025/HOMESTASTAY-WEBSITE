@@ -9,7 +9,7 @@ import 'server-only';
  * is sent — the pages hide the phone option in that case (see
  * isPhoneAuthAvailable), so this is the backstop, not the UX.
  */
-export { TURNSTILE_ACTION_PHONE } from './turnstile-action';
+export { TURNSTILE_ACTION_PHONE, TURNSTILE_ACTION_HOST_LEAD } from './turnstile-action';
 
 export function isTurnstileConfigured(): boolean {
   return Boolean(process.env.TURNSTILE_SECRET_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);

@@ -7,7 +7,9 @@ import { isValidPhoneNumber } from 'react-phone-number-input';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { CategoryIcon } from '@/components/home/CategoryIcon';
 import { submitHostApplication } from '@/app/[locale]/host/actions';
-import { HostApplicationStatus, type HostApplicationState } from '@/components/host/HostApplicationStatus';
+import { HostLeadSuccess } from '@/components/host/HostLeadSuccess';
+import { Turnstile } from '@/components/security/Turnstile';
+import { TURNSTILE_ACTION_HOST_LEAD } from '@/lib/security/turnstile-action';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -29,6 +31,7 @@ type FormDistrict = {
 
 const UNIT_TYPES = ['apartment', 'villa', 'cabin', 'hotel', 'farm'] as const;
 const CONTACT_METHODS = ['whatsapp', 'phone', 'email'] as const;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Maps form unit type slug → CategoryIcon name. These were plural names that
 // matched no icon, so every type fell back to the generic one.
@@ -262,17 +265,26 @@ export function HostForm({
   cities,
   districtsByCityId,
   prefill,
+  signedIn,
+  siteKey,
+  hostsWhatsapp,
 }: {
   cities: FormCity[];
   districtsByCityId: Record<string, FormDistrict[]>;
-  /** From the signed-in account. The email is the account's and not editable. */
+  /** From the signed-in account, or empty for a visitor. */
   prefill: { name: string; phone: string; email: string };
+  signedIn: boolean;
+  /** Cloudflare Turnstile site key. */
+  siteKey: string;
+  /** E.164 — the WhatsApp button on the success screen. */
+  hostsWhatsapp: string;
 }) {
   const t      = useTranslations('pages.host');
 
   // ── Field state
   const [name,           setName]           = useState(prefill.name);
   const [phone,          setPhone]          = useState(prefill.phone);
+  const [email,          setEmail]          = useState(prefill.email);
   const [unitType,       setUnitType]       = useState('');
   const [unitsCount,     setUnitsCount]     = useState('');
   const [cityId,         setCityId]         = useState('');
@@ -281,12 +293,18 @@ export function HostForm({
   const [contactMethod,  setContactMethod]  = useState('whatsapp');
   const [note,           setNote]           = useState('');
   const [listingLink,    setListingLink]    = useState('');
+  const [website,        setWebsite]        = useState(''); // honeypot
 
   // ── UI state
   const [errors,       setErrors]       = useState<Record<string, string>>({});
   const [loading,      setLoading]      = useState(false);
-  const [submitted,    setSubmitted]    = useState<HostApplicationState | null>(null);
+  const [submitted,    setSubmitted]    = useState(false);
   const [submitError,  setSubmitError]  = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  /** Turnstile tokens are single-use: ask for a fresh one after each try. */
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = captchaToken;
 
   // ── Derived geo state
   const selectedCity    = cities.find((c) => c.id === cityId) ?? null;
@@ -308,6 +326,7 @@ export function HostForm({
     if (!name.trim())    errs.name      = t('error.required');
     if (!phone)          errs.phone     = t('error.required');
     else if (!isValidPhoneNumber(phone)) errs.phone = t('error.phoneInvalid');
+    if (email.trim() && !EMAIL_RE.test(email.trim())) errs.email = t('error.emailInvalid');
     if (!unitType)       errs.unitType  = t('error.required');
     const count = parseInt(unitsCount, 10);
     if (!unitsCount || isNaN(count) || count < 1) errs.unitsCount = t('error.unitsMin');
@@ -326,36 +345,40 @@ export function HostForm({
     setSubmitError('');
     setLoading(true);
 
-    // Resolve final district string: dropdown selection, or manual text, or empty
-    const districtName = districtId === 'other'
-      ? districtManual.trim()
-      : districtId
-        ? (cityDistricts.find((d) => d.id === districtId)?.name ?? '')
-        : districtManual.trim();
+    // Turnstile usually has its token long before anyone finishes the form;
+    // a very quick submit waits for it (up to 8 s) instead of failing.
+    if (siteKey) {
+      for (let i = 0; i < 40 && !tokenRef.current; i++) await new Promise((r) => setTimeout(r, 200));
+    }
 
     const result = await submitHostApplication({
-      name:          name.trim(),
+      name:           name.trim(),
       phone,
+      email:          email.trim(),
       unitType,
-      unitsCount:    parseInt(unitsCount, 10),
-      city:          selectedCity?.name ?? '',
-      district:      districtName,
+      unitsCount:     parseInt(unitsCount, 10),
+      cityId,
+      districtId:     districtId && districtId !== 'other' ? districtId : '',
+      districtManual: showManualDist ? districtManual.trim() : '',
       contactMethod,
-      note:          note.trim(),
-      listingLink:   listingLink.trim(),
+      note:           note.trim(),
+      listingLink:    listingLink.trim(),
+      captchaToken:   tokenRef.current,
+      website,
     });
 
     if (result.ok) {
-      setSubmitted(result.status === 'already_host' ? 'approved' : 'under_review');
+      setSubmitted(true);
     } else {
       setSubmitError(t(`error.${result.error}`));
       setLoading(false);
+      setCaptchaReset((n) => n + 1);
     }
   }
 
   // ── Success state ─────────────────────────────────────────────────────────
 
-  if (submitted) return <HostApplicationStatus state={submitted} />;
+  if (submitted) return <HostLeadSuccess hostsWhatsapp={hostsWhatsapp} signedIn={signedIn} />;
 
   // ── Unit type labels (localised)
   const unitLabels = {
@@ -369,7 +392,7 @@ export function HostForm({
   // ── Form ──────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+    <form onSubmit={handleSubmit} noValidate className="relative flex flex-col gap-5">
 
       {/* Generic server error */}
       {submitError && (
@@ -400,20 +423,31 @@ export function HostForm({
           initialValue={prefill.phone || undefined}
           onChange={setPhone}
           defaultCountry="TR"
-          label={t('form.phoneLabel')}
+          label={`${t('form.phoneLabel')} *`}
           searchPlaceholder={t('form.phoneSearchPlaceholder')}
           errorId={errors.phone ? 'host-phone-err' : undefined}
         />
         {errors.phone && <p id="host-phone-err" className="text-xs text-stay mt-0.5">{errors.phone}</p>}
       </div>
 
-      {/* The application belongs to this account: its email is the contact. */}
-      <p className="text-sm text-mute">
-        {t.rich('form.applyingAs', {
-          email: prefill.email,
-          b: (chunks) => <span dir="ltr" className="font-medium text-ink">{chunks}</span>,
-        })}
-      </p>
+      {/* Email (optional) */}
+      <div className="flex flex-col gap-1.5">
+        <FieldLabel htmlFor="host-email">
+          {t('form.emailLabel')} <span className="font-normal text-mute">{t('form.optional')}</span>
+        </FieldLabel>
+        <input
+          id="host-email"
+          type="email"
+          dir="ltr"
+          autoComplete="email"
+          inputMode="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={t('form.emailPlaceholder')}
+          className={`${inputCls(!!errors.email)} text-start rtl:text-right`}
+        />
+        <FieldError message={errors.email} />
+      </div>
 
       {/* Unit type */}
       <UnitTypeSelect
@@ -517,7 +551,9 @@ export function HostForm({
 
       {/* Listing link (optional) */}
       <div className="flex flex-col gap-1.5">
-        <FieldLabel htmlFor="host-link">{t('form.listingLinkLabel')}</FieldLabel>
+        <FieldLabel htmlFor="host-link">
+          {t('form.listingLinkLabel')} <span className="font-normal text-mute">{t('form.optional')}</span>
+        </FieldLabel>
         <input
           id="host-link"
           type="url"
@@ -528,6 +564,25 @@ export function HostForm({
           className={`${INPUT_BASE} border-rule focus:border-ink`}
         />
       </div>
+
+      {/* Honeypot — off-screen and skipped by keyboards and screen readers. */}
+      <div aria-hidden="true" className="absolute -start-[10000px] h-px w-px overflow-hidden">
+        <label htmlFor="host-website">Website</label>
+        <input
+          id="host-website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+        />
+      </div>
+
+      {/* Human check — most visitors never see it (interaction-only). */}
+      {siteKey && (
+        <Turnstile siteKey={siteKey} action={TURNSTILE_ACTION_HOST_LEAD} onToken={setCaptchaToken} resetSignal={captchaReset} />
+      )}
 
       {/* Submit */}
       <button

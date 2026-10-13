@@ -16,6 +16,13 @@ export const CONTACT_EMAIL = 'info@homestastay.com';
  * sync when the number changes.
  */
 export const SUPPORT_WHATSAPP = '+905415439091';
+/**
+ * Hosts WhatsApp — the number the team answers property owners on (the
+ * whatsapp_hosts channel; checked equal on 2026-10-13). A constant, because
+ * the inbox tables are team-internal and this site does not read them.
+ */
+export const HOSTS_WHATSAPP = '+905451469190';
+
 /** wa.me requires digits only (no '+'). */
 export const SUPPORT_WHATSAPP_LINK = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^\d]/g, '')}`;
 
