@@ -115,6 +115,12 @@ export default function UnitGoogleMap({
   const [satellite, setSatellite] = useState(false);
   const [category, setCategory] = useState<NearbyCategory | null>(null);
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
+  /**
+   * Every category loaded so far on this page. Their lists stay MOUNTED (the
+   * inactive ones hidden): a thumbnail is a billed Place Photo request, and
+   * re-mounting the <img> on a second tap would fetch — and bill — it again.
+   */
+  const [loaded, setLoaded] = useState<Partial<Record<NearbyCategory, NearbyPlace[]>>>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [selected, setSelected] = useState<string | null>(null);
   const [pinHosts, setPinHosts] = useState<{ id: string; el: HTMLDivElement }[]>([]);
@@ -219,7 +225,7 @@ export default function UnitGoogleMap({
     setSelected(null);
     const key = `${unitId}:${cat}`;
     const hit = cache.get(key);
-    if (hit) { setPlaces(hit); setStatus('idle'); return; }
+    if (hit) { setPlaces(hit); setLoaded((l) => ({ ...l, [cat]: hit })); setStatus('idle'); return; }
     setStatus('loading');
     try {
       await loadGoogleMaps(apiKey, locale);
@@ -248,6 +254,7 @@ export default function UnitGoogleMap({
       });
       cache.set(key, list);
       setPlaces(list);
+      setLoaded((l) => ({ ...l, [cat]: list }));
       setStatus('idle');
     } catch {
       setPlaces([]);
@@ -324,36 +331,41 @@ export default function UnitGoogleMap({
           {status === 'loading' && <p className="text-sm text-mute">{t('loading')}</p>}
           {status === 'error' && <p className="text-sm text-mute">{t('searchError')}</p>}
           {status === 'idle' && places.length === 0 && <p className="text-sm text-mute">{t('empty')}</p>}
-          {status === 'idle' && places.length > 0 && (
-            <ul className="divide-y divide-rule rounded-[14px] border border-rule bg-white">
-              {places.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => choose(p)}
-                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-start transition-colors duration-[240ms] ${selected === p.id ? 'bg-paper-warm' : 'hover:bg-paper-warm'}`}
-                  >
-                    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-paper-warm grid place-items-center text-mute">
-                      {p.photo ? (
-                        // A Google-hosted thumbnail: next/image would proxy (and re-bill) it.
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.photo} alt="" width={44} height={44} loading="lazy" className="h-full w-full object-cover" />
-                      ) : Icon ? <Icon className="w-4 h-4" aria-hidden="true" /> : null}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-ink"><bdi>{p.name}</bdi></span>
-                      <span className="block text-xs text-mute">{t(`categories.${category}`)}</span>
-                    </span>
-                    <span className="shrink-0 text-end text-xs text-ink-soft tabular-nums">
-                      <bdi>{t('km', { km: km(p.metres) })}</bdi>
-                      <br />
-                      <bdi>{t('walk', { minutes: walk(p.metres) })}</bdi>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {(Object.keys(loaded) as NearbyCategory[]).map((cat) => {
+            const list = loaded[cat] ?? [];
+            const ListIcon = CATEGORY_ICON[cat];
+            const shown = status === 'idle' && cat === category && list.length > 0;
+            return (
+              <ul key={cat} hidden={!shown} className="divide-y divide-rule rounded-[14px] border border-rule bg-white">
+                {list.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => choose(p)}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-start transition-colors duration-[240ms] ${selected === p.id ? 'bg-paper-warm' : 'hover:bg-paper-warm'}`}
+                    >
+                      <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-paper-warm grid place-items-center text-mute">
+                        {p.photo ? (
+                          // A Google-hosted thumbnail: next/image would proxy (and re-bill) it.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.photo} alt="" width={44} height={44} loading="lazy" className="h-full w-full object-cover" />
+                        ) : <ListIcon className="w-4 h-4" aria-hidden="true" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-ink"><bdi>{p.name}</bdi></span>
+                        <span className="block text-xs text-mute">{t(`categories.${cat}`)}</span>
+                      </span>
+                      <span className="shrink-0 text-end text-xs text-ink-soft tabular-nums">
+                        <bdi>{t('km', { km: km(p.metres) })}</bdi>
+                        <br />
+                        <bdi>{t('walk', { minutes: walk(p.metres) })}</bdi>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            );
+          })}
         </div>
       )}
     </div>
