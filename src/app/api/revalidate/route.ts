@@ -3,6 +3,8 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { isInternalSecret } from '@/lib/security/internal-secret';
 import { cardUrls, slugForRow, warmCards } from '@/lib/seo/warm-cards';
 import { routing } from '@/i18n/routing';
+import { createPublicClient } from '@/lib/supabase/public';
+import { citySlug } from '@/lib/geo/city-slug';
 
 /**
  * On-demand cache invalidation. Called by Supabase Database Webhooks when a
@@ -106,6 +108,37 @@ function unitPaths(slugs: string[]): string[] {
   return paths;
 }
 
+/**
+ * Every page a hotel / resort change can alter, in all locales: the hotel's
+ * page (and its old slug), each of its rooms' pages, its city page, /stays and
+ * the home page (where its card lives). Rooms and city are looked up by the
+ * hotel's current slug; if that read fails, the hotel and listing paths are
+ * still dropped and the tag refreshes the data regardless.
+ */
+async function propertyPaths(slugs: string[]): Promise<string[]> {
+  const rooms: string[] = [];
+  let city: string | null = null;
+  try {
+    const supabase = createPublicClient();
+    const [{ data: units }, { data: prop }] = await Promise.all([
+      supabase.from('units').select('slug,properties!inner(slug)').eq('properties.slug', slugs[0]),
+      supabase.from('public_properties_view').select('city_name').eq('slug', slugs[0]).maybeSingle(),
+    ]);
+    for (const u of units ?? []) if (typeof u.slug === 'string' && SLUG_RE.test(u.slug)) rooms.push(u.slug);
+    if (typeof prop?.city_name === 'string' && prop.city_name) city = citySlug(prop.city_name);
+  } catch (err) {
+    console.error('[revalidate] property lookup failed', { message: err instanceof Error ? err.message : String(err) });
+  }
+  const paths: string[] = [];
+  for (const locale of routing.locales) {
+    for (const slug of slugs) paths.push(`/${locale}/hotels/${slug}`);
+    for (const room of rooms) paths.push(`/${locale}/stays/${room}`);
+    if (city) paths.push(`/${locale}/destinations/${city}`);
+    paths.push(`/${locale}/stays`, `/${locale}`);
+  }
+  return paths;
+}
+
 async function affectedSlug(body: Record<string, unknown> | null): Promise<string | null> {
   try {
     return await slugForRow(row(body, 'record') ?? row(body, 'old_record'));
@@ -147,6 +180,25 @@ export async function POST(request: NextRequest) {
       slug: row(body, 'record')?.slug ?? null,
     });
     return NextResponse.json({ revalidated: true, tag: 'city-content' });
+  }
+
+  // An explicit property call from the database: {type:'property', slug,
+  // old_slug?} — fired on properties, property_media, property_translations
+  // and property_amenities. Hotel pages, the property index, the cards and
+  // the rooms' pages are all cached under 'units'; the paths drop rendered
+  // copies on top.
+  if (body?.type === 'property') {
+    const slug = slugField(body, 'slug');
+    if (!slug) return NextResponse.json({ error: 'slug required' }, { status: 400 });
+    const oldSlug = slugField(body, 'old_slug');
+    const slugs = oldSlug && oldSlug !== slug ? [slug, oldSlug] : [slug];
+
+    revalidateTag('units');
+    const paths = await propertyPaths(slugs);
+    for (const path of paths) revalidatePath(path);
+
+    console.log('[revalidate] property', { slug, oldSlug, paths: paths.length });
+    return NextResponse.json({ revalidated: true, tag: 'units', slugs, paths: paths.length });
   }
 
   // An explicit unit call from the database: {type:'unit', slug}. Checked
