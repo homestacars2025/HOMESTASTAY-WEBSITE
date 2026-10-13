@@ -15,8 +15,8 @@ import { AMENITY_FILTERS, type AmenityFilter, type StaysFilters } from '@/lib/st
 import { buildStaysQueryWithPage } from '@/lib/stays/search-params';
 import type { StayCard } from '@/lib/queries/stays';
 
-// The map (mapbox-gl, ~1/2 MB) is fetched the first time it is opened — never
-// for a guest who only uses the list.
+// The map (our component + Google's script) is fetched the first time it is
+// opened — never for a guest who only uses the list.
 const StaysMap = dynamic(() => import('./StaysMap'), {
   ssr: false,
   loading: () => <div className="h-full w-full animate-pulse bg-paper-warm" />,
@@ -25,7 +25,7 @@ const StaysMap = dynamic(() => import('./StaysMap'), {
 const PAGE_SIZE = 24;
 /** Cards in the first row on the widest grid — loaded eagerly as LCP. */
 const EAGER = 4;
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
+const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
 interface StaysBrowserProps {
   /** Every unit matching the search (category NOT applied), in sort order. */
@@ -84,8 +84,6 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
   const [area, setArea] = useState<Bounds | null>(null);
   const [moved, setMoved] = useState<Bounds | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [rtl, setRtl] = useState(false);
-  useEffect(() => { setRtl(document.documentElement.dir === 'rtl'); }, []);
 
   // Counts per chip from the list itself — no query. A chip with no units in
   // THIS search is hidden, unless it is the one the guest is on.
@@ -125,10 +123,6 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
   const searchQuery = buildStaysQueryWithPage(liveFilters, safePage).replace(/^\?/, '');
 
   // ── Map data — the same list, as points ───────────────────────────────────
-  const money = useMemo(
-    () => new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }),
-    [locale],
-  );
   const mapUnits: MapUnit[] = useMemo(() => {
     if (!mapOpen) return [];
     return filtered.flatMap((c, i) => (c.geo ? [{
@@ -136,13 +130,16 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
       lat: c.geo.lat,
       lng: c.geo.lng,
       title: c.ad_title ?? c.unit_name ?? '—',
-      price: c.pricing.nightly_usd !== null ? money.format(c.pricing.nightly_usd) : null,
+      // "$78" — the same plain USD the cards show (Intl's currency style reads
+      // "$US 78" in Arabic).
+      price: c.pricing.nightly_usd !== null ? `$${Math.round(c.pricing.nightly_usd)}` : null,
+      from: Boolean(c.property),
       guests: c.guests,
       cover: (c.media.find((m) => m.is_cover) ?? c.media[0])?.public_url ?? null,
       href: `${c.property ? `/hotels/${c.property.slug}` : `/stays/${c.slug ?? c.id}`}${searchQuery ? `?${searchQuery}` : ''}`,
       position: i + 1,
     }] : []));
-  }, [mapOpen, filtered, money, searchQuery]);
+  }, [mapOpen, filtered, searchQuery]);
   const offMap = useMemo(() => filtered.filter((c) => !c.geo).length, [filtered]);
   const fitKey = `${JSON.stringify(filters)}|${category}`;
 
@@ -217,7 +214,7 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
         <div className="flex items-center justify-between gap-3">
           <FiltersSheet filters={liveFilters} total={filtered.length} amenityCounts={amenityCounts} districts={districts} />
           <div className="flex items-center gap-2">
-            {MAPBOX_TOKEN && (
+            {MAPS_KEY && (
               <div role="group" aria-label={t('map.toggle')} className="hidden md:inline-flex items-center rounded-[999px] border border-rule p-1">
                 <button type="button" aria-pressed={!mapOpen} onClick={() => setMapOpen(false)} className={seg(!mapOpen)}>
                   <List className="w-4 h-4" aria-hidden="true" />
@@ -305,23 +302,23 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
           )}
         </div>
 
-        {mapOpen && MAPBOX_TOKEN && (
+        {mapOpen && MAPS_KEY && (
           // Phone: full screen above everything. Desktop: a sticky column
           // beside the list.
           <div className="fixed inset-0 z-[60] bg-paper md:inset-auto md:z-auto md:sticky md:top-24 md:w-[42%] md:shrink-0 md:h-[calc(100vh-7rem)] md:rounded-[14px] md:overflow-hidden md:border md:border-rule">
             <div className="relative h-full w-full">
               <StaysMap
                 units={mapUnits}
-                token={MAPBOX_TOKEN}
+                apiKey={MAPS_KEY}
+                locale={locale}
                 fitKey={fitKey}
                 activeId={activeId}
                 onActive={setActiveId}
                 onUserMove={setMoved}
-                rtl={rtl}
                 labels={{
                   perNight: tCard('perNight'),
                   sleeps: (n) => t('map.sleeps', { count: n }),
-                  close: t('map.close'),
+                  from: (price) => t('map.fromPin', { price }),
                 }}
               />
 
@@ -355,7 +352,7 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
       </div>
 
       {/* Phone: the floating "Map" button, bottom-centre like the list it opens over. */}
-      {MAPBOX_TOKEN && !mapOpen && filtered.length > 0 && (
+      {MAPS_KEY && !mapOpen && filtered.length > 0 && (
         <button
           type="button"
           onClick={() => setMapOpen(true)}

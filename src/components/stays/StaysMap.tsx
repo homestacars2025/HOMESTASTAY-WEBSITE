@@ -1,36 +1,35 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Map, {
-  Layer,
-  Marker,
-  NavigationControl,
-  Popup,
-  Source,
-  type MapMouseEvent,
-  type MapRef,
-  type ViewStateChangeEvent,
-} from 'react-map-gl/mapbox';
-import type { CircleLayerSpecification, GeoJSONSource, SymbolLayerSpecification } from 'mapbox-gl';
-import { Link } from '@/i18n/navigation';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, useRouter } from '@/i18n/navigation';
 import { SmartImage } from '@/components/media/SmartImage';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { loadGoogleMaps } from '@/lib/maps/google';
+import { LIGHT_STYLE } from '@/lib/maps/google-style';
 
 /**
- * The /stays results on a map — the SAME list the grid shows (StaysBrowser
- * hands it over), never a search of its own.
+ * The /stays results on a Google map — the SAME list the grid shows
+ * (StaysBrowser hands it over), never a search of its own.
  *
- *   • zoomed out: clusters (Mapbox's own clustering on the GeoJSON source)
- *   • zoomed in: a price pill per unit (DOM markers for the unclustered points
- *     only, so a 300-unit city never puts 300 nodes on screen)
- *   • a pill opens a mini card → the unit page
+ *   • every unit is its own price pin, at every zoom — no clustering; a hotel
+ *     card is one pin, "from $X"
+ *   • pins within a few metres of each other (one building) fan out in a
+ *     small ring, so each stays visible and clickable
+ *   • desktop: hover a pin → its mini card (and the pin turns brand red and
+ *     comes to the front); the card stays while the mouse is on it; a click on
+ *     the pin or the card opens the page
+ *   • phone: tap a pin → the card slides up at the bottom; tap it to open,
+ *     tap the map to close
  *
- * PRIVACY: every point is the unit page's blurred position (20–50 m off,
- * 4 decimals), computed on the server (StayCard.geo). No exact coordinate
- * reaches here.
+ * PERFORMANCE: all pins live in ONE OverlayView container. Panning moves the
+ * overlay pane as a whole (no per-pin work per frame); positions are computed
+ * once per zoom/redraw and written straight to the DOM (no React re-render).
  *
- * Client-only and loaded on demand: StaysBrowser imports it with
- * next/dynamic (ssr: false) the first time the map is opened.
+ * PRIVACY: every point is the blurred, 4-decimal position computed on the
+ * server (StayCard.geo). No exact coordinate reaches the browser.
+ *
+ * Client-only, loaded on demand: StaysBrowser imports it with next/dynamic the
+ * first time the map is opened; the Google script itself loads then too.
  */
 
 export interface MapUnit {
@@ -38,8 +37,10 @@ export interface MapUnit {
   lat: number;
   lng: number;
   title: string;
-  /** Nightly USD, already formatted ("$120"), or null when unpriced. */
+  /** Nightly USD, formatted ("$120"), or null when unpriced. */
   price: string | null;
+  /** A hotel / resort card: the pin reads "from $X". */
+  from: boolean;
   guests: number | null;
   cover: string | null;
   href: string;
@@ -51,250 +52,289 @@ export type Bounds = [west: number, south: number, east: number, north: number];
 
 interface StaysMapProps {
   units: MapUnit[];
-  token: string;
+  apiKey: string;
+  locale: string;
   /** Changes when the result set changes — the map refits to it. */
   fitKey: string;
+  /** The list card under the mouse, lighting its pin. */
   activeId: string | null;
   onActive: (id: string | null) => void;
   /** The guest moved the map themselves (not a refit). */
   onUserMove: (bounds: Bounds) => void;
-  rtl: boolean;
-  labels: { perNight: string; sleeps: (n: number) => string; close: string };
+  labels: { perNight: string; sleeps: (n: number) => string; from: (price: string) => string };
 }
 
-const SOURCE = 'stays';
+const MAX_ZOOM = 16;
+/** Pins closer than this (metres) are one spot: they fan out. */
+const SAME_SPOT_M = 25;
 
-const clusterLayer: CircleLayerSpecification = {
-  id: 'stays-clusters',
-  type: 'circle',
-  source: SOURCE,
-  filter: ['has', 'point_count'],
-  paint: {
-    'circle-color': '#0E0E10',
-    'circle-radius': ['step', ['get', 'point_count'], 16, 10, 20, 30, 25],
-    'circle-stroke-width': 2,
-    'circle-stroke-color': '#FFFFFF',
-  },
-};
+type Point = { lat: number; lng: number; dx: number; dy: number };
 
-const clusterCountLayer: SymbolLayerSpecification = {
-  id: 'stays-cluster-count',
-  type: 'symbol',
-  source: SOURCE,
-  filter: ['has', 'point_count'],
-  layout: {
-    'text-field': ['get', 'point_count_abbreviated'],
-    'text-font': ['DIN Pro Medium', 'Arial Unicode MS Bold'],
-    'text-size': 12,
-    'text-allow-overlap': true,
-  },
-  paint: { 'text-color': '#FFFFFF' },
-};
-
-/**
- * The box to open on: the results, minus far outliers. One unit with a wrong
- * pin (an Istanbul listing pinned near Çorum) would otherwise zoom the map
- * out to half the country. Outliers keep their pin; they just do not decide
- * the first view. Kept: within 3× the 75th-percentile distance from the
- * median point (at least 3 km).
- */
-function boundsOf(units: MapUnit[]): [[number, number], [number, number]] | null {
-  if (!units.length) return null;
-  const median = (xs: number[]) => {
-    const s = [...xs].sort((a, b) => a - b);
-    const m = s.length >> 1;
-    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-  };
-  const c = { lat: median(units.map((u) => u.lat)), lng: median(units.map((u) => u.lng)) };
-  const km = (u: MapUnit) => {
-    const dy = (u.lat - c.lat) * 111;
-    const dx = (u.lng - c.lng) * 111 * Math.cos((c.lat * Math.PI) / 180);
-    return Math.hypot(dx, dy);
-  };
-  const d = units.map(km).sort((a, b) => a - b);
-  const limit = Math.max(3, 3 * d[Math.floor(d.length * 0.75)]);
-  const core = units.filter((u) => km(u) <= limit);
-  let w = Infinity, s = Infinity, e = -Infinity, n = -Infinity;
-  for (const u of core.length ? core : units) {
-    w = Math.min(w, u.lng); e = Math.max(e, u.lng);
-    s = Math.min(s, u.lat); n = Math.max(n, u.lat);
-  }
-  return [[w, s], [e, n]];
+function metres(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const dy = (a.lat - b.lat) * 111_320;
+  const dx = (a.lng - b.lng) * 111_320 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.hypot(dx, dy);
 }
 
-export default function StaysMap({ units, token, fitKey, activeId, onActive, onUserMove, rtl, labels }: StaysMapProps) {
-  const mapRef = useRef<MapRef>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [visible, setVisible] = useState<Set<string>>(new Set());
-  const [selected, setSelected] = useState<string | null>(null);
-
-  const byId = useMemo(() => new globalThis.Map(units.map((u) => [u.id, u])), [units]);
-
-  const data = useMemo(() => ({
-    type: 'FeatureCollection' as const,
-    features: units.map((u) => ({
-      type: 'Feature' as const,
-      properties: { id: u.id },
-      geometry: { type: 'Point' as const, coordinates: [u.lng, u.lat] },
-    })),
-  }), [units]);
-
-  /** Which points are NOT inside a cluster right now — those get a price pill. */
-  const refreshPins = useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || !map.getSource(SOURCE)) return;
-    const ids = new Set(
-      map.querySourceFeatures(SOURCE, { filter: ['!', ['has', 'point_count']] })
-        .map((f) => String(f.properties?.id)),
-    );
-    setVisible((prev) => (prev.size === ids.size && [...ids].every((id) => prev.has(id)) ? prev : ids));
-  }, []);
-
-  const fit = useCallback((animate: boolean) => {
-    const map = mapRef.current;
-    const b = boundsOf(units);
-    if (!map || !b) return;
-    if (b[0][0] === b[1][0] && b[0][1] === b[1][1]) {
-      map.jumpTo({ center: b[0], zoom: 13 });
-      return;
+/** Screen-pixel offsets that fan out pins sharing one spot (a ring per spot). */
+function spreadOffsets(units: MapUnit[]): Map<string, { dx: number; dy: number }> {
+  const parent = units.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < units.length; i++) {
+    for (let j = i + 1; j < units.length; j++) {
+      if (Math.abs(units[i].lat - units[j].lat) > 0.0005) continue; // cheap pre-check (~55 m)
+      if (metres(units[i], units[j]) < SAME_SPOT_M) parent[find(i)] = find(j);
     }
-    map.fitBounds(b, { padding: 56, maxZoom: 14, duration: animate ? 400 : 0 });
-  }, [units]);
-
-  // Refit when the result set changes (a chip, a new search) — not on every
-  // render, and never because the guest moved the map.
-  const lastFit = useRef<string | null>(null);
-  useEffect(() => {
-    if (!loaded || lastFit.current === fitKey) return;
-    fit(lastFit.current !== null);
-    lastFit.current = fitKey;
-  }, [loaded, fitKey, fit]);
-
-  // A selected unit that left the results closes its card.
-  useEffect(() => {
-    if (selected && !byId.has(selected)) setSelected(null);
-  }, [selected, byId]);
-
-  function onClusterClick(e: MapMouseEvent) {
-    const feature = e.features?.[0];
-    const map = mapRef.current?.getMap();
-    if (!feature || !map) return;
-    const clusterId = feature.properties?.cluster_id as number;
-    const source = map.getSource(SOURCE) as GeoJSONSource;
-    source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-      if (err || zoom == null) return;
-      const [lng, lat] = (feature.geometry as unknown as { coordinates: [number, number] }).coordinates;
-      map.easeTo({ center: [lng, lat], zoom, duration: 400 });
+  }
+  const groups = new Map<number, number[]>();
+  units.forEach((_, i) => {
+    const r = find(i);
+    groups.set(r, [...(groups.get(r) ?? []), i]);
+  });
+  const out = new Map<string, { dx: number; dy: number }>();
+  for (const members of groups.values()) {
+    if (members.length === 1) { out.set(units[members[0]].id, { dx: 0, dy: 0 }); continue; }
+    const radius = 18 + 5 * members.length;
+    members.forEach((m, k) => {
+      const a = (k / members.length) * 2 * Math.PI - Math.PI / 2;
+      out.set(units[m].id, { dx: Math.round(radius * Math.cos(a)), dy: Math.round(radius * Math.sin(a)) });
     });
   }
+  return out;
+}
 
-  function onMoveEnd(e: ViewStateChangeEvent) {
-    refreshPins();
-    // A refit has no originalEvent; a drag, pinch or wheel does. (Present at
-    // runtime on mapbox-gl's moveend, missing from its event typing.)
-    if (!(e as unknown as { originalEvent?: Event }).originalEvent) return;
-    const b = mapRef.current?.getBounds();
-    if (b) onUserMove([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+/**
+ * The opening view: the results minus far outliers (a mis-pinned unit must
+ * not zoom the map out to the whole country). Outliers keep their pin.
+ */
+function coreBounds(units: MapUnit[]): google.maps.LatLngBounds | null {
+  if (!units.length) return null;
+  const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const c = { lat: median(units.map((u) => u.lat)), lng: median(units.map((u) => u.lng)) };
+  const d = units.map((u) => metres(u, c) / 1000).sort((a, b) => a - b);
+  const limit = Math.max(3, 3 * d[Math.floor(d.length * 0.75)]);
+  const core = units.filter((u) => metres(u, c) / 1000 <= limit);
+  const b = new google.maps.LatLngBounds();
+  for (const u of core.length ? core : units) b.extend({ lat: u.lat, lng: u.lng });
+  return b;
+}
+
+/** One overlay holding every pin; positions written to the DOM in draw(). */
+interface PinLayer extends google.maps.OverlayView {
+  container: HTMLDivElement;
+  setPoints(points: Map<string, Point>): void;
+  register(id: string, el: HTMLElement | null): void;
+}
+
+function createPinLayer(): PinLayer {
+  class Layer extends google.maps.OverlayView {
+    container = document.createElement('div');
+    private points = new Map<string, Point>();
+    private els = new Map<string, HTMLElement>();
+    constructor() {
+      super();
+      this.container.style.position = 'absolute';
+      this.container.style.left = '0';
+      this.container.style.top = '0';
+      // Clicks and drags that start on a pin are the pin's, not the map's.
+      google.maps.OverlayView.preventMapHitsAndGesturesFrom(this.container);
+    }
+    onAdd() { this.getPanes()?.overlayMouseTarget.appendChild(this.container); }
+    onRemove() { this.container.remove(); }
+    setPoints(points: Map<string, Point>) { this.points = points; this.draw(); }
+    register(id: string, el: HTMLElement | null) {
+      if (el) { this.els.set(id, el); this.place(id, el); } else this.els.delete(id);
+    }
+    private place(id: string, el: HTMLElement) {
+      const proj = this.getProjection();
+      const p = this.points.get(id);
+      if (!proj || !p) return;
+      const px = proj.fromLatLngToDivPixel(new google.maps.LatLng(p.lat, p.lng));
+      if (px) el.style.transform = `translate(${px.x + p.dx}px, ${px.y + p.dy}px) translate(-50%, -50%)`;
+    }
+    draw() { for (const [id, el] of this.els) this.place(id, el); }
+  }
+  return new Layer() as unknown as PinLayer;
+}
+
+export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onActive, onUserMove, labels }: StaysMapProps) {
+  const router = useRouter();
+  const box = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const layerRef = useRef<PinLayer | null>(null);
+  const [ready, setReady] = useState(false);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [tapId, setTapId] = useState<string | null>(null);
+  const [canHover, setCanHover] = useState(true);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userMoved = useRef(false);
+  const programmatic = useRef(false);
+  const onUserMoveRef = useRef(onUserMove);
+  onUserMoveRef.current = onUserMove;
+
+  const byId = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
+  const rtl = locale === 'ar';
+
+  // ── The map ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    setCanHover(window.matchMedia('(hover: hover)').matches);
+    let cancelled = false;
+    (async () => {
+      await loadGoogleMaps(apiKey, locale);
+      const { Map } = (await google.maps.importLibrary('maps')) as google.maps.MapsLibrary;
+      if (cancelled || !box.current) return;
+      const map = new Map(box.current, {
+        center: { lat: 39.5, lng: 32 },
+        zoom: 6,
+        maxZoom: MAX_ZOOM,
+        styles: LIGHT_STYLE,
+        disableDefaultUI: true,
+        zoomControl: true,
+        zoomControlOptions: { position: rtl ? google.maps.ControlPosition.LEFT_BOTTOM : google.maps.ControlPosition.RIGHT_BOTTOM },
+        gestureHandling: 'greedy',
+        clickableIcons: false,
+      });
+      const layer = createPinLayer();
+      layer.setMap(map);
+      map.addListener('dragstart', () => { userMoved.current = true; });
+      map.addListener('zoom_changed', () => { if (!programmatic.current) userMoved.current = true; });
+      map.addListener('idle', () => {
+        programmatic.current = false;
+        if (!userMoved.current) return;
+        userMoved.current = false;
+        const b = map.getBounds();
+        if (b) {
+          const ne = b.getNorthEast(), sw = b.getSouthWest();
+          onUserMoveRef.current([sw.lng(), sw.lat(), ne.lng(), ne.lat()]);
+        }
+      });
+      // A tap on the map (not on a pin) closes the phone card.
+      map.addListener('click', () => setTapId(null));
+      mapRef.current = map;
+      layerRef.current = layer;
+      setReady(true);
+    })().catch(() => { /* the list still works without the map */ });
+    return () => { cancelled = true; layerRef.current?.setMap(null); };
+    // The key and language are fixed for the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Points (with the fan-out offsets) ────────────────────────────────────
+  useLayoutEffect(() => {
+    if (!ready) return;
+    const offsets = spreadOffsets(units);
+    layerRef.current?.setPoints(new Map(units.map((u) => [u.id, { lat: u.lat, lng: u.lng, ...(offsets.get(u.id) ?? { dx: 0, dy: 0 }) }])));
+  }, [units, ready]);
+
+  // ── Fit to the pins when the result set changes (not when the guest moves) ─
+  const lastFit = useRef<string | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || lastFit.current === fitKey) return;
+    lastFit.current = fitKey;
+    const b = coreBounds(units);
+    if (!b) return;
+    programmatic.current = true;
+    map.fitBounds(b, 56);
+  }, [ready, fitKey, units]);
+
+  // A pin that left the results drops its card.
+  useEffect(() => {
+    if (tapId && !byId.has(tapId)) setTapId(null);
+    if (hoverId && !byId.has(hoverId)) setHoverId(null);
+  }, [byId, tapId, hoverId]);
+
+  const hoverIn = useCallback((id: string) => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setHoverId(id);
+    onActive(id);
+  }, [onActive]);
+  const hoverOut = useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    // A short grace period: the mouse crossing from the pin to its card.
+    closeTimer.current = setTimeout(() => { setHoverId(null); onActive(null); }, 140);
+  }, [onActive]);
+
+  function pinClick(u: MapUnit) {
+    if (canHover) router.push(u.href as '/stays');
+    else setTapId((cur) => (cur === u.id ? null : u.id));
   }
 
-  const sel = selected ? byId.get(selected) : undefined;
+  const pinText = (u: MapUnit) => (u.price ? (u.from ? labels.from(u.price) : u.price) : '•');
+  const tapped = tapId ? byId.get(tapId) : undefined;
+
+  const card = (u: MapUnit, compact: boolean) => (
+    <Link
+      href={u.href as '/stays'}
+      data-unit={u.id}
+      data-pos={u.position}
+      data-src="map"
+      className={`flex overflow-hidden rounded-[14px] bg-white text-start shadow-[0_8px_28px_rgba(0,0,0,0.18)] ${compact ? 'w-[240px] flex-col' : 'w-full flex-row'}`}
+    >
+      <span className={`relative block shrink-0 bg-paper-warm ${compact ? 'aspect-[4/3] w-full' : 'h-24 w-28'}`}>
+        {u.cover && <SmartImage src={u.cover} alt={u.title} fill sizes="240px" className="object-cover" />}
+      </span>
+      <span className="block min-w-0 px-3 py-2.5">
+        <span className="block text-sm font-semibold leading-snug text-ink line-clamp-2">{u.title}</span>
+        <span className="mt-0.5 block text-xs text-mute">
+          {u.guests ? `${labels.sleeps(u.guests)} · ` : ''}
+          {u.price && (
+            <>
+              <span className="font-semibold text-stay">{u.from ? labels.from(u.price) : u.price}</span> {labels.perNight}
+            </>
+          )}
+        </span>
+      </span>
+    </Link>
+  );
 
   return (
-    <Map
-      ref={mapRef}
-      mapboxAccessToken={token}
-      initialViewState={{ longitude: 29, latitude: 39.5, zoom: 5 }}
-      mapStyle="mapbox://styles/mapbox/streets-v12"
-      style={{ width: '100%', height: '100%' }}
-      // Pins are blurred points (20–50 m off); the same zoom limit as the unit map.
-      maxZoom={16}
-      dragRotate={false}
-      touchPitch={false}
-      interactiveLayerIds={['stays-clusters']}
-      onClick={onClusterClick}
-      onLoad={() => { setLoaded(true); }}
-      onMoveEnd={onMoveEnd}
-      onIdle={refreshPins}
-    >
-      <NavigationControl position={rtl ? 'top-left' : 'top-right'} showCompass={false} />
+    <div className="relative h-full w-full">
+      <div ref={box} className="absolute inset-0" />
 
-      <Source id={SOURCE} type="geojson" data={data} cluster clusterMaxZoom={13} clusterRadius={48}>
-        <Layer {...clusterLayer} />
-        <Layer {...clusterCountLayer} />
-      </Source>
-
-      {units.filter((u) => visible.has(u.id)).map((u) => {
-        const on = u.id === activeId || u.id === selected;
-        return (
-          <Marker
-            key={u.id}
-            longitude={u.lng}
-            latitude={u.lat}
-            anchor="bottom"
-            style={{ zIndex: on ? 2 : 1 }}
-            onClick={(e) => { e.originalEvent.stopPropagation(); setSelected(u.id); }}
-          >
-            <button
-              type="button"
-              onMouseEnter={() => onActive(u.id)}
-              onMouseLeave={() => onActive(null)}
-              aria-label={`${u.title}${u.price ? ` · ${u.price}` : ''}`}
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums shadow-[0_2px_8px_rgba(0,0,0,0.18)] ring-1 ring-black/10 transition-[background-color,color,transform] duration-[240ms] ${
-                on ? 'bg-ink text-white scale-110' : 'bg-white text-ink hover:scale-105'
-              }`}
-            >
-              {u.price ?? '•'}
-            </button>
-          </Marker>
-        );
-      })}
-
-      {sel && (
-        <Popup
-          longitude={sel.lng}
-          latitude={sel.lat}
-          anchor="bottom"
-          offset={34}
-          closeButton={false}
-          closeOnClick
-          onClose={() => setSelected(null)}
-          maxWidth="260px"
-          className="hs-map-popup"
-        >
-          <Link
-            href={sel.href as '/stays/[slug]'}
-            data-unit={sel.id}
-            data-pos={sel.position}
-            data-src="map"
-            className="block w-[240px] text-start"
-          >
-            <div className="relative aspect-[4/3] bg-paper-warm">
-              {sel.cover && (
-                <SmartImage src={sel.cover} alt={sel.title} fill sizes="240px" className="object-cover" />
-              )}
-            </div>
-            <div className="px-3 py-2.5">
-              <p className="text-sm font-semibold text-ink leading-snug line-clamp-1">{sel.title}</p>
-              <p className="mt-0.5 text-xs text-mute">
-                {sel.guests ? `${labels.sleeps(sel.guests)} · ` : ''}
-                {sel.price && (
-                  <>
-                    <span className="font-semibold text-stay">{sel.price}</span> {labels.perNight}
-                  </>
+      {ready && layerRef.current && createPortal(
+        <>
+          {units.map((u) => {
+            const on = u.id === hoverId || u.id === tapId || u.id === activeId;
+            return (
+              <div
+                key={u.id}
+                ref={(el) => layerRef.current?.register(u.id, el)}
+                className="absolute left-0 top-0"
+                style={{ zIndex: on ? 1000 : 1 }}
+                onMouseEnter={canHover ? () => hoverIn(u.id) : undefined}
+                onMouseLeave={canHover ? hoverOut : undefined}
+              >
+                <button
+                  type="button"
+                  onClick={() => pinClick(u)}
+                  aria-label={`${u.title}${u.price ? ` · ${pinText(u)}` : ''}`}
+                  className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums shadow-[0_2px_8px_rgba(0,0,0,0.18)] ring-1 transition-[background-color,color,transform] duration-[240ms] ${
+                    on ? 'scale-110 bg-stay text-white ring-stay' : 'bg-white text-ink ring-black/10'
+                  }`}
+                >
+                  {pinText(u)}
+                </button>
+                {/* Desktop: the card above the hovered pin. Its padding is the
+                    bridge the mouse crosses without the card closing. */}
+                {canHover && u.id === hoverId && (
+                  <div className="absolute bottom-full start-1/2 -translate-x-1/2 rtl:translate-x-1/2 pb-2">
+                    {card(u, true)}
+                  </div>
                 )}
-              </p>
-            </div>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            aria-label={labels.close}
-            className="absolute top-2 end-2 w-7 h-7 rounded-full bg-white/90 text-ink text-sm leading-none shadow-sm"
-          >
-            ×
-          </button>
-        </Popup>
+              </div>
+            );
+          })}
+        </>,
+        layerRef.current.container,
       )}
-    </Map>
+
+      {/* Phone: the tapped unit's card slides up at the bottom. */}
+      <div
+        className={`pointer-events-none absolute inset-x-3 bottom-3 z-20 transition-transform duration-[240ms] ${tapped ? 'translate-y-0' : 'translate-y-[140%]'}`}
+      >
+        {tapped && <div className="pointer-events-auto">{card(tapped, false)}</div>}
+      </div>
+    </div>
   );
 }

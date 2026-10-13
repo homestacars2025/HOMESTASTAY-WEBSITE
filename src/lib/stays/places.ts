@@ -104,27 +104,44 @@ const getDirectory = unstable_cache(
   { tags: ['units'], revalidate: 600 },
 );
 
-/** Mapbox forward geocoding, cached per query for a week. Null = no match. */
+/**
+ * Where a place name is — Google Places API (New) Text Search, server-side,
+ * cached per query for a week. Null = no match.
+ *
+ * Needs GOOGLE_PLACES_SERVER_KEY: a SERVER key (restricted by API to Places
+ * API (New), not by referrer). The browser key NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ * is referrer-restricted and must not be used from the server. Without the
+ * key, unknown places resolve to "showing all places" — nothing breaks.
+ */
 const geocode = unstable_cache(
   async (query: string, countries: string): Promise<{ lat: number; lng: number } | null> => {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token) return null;
-    const url = new URL('https://api.mapbox.com/search/geocode/v6/forward');
-    url.searchParams.set('q', query);
-    url.searchParams.set('limit', '1');
-    if (countries) url.searchParams.set('country', countries);
-    url.searchParams.set('access_token', token);
-    // The public token is URL-restricted to the site; say where we are.
-    const res = await fetch(url, { headers: { Referer: 'https://www.homestastay.com/' }, signal: AbortSignal.timeout(2500) });
+    const key = process.env.GOOGLE_PLACES_SERVER_KEY ?? '';
+    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': key,
+        // The location only — the cheapest field set for Text Search.
+        'X-Goog-FieldMask': 'places.location',
+      },
+      body: JSON.stringify({ textQuery: query, pageSize: 1, regionCode: (countries.split(',')[0] || 'tr').toUpperCase() }),
+      signal: AbortSignal.timeout(2500),
+    });
     // Thrown, so a failure is not cached as "no such place".
-    if (!res.ok) throw new Error(`geocode ${res.status}`);
-    const data = (await res.json()) as { features?: { geometry?: { coordinates?: [number, number] } }[] };
-    const c = data.features?.[0]?.geometry?.coordinates;
-    return c ? { lng: c[0], lat: c[1] } : null;
+    if (!res.ok) throw new Error(`places text search ${res.status}`);
+    const data = (await res.json()) as { places?: { location?: { latitude?: number; longitude?: number } }[] };
+    const loc = data.places?.[0]?.location;
+    return typeof loc?.latitude === 'number' && typeof loc?.longitude === 'number' ? { lat: loc.latitude, lng: loc.longitude } : null;
   },
-  ['place-geocode-v1'],
+  ['place-geocode-v2'],
   { revalidate: 7 * 24 * 3600 },
 );
+
+/** Checked BEFORE the cache: a missing key must not cache "no such place" for a week. */
+function geocodePlace(query: string, countries: string): Promise<{ lat: number; lng: number } | null> {
+  return process.env.GOOGLE_PLACES_SERVER_KEY ? geocode(query, countries) : Promise.resolve(null);
+}
+
 
 /** The longest run of words in the text that names a place we know. */
 function findInText(normalized: string, names: Record<string, Entry>, hasUnits: (city: string) => boolean): Entry | null {
@@ -178,7 +195,7 @@ export async function resolvePlace(raw: string): Promise<PlaceMatch> {
   // A real place we have no name for: where is it, and what is near?
   let point: { lat: number; lng: number } | null = null;
   try {
-    point = await geocode(normalized, directory.countries.join(','));
+    point = await geocodePlace(normalized, directory.countries.join(','));
   } catch (err) {
     console.warn('[places] geocode failed', { message: err instanceof Error ? err.message : String(err) });
   }
@@ -204,7 +221,7 @@ export async function placePoint(cityName: string): Promise<{ lat: number; lng: 
   if (c?.center) return c.center;
   try {
     const d = await getDirectory();
-    return await geocode(normalizePlace(cityName), d.countries.join(','));
+    return await geocodePlace(normalizePlace(cityName), d.countries.join(','));
   } catch {
     return null;
   }

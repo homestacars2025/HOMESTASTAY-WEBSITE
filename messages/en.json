@@ -170,7 +170,7 @@
         "clearArea": "Clear map area",
         "notShown": "{count, plural, one {# place} other {# places}} not shown on the map",
         "sleeps": "Sleeps {count}",
-        "close": "Close"
+        "fromPin": "from {price}"
       }
     },
     "destinations": {
@@ -681,7 +681,29 @@
       "error": "Couldn’t load the map right now.",
       "loading": "Looking nearby…",
       "searchError": "Couldn’t load nearby places right now.",
-      "stayArea": "Your stay is in this area"
+      "stayArea": "Your stay is in this area",
+      "types": {
+        "supermarket": "Supermarket",
+        "grocery": "Grocery store",
+        "convenience": "Convenience store",
+        "subway": "Metro station",
+        "lightRail": "Tram / light rail",
+        "train": "Train station",
+        "transit": "Transit stop",
+        "bus": "Bus station",
+        "restaurant": "Restaurant",
+        "cafe": "Café",
+        "bakery": "Bakery",
+        "fastFood": "Fast food",
+        "pharmacy": "Pharmacy",
+        "hospital": "Hospital",
+        "clinic": "Clinic",
+        "mall": "Shopping mall",
+        "mosque": "Mosque",
+        "worship": "Place of worship",
+        "atm": "ATM",
+        "bank": "Bank"
+      }
     },
     "partOf": "Part of <b>{hotel}</b>"
   },

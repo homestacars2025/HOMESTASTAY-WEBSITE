@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { loadGoogleMaps } from '@/lib/maps/google';
+import { LIGHT_STYLE } from '@/lib/maps/google-style';
 import { APPROX_RADIUS_M } from '@/lib/geo/blur-constants';
 import { BrandMark } from '@/components/brand/BrandMark';
 
@@ -32,7 +33,8 @@ export const NEARBY_CATEGORIES: NearbyCategory[] = ['supermarket', 'transit', 'r
 
 const TYPES: Record<NearbyCategory, string[]> = {
   supermarket: ['supermarket', 'grocery_store'],
-  transit: ['subway_station', 'light_rail_station', 'train_station', 'transit_station'],
+  // Rail only: 'transit_station' brings back every bus stop on the street.
+  transit: ['subway_station', 'light_rail_station', 'train_station'],
   restaurant: ['restaurant'],
   pharmacy: ['pharmacy'],
   hospital: ['hospital'],
@@ -65,6 +67,8 @@ export const CATEGORY_ICON: Record<NearbyCategory, LucideIcon> = {
 interface NearbyPlace {
   id: string;
   name: string;
+  /** Google's primaryType (e.g. 'mosque', 'subway_station') — labelled by us. */
+  type: string | null;
   lat: number;
   lng: number;
   metres: number;
@@ -79,19 +83,7 @@ const MAX_ZOOM = 16;
 const MIN_DIAMETER_PX = 28;
 const SEARCH_RADIUS_M = 1000;
 
-/**
- * Clean, light base map. poi.business is OFF — hotels and every shop,
- * restaurant and brand — so a competitor never appears on our listing.
- * Transit, parks, places of worship, landmarks, hospitals and street names
- * stay. (A styles array, not a cloud Map ID: no Map ID is configured, and a
- * Map ID would ignore this array.)
- */
-const LIGHT_STYLE: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ saturation: -35 }, { lightness: 8 }] },
-  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ saturation: -60 }, { lightness: 20 }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ saturation: -20 }, { lightness: 15 }] },
-];
+
 
 /** An HTML element on the map, centred on a point (React renders into `el`). */
 type HtmlOverlay = google.maps.OverlayView & { el: HTMLDivElement };
@@ -174,6 +166,15 @@ function LazyThumb({ src, cat }: { src: string | null; cat: NearbyCategory }) {
   );
 }
 
+/** Google primaryType → our label key (unit.nearby.types.*). */
+const PRIMARY_TYPE_LABEL: Record<string, string> = {
+  supermarket: 'supermarket', grocery_store: 'grocery', convenience_store: 'convenience',
+  subway_station: 'subway', light_rail_station: 'lightRail', train_station: 'train', transit_station: 'transit', bus_station: 'bus', bus_stop: 'transit',
+  restaurant: 'restaurant', cafe: 'cafe', bakery: 'bakery', meal_takeaway: 'restaurant', fast_food_restaurant: 'fastFood',
+  pharmacy: 'pharmacy', drugstore: 'pharmacy', hospital: 'hospital', medical_clinic: 'clinic',
+  shopping_mall: 'mall', department_store: 'mall', mosque: 'mosque', place_of_worship: 'worship', atm: 'atm', bank: 'bank',
+};
+
 /** Thumbnails per chip: the nearest few get one, the rest show the icon. */
 const MAX_PHOTOS = 6;
 
@@ -200,6 +201,11 @@ export default function UnitGoogleMap({
 }) {
   const t = useTranslations('unit.nearby');
   const tUnit = useTranslations('unit');
+  /** Our own words for Google's primaryType; the chip's label when we have none. */
+  const typeLabel = (type: string | null, cat: NearbyCategory) => {
+    const k = type && (PRIMARY_TYPE_LABEL[type] ?? (type.endsWith('_restaurant') ? 'restaurant' : null));
+    return k ? t(`types.${k}`) : t(`categories.${cat}`);
+  };
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const overlays = useRef<google.maps.OverlayView[]>([]);
@@ -309,7 +315,8 @@ export default function UnitGoogleMap({
   const search = useCallback(async (cat: NearbyCategory) => {
     setCategory(cat);
     setSelected(null);
-    const key = `${unitId}:${cat}`;
+    // Per language: names come back in the page's language when Google has them.
+    const key = `${locale}:${unitId}:${cat}`;
     const hit = cache.get(key);
     if (hit) { setPlaces(hit); setLoaded((l) => ({ ...l, [cat]: hit })); setStatus('idle'); return; }
     setStatus('loading');
@@ -331,7 +338,10 @@ export default function UnitGoogleMap({
         const pos = { lat: loc.lat(), lng: loc.lng() };
         return [{
           id: p.id,
+          // Google's name in the requested language when it has one, else the
+          // local name as it is — never machine-translated.
           name: p.displayName,
+          type: p.primaryType ?? null,
           lat: pos.lat,
           lng: pos.lng,
           metres: metresBetween({ lat: latitude, lng: longitude }, pos),
@@ -459,7 +469,7 @@ export default function UnitGoogleMap({
                       <LazyThumb src={p.photo} cat={cat} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-ink"><bdi>{p.name}</bdi></span>
-                        <span className="block text-xs text-mute">{t(`categories.${cat}`)}</span>
+                        <span className="block text-xs text-mute">{typeLabel(p.type, cat)}</span>
                       </span>
                       <span className="shrink-0 text-end text-xs text-ink-soft tabular-nums">
                         <bdi>{t('km', { km: km(p.metres) })}</bdi>

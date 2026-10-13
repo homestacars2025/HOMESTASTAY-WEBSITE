@@ -170,7 +170,7 @@
         "clearArea": "Harita alanını temizle",
         "notShown": "{count} yer haritada gösterilmiyor",
         "sleeps": "{count} kişilik",
-        "close": "Kapat"
+        "fromPin": "{price}+"
       }
     },
     "destinations": {
@@ -681,7 +681,29 @@
       "error": "Harita şu anda yüklenemedi.",
       "loading": "Yakında aranıyor…",
       "searchError": "Yakındaki yerler şu anda yüklenemedi.",
-      "stayArea": "Konaklamanız bu bölgede"
+      "stayArea": "Konaklamanız bu bölgede",
+      "types": {
+        "supermarket": "Süpermarket",
+        "grocery": "Bakkal",
+        "convenience": "Market",
+        "subway": "Metro istasyonu",
+        "lightRail": "Tramvay",
+        "train": "Tren istasyonu",
+        "transit": "Durak",
+        "bus": "Otobüs terminali",
+        "restaurant": "Restoran",
+        "cafe": "Kafe",
+        "bakery": "Fırın",
+        "fastFood": "Fast food",
+        "pharmacy": "Eczane",
+        "hospital": "Hastane",
+        "clinic": "Klinik",
+        "mall": "AVM",
+        "mosque": "Cami",
+        "worship": "İbadethane",
+        "atm": "ATM",
+        "bank": "Banka"
+      }
     },
     "partOf": "<b>{hotel}</b> bünyesinde"
   },

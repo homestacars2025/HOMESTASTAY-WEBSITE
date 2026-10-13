@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { ChevronDown } from 'lucide-react';
-import { Link, usePathname } from '@/i18n/navigation';
+import { getPathname, usePathname } from '@/i18n/navigation';
 import type { Locale } from '@/i18n/routing';
 
 const LOCALES: { code: Locale; label: string; native: string }[] = [
@@ -49,10 +49,13 @@ export function LanguageSwitcher() {
           className="absolute bottom-full end-0 mb-1.5 md:top-full md:bottom-auto md:mt-1.5 md:mb-0 z-50 min-w-[148px] rounded-[14px] border border-rule bg-white shadow-[0_8px_32px_rgba(0,0,0,0.10)] py-1.5 overflow-hidden"
         >
           {LOCALES.map(({ code, native }) => (
-            <Link
+            // A plain link, so switching language is a full page load: Google
+            // Maps fixes its language when its script first loads, and a
+            // client-side switch would keep the maps in the old language.
+            <a
               key={code}
-              href={pathname}
-              locale={code}
+              href={getPathname({ href: pathname, locale: code })}
+              hrefLang={code}
               role="option"
               aria-selected={locale === code}
               onClick={() => setOpen(false)}
@@ -66,7 +69,7 @@ export function LanguageSwitcher() {
               {locale === code && (
                 <span className="w-1.5 h-1.5 rounded-full bg-stay" />
               )}
-            </Link>
+            </a>
           ))}
         </div>
       )}

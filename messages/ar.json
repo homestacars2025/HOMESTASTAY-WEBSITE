@@ -170,7 +170,7 @@
         "clearArea": "إزالة منطقة الخريطة",
         "notShown": "{count, plural, zero {لا أماكن} one {مكان واحد} two {مكانان} few {# أماكن} many {# مكانًا} other {# مكان}} غير معروضة على الخريطة",
         "sleeps": "تتسع لـ {count}",
-        "close": "إغلاق"
+        "fromPin": "من {price}"
       }
     },
     "destinations": {
@@ -681,7 +681,29 @@
       "error": "تعذّر تحميل الخريطة الآن.",
       "loading": "نبحث بالقرب…",
       "searchError": "تعذّر تحميل الأماكن القريبة الآن.",
-      "stayArea": "إقامتك في هذه المنطقة"
+      "stayArea": "إقامتك في هذه المنطقة",
+      "types": {
+        "supermarket": "سوبرماركت",
+        "grocery": "بقالة",
+        "convenience": "متجر صغير",
+        "subway": "محطة مترو",
+        "lightRail": "ترام",
+        "train": "محطة قطار",
+        "transit": "محطة مواصلات",
+        "bus": "محطة حافلات",
+        "restaurant": "مطعم",
+        "cafe": "مقهى",
+        "bakery": "مخبز",
+        "fastFood": "وجبات سريعة",
+        "pharmacy": "صيدلية",
+        "hospital": "مستشفى",
+        "clinic": "عيادة",
+        "mall": "مول",
+        "mosque": "مسجد",
+        "worship": "دار عبادة",
+        "atm": "صراف آلي",
+        "bank": "بنك"
+      }
     },
     "partOf": "جزء من <b>{hotel}</b>"
   },
