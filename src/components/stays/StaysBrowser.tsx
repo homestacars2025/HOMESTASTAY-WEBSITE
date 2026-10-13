@@ -25,7 +25,8 @@ const StaysMap = dynamic(() => import('./StaysMap'), {
 const PAGE_SIZE = 24;
 /** Cards in the first row on the widest grid — loaded eagerly as LCP. */
 const EAGER = 4;
-const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+// The map needs both the key and our cloud Map ID (advanced markers require it).
+const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID ? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '' : '';
 
 interface StaysBrowserProps {
   /** Every unit matching the search (category NOT applied), in sort order. */

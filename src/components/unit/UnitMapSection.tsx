@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+// Advanced markers (our badge and pins) need the cloud Map ID; no ID, no map.
+const GOOGLE_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID;
 
 /** The same footprint as the loaded map + chips, so nothing shifts when it arrives. */
 function Placeholder() {
@@ -48,7 +50,7 @@ export function UnitMapSection({
     return () => io.disconnect();
   }, [near]);
 
-  if (latitude == null || longitude == null || !GOOGLE_MAPS_KEY) return null;
+  if (latitude == null || longitude == null || !GOOGLE_MAPS_KEY || !GOOGLE_MAP_ID) return null;
 
   return (
     <div ref={box}>

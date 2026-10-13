@@ -1,17 +1,19 @@
 /**
- * The base-map style for every Google map on the site (unit page, hotel page,
- * /stays map) — one definition, so they cannot drift.
+ * The site's map style is a cloud-based Google Map ID ("Homesta": light,
+ * muted, hotels / restaurants / cafes hidden) — edited in the Google Cloud
+ * console, not in code. Every Google map passes it as mapId; a local `styles`
+ * array would conflict with it. AdvancedMarkerElement (our pins) requires it,
+ * so without it the maps are not shown at all.
  */
+export const GOOGLE_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID ?? '';
+
 /**
- * Clean, light base map. poi.business is OFF — hotels and every shop,
- * restaurant and brand — so a competitor never appears on our listing.
- * Transit, parks, places of worship, landmarks, hospitals and street names
- * stay. (A styles array, not a cloud Map ID: no Map ID is configured, and a
- * Map ID would ignore this array.)
+ * A marker's HTML element, anchored at its CENTRE (AdvancedMarkerElement
+ * anchors the bottom-centre by default — right for a pin tip, wrong for a
+ * round badge that marks an area). Optional pixel offset (fan-out).
  */
-export const LIGHT_STYLE: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ saturation: -35 }, { lightness: 8 }] },
-  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ saturation: -60 }, { lightness: 20 }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ saturation: -20 }, { lightness: 15 }] },
-];
+export function centredContent(dx = 0, dy = 0): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.transform = `translate(${dx}px, calc(50% + ${dy}px))`;
+  return el;
+}

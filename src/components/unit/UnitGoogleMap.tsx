@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { loadGoogleMaps } from '@/lib/maps/google';
-import { LIGHT_STYLE } from '@/lib/maps/google-style';
+import { GOOGLE_MAP_ID, centredContent } from '@/lib/maps/google-style';
 import { APPROX_RADIUS_M } from '@/lib/geo/blur-constants';
 import { BrandMark } from '@/components/brand/BrandMark';
 
@@ -85,30 +85,6 @@ const SEARCH_RADIUS_M = 1000;
 
 
 
-/** An HTML element on the map, centred on a point (React renders into `el`). */
-type HtmlOverlay = google.maps.OverlayView & { el: HTMLDivElement };
-let HtmlOverlayClass: (new (pos: google.maps.LatLngLiteral, z: number) => HtmlOverlay) | null = null;
-function htmlOverlay(pos: google.maps.LatLngLiteral, z = 1): HtmlOverlay {
-  if (!HtmlOverlayClass) {
-    HtmlOverlayClass = class extends google.maps.OverlayView {
-      el: HTMLDivElement;
-      constructor(private pos: google.maps.LatLngLiteral, z: number) {
-        super();
-        this.el = document.createElement('div');
-        this.el.style.position = 'absolute';
-        this.el.style.transform = 'translate(-50%, -50%)'; // centred, not a pin tip
-        this.el.style.zIndex = String(z);
-      }
-      onAdd() { this.getPanes()?.overlayMouseTarget.appendChild(this.el); }
-      draw() {
-        const p = this.getProjection()?.fromLatLngToDivPixel(this.pos);
-        if (p) { this.el.style.left = `${p.x}px`; this.el.style.top = `${p.y}px`; }
-      }
-      onRemove() { this.el.remove(); }
-    };
-  }
-  return new HtmlOverlayClass(pos, z);
-}
 
 /** Keys whose 3D icon file is missing — asked once per page, then the line icon. */
 const missingIcons = new Set<NearbyCategory>();
@@ -208,7 +184,7 @@ export default function UnitGoogleMap({
   };
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const overlays = useRef<google.maps.OverlayView[]>([]);
+  const markers = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [satellite, setSatellite] = useState(false);
@@ -234,13 +210,17 @@ export default function UnitGoogleMap({
     (async () => {
       try {
         await loadGoogleMaps(apiKey, locale);
-        const { Map, Circle } = (await google.maps.importLibrary('maps')) as google.maps.MapsLibrary;
+        const [{ Map, Circle }, { AdvancedMarkerElement }] = await Promise.all([
+          google.maps.importLibrary('maps') as Promise<google.maps.MapsLibrary>,
+          google.maps.importLibrary('marker') as Promise<google.maps.MarkerLibrary>,
+        ]);
         if (cancelled || !box.current) return;
         const map = new Map(box.current, {
           center: { lat: latitude, lng: longitude },
           zoom: START_ZOOM,
           maxZoom: MAX_ZOOM,
-          styles: LIGHT_STYLE,
+          // Our cloud style (see lib/maps/google-style) — no local styles array.
+          mapId: GOOGLE_MAP_ID,
           disableDefaultUI: true,
           zoomControl: true,
           zoomControlOptions: { position: rtl ? google.maps.ControlPosition.LEFT_BOTTOM : google.maps.ControlPosition.RIGHT_BOTTOM },
@@ -272,9 +252,9 @@ export default function UnitGoogleMap({
           if (window.matchMedia('(hover: hover)').matches) map.setOptions({ gestureHandling: 'greedy' });
         });
         // Our badge, centred on the blurred point, above the circle.
-        const stay = htmlOverlay({ lat: latitude, lng: longitude }, 2);
-        stay.setMap(map);
-        setStayHost(stay.el);
+        const stayEl = centredContent();
+        new AdvancedMarkerElement({ map, position: { lat: latitude, lng: longitude }, content: stayEl, zIndex: 2 });
+        setStayHost(stayEl);
         mapRef.current = map;
         setReady(true);
       } catch {
@@ -293,15 +273,15 @@ export default function UnitGoogleMap({
   // ── Nearby markers: an HTML overlay per result, rendered by React (portal) ─
   useEffect(() => {
     const map = mapRef.current;
-    for (const o of overlays.current) o.setMap(null);
-    overlays.current = [];
+    for (const m of markers.current) m.map = null;
+    markers.current = [];
     if (!map || !places.length) { setPinHosts([]); return; }
 
     const hosts = places.map((p) => {
-      const o = htmlOverlay({ lat: p.lat, lng: p.lng }, 1);
-      o.setMap(map);
-      overlays.current.push(o);
-      return { id: p.id, el: o.el };
+      const el = centredContent();
+      const m = new google.maps.marker.AdvancedMarkerElement({ map, position: { lat: p.lat, lng: p.lng }, content: el, zIndex: 1 });
+      markers.current.push(m);
+      return { id: p.id, el };
     });
     setPinHosts(hosts);
 

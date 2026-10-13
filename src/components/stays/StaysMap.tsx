@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Link, useRouter } from '@/i18n/navigation';
 import { SmartImage } from '@/components/media/SmartImage';
 import { loadGoogleMaps } from '@/lib/maps/google';
-import { LIGHT_STYLE } from '@/lib/maps/google-style';
+import { GOOGLE_MAP_ID } from '@/lib/maps/google-style';
 
 /**
  * The /stays results on a Google map — the SAME list the grid shows
@@ -21,9 +21,10 @@ import { LIGHT_STYLE } from '@/lib/maps/google-style';
  *   • phone: tap a pin → the card slides up at the bottom; tap it to open,
  *     tap the map to close
  *
- * PERFORMANCE: all pins live in ONE OverlayView container. Panning moves the
- * overlay pane as a whole (no per-pin work per frame); positions are computed
- * once per zoom/redraw and written straight to the DOM (no React re-render).
+ * PINS: one AdvancedMarkerElement per unit, its HTML content rendered by
+ * React through a portal — Google positions them natively (GPU-composited
+ * on the vector map), so panning costs no work of ours per frame. The map is
+ * styled by our cloud Map ID ("Homesta"), which advanced markers require.
  *
  * PRIVACY: every point is the blurred, 4-decimal position computed on the
  * server (StayCard.geo). No exact coordinate reaches the browser.
@@ -67,8 +68,6 @@ interface StaysMapProps {
 const MAX_ZOOM = 16;
 /** Pins closer than this (metres) are one spot: they fan out. */
 const SAME_SPOT_M = 25;
-
-type Point = { lat: number; lng: number; dx: number; dy: number };
 
 function metres(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const dy = (a.lat - b.lat) * 111_320;
@@ -119,49 +118,13 @@ function coreBounds(units: MapUnit[]): google.maps.LatLngBounds | null {
   return b;
 }
 
-/** One overlay holding every pin; positions written to the DOM in draw(). */
-interface PinLayer extends google.maps.OverlayView {
-  container: HTMLDivElement;
-  setPoints(points: Map<string, Point>): void;
-  register(id: string, el: HTMLElement | null): void;
-}
-
-function createPinLayer(): PinLayer {
-  class Layer extends google.maps.OverlayView {
-    container = document.createElement('div');
-    private points = new Map<string, Point>();
-    private els = new Map<string, HTMLElement>();
-    constructor() {
-      super();
-      this.container.style.position = 'absolute';
-      this.container.style.left = '0';
-      this.container.style.top = '0';
-      // Clicks and drags that start on a pin are the pin's, not the map's.
-      google.maps.OverlayView.preventMapHitsAndGesturesFrom(this.container);
-    }
-    onAdd() { this.getPanes()?.overlayMouseTarget.appendChild(this.container); }
-    onRemove() { this.container.remove(); }
-    setPoints(points: Map<string, Point>) { this.points = points; this.draw(); }
-    register(id: string, el: HTMLElement | null) {
-      if (el) { this.els.set(id, el); this.place(id, el); } else this.els.delete(id);
-    }
-    private place(id: string, el: HTMLElement) {
-      const proj = this.getProjection();
-      const p = this.points.get(id);
-      if (!proj || !p) return;
-      const px = proj.fromLatLngToDivPixel(new google.maps.LatLng(p.lat, p.lng));
-      if (px) el.style.transform = `translate(${px.x + p.dx}px, ${px.y + p.dy}px) translate(-50%, -50%)`;
-    }
-    draw() { for (const [id, el] of this.els) this.place(id, el); }
-  }
-  return new Layer() as unknown as PinLayer;
-}
-
 export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onActive, onUserMove, labels }: StaysMapProps) {
   const router = useRouter();
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const layerRef = useRef<PinLayer | null>(null);
+  const markers = useRef(new globalThis.Map<string, { marker: google.maps.marker.AdvancedMarkerElement; el: HTMLDivElement }>());
+  const [hosts, setHosts] = useState<{ id: string; el: HTMLDivElement }[]>([]);
+  const lastPinTap = useRef(0);
   const [ready, setReady] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [tapId, setTapId] = useState<string | null>(null);
@@ -181,21 +144,23 @@ export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onAc
     let cancelled = false;
     (async () => {
       await loadGoogleMaps(apiKey, locale);
-      const { Map } = (await google.maps.importLibrary('maps')) as google.maps.MapsLibrary;
+      const [{ Map }] = await Promise.all([
+        google.maps.importLibrary('maps') as Promise<google.maps.MapsLibrary>,
+        google.maps.importLibrary('marker') as Promise<google.maps.MarkerLibrary>,
+      ]);
       if (cancelled || !box.current) return;
       const map = new Map(box.current, {
         center: { lat: 39.5, lng: 32 },
         zoom: 6,
         maxZoom: MAX_ZOOM,
-        styles: LIGHT_STYLE,
+        // Our cloud style (see lib/maps/google-style) — no local styles array.
+        mapId: GOOGLE_MAP_ID,
         disableDefaultUI: true,
         zoomControl: true,
         zoomControlOptions: { position: rtl ? google.maps.ControlPosition.LEFT_BOTTOM : google.maps.ControlPosition.RIGHT_BOTTOM },
         gestureHandling: 'greedy',
         clickableIcons: false,
       });
-      const layer = createPinLayer();
-      layer.setMap(map);
       map.addListener('dragstart', () => { userMoved.current = true; });
       map.addListener('zoom_changed', () => { if (!programmatic.current) userMoved.current = true; });
       map.addListener('idle', () => {
@@ -208,23 +173,50 @@ export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onAc
           onUserMoveRef.current([sw.lng(), sw.lat(), ne.lng(), ne.lat()]);
         }
       });
-      // A tap on the map (not on a pin) closes the phone card.
-      map.addListener('click', () => setTapId(null));
+      // A tap on the map (not on a pin) closes the phone card. A pin tap can
+      // bubble to the map as well, so a map click right after one is ignored.
+      map.addListener('click', () => { if (Date.now() - lastPinTap.current > 400) setTapId(null); });
       mapRef.current = map;
-      layerRef.current = layer;
       setReady(true);
     })().catch(() => { /* the list still works without the map */ });
-    return () => { cancelled = true; layerRef.current?.setMap(null); };
+    const current = markers.current;
+    return () => { cancelled = true; for (const { marker } of current.values()) marker.map = null; current.clear(); };
     // The key and language are fixed for the page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Points (with the fan-out offsets) ────────────────────────────────────
+  // ── Markers: one per unit, created / moved / removed as the list changes ─
   useLayoutEffect(() => {
-    if (!ready) return;
+    const map = mapRef.current;
+    if (!ready || !map) return;
     const offsets = spreadOffsets(units);
-    layerRef.current?.setPoints(new Map(units.map((u) => [u.id, { lat: u.lat, lng: u.lng, ...(offsets.get(u.id) ?? { dx: 0, dy: 0 }) }])));
+    const keep = new Set(units.map((u) => u.id));
+    for (const [id, { marker }] of markers.current) {
+      if (!keep.has(id)) { marker.map = null; markers.current.delete(id); }
+    }
+    for (const u of units) {
+      const { dx, dy } = offsets.get(u.id) ?? { dx: 0, dy: 0 };
+      let entry = markers.current.get(u.id);
+      if (!entry) {
+        const el = document.createElement('div');
+        const marker = new google.maps.marker.AdvancedMarkerElement({ map, content: el, position: { lat: u.lat, lng: u.lng }, zIndex: 1 });
+        entry = { marker, el };
+        markers.current.set(u.id, entry);
+      } else {
+        entry.marker.position = { lat: u.lat, lng: u.lng };
+      }
+      // Centred on the point (not bottom-anchored), plus the fan-out offset.
+      entry.el.style.transform = `translate(${dx}px, calc(50% + ${dy}px))`;
+    }
+    setHosts(units.map((u) => ({ id: u.id, el: markers.current.get(u.id)!.el })));
   }, [units, ready]);
+
+  // The hovered / tapped / list-highlighted pin is drawn on top.
+  useEffect(() => {
+    for (const [id, { marker }] of markers.current) {
+      marker.zIndex = id === hoverId || id === tapId || id === activeId ? 1000 : 1;
+    }
+  }, [hoverId, tapId, activeId, hosts]);
 
   // ── Fit to the pins when the result set changes (not when the guest moves) ─
   const lastFit = useRef<string | null>(null);
@@ -256,8 +248,9 @@ export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onAc
   }, [onActive]);
 
   function pinClick(u: MapUnit) {
-    if (canHover) router.push(u.href as '/stays');
-    else setTapId((cur) => (cur === u.id ? null : u.id));
+    if (canHover) { router.push(u.href as '/stays'); return; }
+    lastPinTap.current = Date.now();
+    setTapId((cur) => (cur === u.id ? null : u.id));
   }
 
   const pinText = (u: MapUnit) => (u.price ? (u.from ? labels.from(u.price) : u.price) : '•');
@@ -292,42 +285,38 @@ export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onAc
     <div className="relative h-full w-full">
       <div ref={box} className="absolute inset-0" />
 
-      {ready && layerRef.current && createPortal(
-        <>
-          {units.map((u) => {
-            const on = u.id === hoverId || u.id === tapId || u.id === activeId;
-            return (
-              <div
-                key={u.id}
-                ref={(el) => layerRef.current?.register(u.id, el)}
-                className="absolute left-0 top-0"
-                style={{ zIndex: on ? 1000 : 1 }}
-                onMouseEnter={canHover ? () => hoverIn(u.id) : undefined}
-                onMouseLeave={canHover ? hoverOut : undefined}
-              >
-                <button
-                  type="button"
-                  onClick={() => pinClick(u)}
-                  aria-label={`${u.title}${u.price ? ` · ${pinText(u)}` : ''}`}
-                  className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums shadow-[0_2px_8px_rgba(0,0,0,0.18)] ring-1 transition-[background-color,color,transform] duration-[240ms] ${
-                    on ? 'scale-110 bg-stay text-white ring-stay' : 'bg-white text-ink ring-black/10'
-                  }`}
-                >
-                  {pinText(u)}
-                </button>
-                {/* Desktop: the card above the hovered pin. Its padding is the
-                    bridge the mouse crosses without the card closing. */}
-                {canHover && u.id === hoverId && (
-                  <div className="absolute bottom-full start-1/2 -translate-x-1/2 rtl:translate-x-1/2 pb-2">
-                    {card(u, true)}
-                  </div>
-                )}
+      {hosts.map(({ id, el }) => {
+        const u = byId.get(id);
+        if (!u) return null;
+        const on = u.id === hoverId || u.id === tapId || u.id === activeId;
+        return createPortal(
+          <div
+            className="relative"
+            onMouseEnter={canHover ? () => hoverIn(u.id) : undefined}
+            onMouseLeave={canHover ? hoverOut : undefined}
+          >
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); pinClick(u); }}
+              aria-label={`${u.title}${u.price ? ` · ${pinText(u)}` : ''}`}
+              className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums shadow-[0_2px_8px_rgba(0,0,0,0.18)] ring-1 transition-[background-color,color,transform] duration-[240ms] ${
+                on ? 'scale-110 bg-stay text-white ring-stay' : 'bg-white text-ink ring-black/10'
+              }`}
+            >
+              {pinText(u)}
+            </button>
+            {/* Desktop: the card above the hovered pin. Its padding is the
+                bridge the mouse crosses without the card closing. */}
+            {canHover && u.id === hoverId && (
+              <div className="absolute bottom-full start-1/2 -translate-x-1/2 rtl:translate-x-1/2 pb-2">
+                {card(u, true)}
               </div>
-            );
-          })}
-        </>,
-        layerRef.current.container,
-      )}
+            )}
+          </div>,
+          el,
+          id,
+        );
+      })}
 
       {/* Phone: the tapped unit's card slides up at the bottom. */}
       <div
