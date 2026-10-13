@@ -4,7 +4,6 @@ import { unstable_cache } from 'next/cache';
 import { pickLocalizedName } from '@/lib/geo/localize';
 import { countryNamesByIso, localizedCountryName } from '@/lib/geo/countries';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { approximateCoords } from '@/lib/geo/approximate';
 import {
   AMENITY_FILTERS,
   DEFAULT_SORT,
@@ -62,8 +61,10 @@ const LISTING_SELECT = [
   'allow_full_prepay,allow_deposit,allow_pay_at_arrival',
   // full_address and google_maps_url are deliberately not selected: both pin the
   // exact property, and anything selected here reaches the browser in the RSC
-  // payload. Public surfaces get the blurred point from approximateCoords only.
-  'unit_info!inner(ad_title,ad_description,city,region,municipality,latitude,longitude)',
+  // payload. Public surfaces get public_units_view's blurred point only.
+  // latitude/longitude are NOT selected here: unit_info's are exact (and not
+  // readable by anon). The public, blurred point comes from viewPoints.
+  'unit_info!inner(ad_title,ad_description,city,region,municipality)',
   'unit_specifications(bedrooms,beds,bathrooms,max_guests,size_sqm,floor,balconies,kitchens,distance_to_mall,distance_to_transport)',
   'unit_amenities(tv,wifi,air_conditioning,heating,kitchen,dishwasher,washing_machine,hot_water,hair_dryer,iron,extra_bed,parking,elevator,pool,gym,self_check_in)',
   'unit_rules(allow_parties,allow_pets,allow_smoking,quiet_hours_enabled,quiet_hours_from,quiet_hours_to,allow_unregistered_guests,family_friendly,id_required,additional_rules)',
@@ -205,6 +206,31 @@ async function fetchQuotes(
     });
   }
   return map;
+}
+
+/**
+ * Each unit's PUBLIC point — public_units_view.latitude/longitude, blurred in
+ * the database (a stable 40–70 m offset per unit), read with the anon key.
+ * The exact unit_info.latitude/longitude, full_address and google_maps_url
+ * are never read by this site (they are not readable by anon). Published as
+ * is, rounded to 4 decimals (~11 m): at most ~76 m from the home, so the
+ * 80 m circle drawn around it (APPROX_RADIUS_M) always contains it.
+ */
+async function viewPoints(unitIds?: string[]): Promise<Map<string, { lat: number; lng: number }>> {
+  let q = createPublicClient()
+    .from('public_units_view')
+    .select('id,latitude,longitude')
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null);
+  if (unitIds) q = q.in('id', unitIds);
+  const { data, error } = await q;
+  if (error) throw new Error(`unit points: ${error.message}`);
+  const r4 = (v: number) => Math.round(v * 10_000) / 10_000;
+  return new Map(
+    ((data ?? []) as RawRow[])
+      .filter((r) => typeof r.latitude === 'number' && typeof r.longitude === 'number')
+      .map((r) => [r.id as string, { lat: r4(r.latitude as number), lng: r4(r.longitude as number) }]),
+  );
 }
 
 /** Read the single row of a one-to-one embed (PostgREST returns [row] or []). */
@@ -420,11 +446,10 @@ function mapRow(
     country_id: countryRow?.id ?? null,
     // Blurred here, at the single point where DB rows become public listings, so
     // no caller can accidentally publish the real address.
-    ...approximateCoords(
-      row.id,
-      typeof info?.latitude === 'number' ? info.latitude : null,
-      typeof info?.longitude === 'number' ? info.longitude : null,
-    ),
+    // The public point (public_units_view, blurred in the database — see
+    // viewPoints), attached to the row by the caller. Never unit_info's.
+    latitude: row.__point?.lat ?? null,
+    longitude: row.__point?.lng ?? null,
 
     specifications,
     amenities,
@@ -645,7 +670,7 @@ export interface StayCard extends UnitCardData {
   category: Category | null;
   /**
    * Where to pin it on the results map: the SAME blurred point the unit page
-   * draws (approximateCoords: 20–50 m off, 4 decimals, server-side) — never the real
+   * draws (public_units_view, blurred in the database, 4 decimals) — never the real
    * address. Null when the unit has no coordinates.
    */
   geo: { lat: number; lng: number } | null;
@@ -675,7 +700,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v4', locale],
+      ['stays-catalogue-v5', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -818,7 +843,7 @@ async function leanCards(
       },
       long_stay_min: c.longStay ? c.minNights : null,
       category: categoryFor(c.unit_type, c.propertyType),
-      geo: mapPoint(c.id, index.units[c.id]),
+      geo: mapPoint(index.units[c.id]),
       guests: c.maxGuests,
       amenities: AMENITY_FILTERS.filter((a) => c.amenities[a]),
     });
@@ -826,12 +851,10 @@ async function leanCards(
   return cards;
 }
 
-/** The public map point: the unit page's blurred, 4-decimal point — the same one. */
-function mapPoint(id: string, facts: RankingFacts | undefined): StayCard['geo'] {
+/** The public map point — the unit page's own (public_units_view, blurred in the DB). */
+function mapPoint(facts: RankingFacts | undefined): StayCard['geo'] {
   if (!facts || facts.lat === null || facts.lng === null) return null;
-  const p = approximateCoords(id, facts.lat, facts.lng);
-  if (p.latitude === null || p.longitude === null) return null;
-  return { lat: p.latitude, lng: p.longitude };
+  return { lat: facts.lat, lng: facts.lng };
 }
 
 // ── Similar places ───────────────────────────────────────────────────────────
@@ -874,7 +897,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v3', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v4', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -1297,7 +1320,7 @@ export function propertyName(p: PropertySummary, locale: string): string {
 
 /** Per-unit facts the ranking reads that a search query does not carry. */
 export interface RankingFacts {
-  /** Exact coordinates — SERVER ONLY (distances); never sent to a browser. */
+  /** The public, blurred point (public_units_view) — distances and map pins. */
   lat: number | null;
   lng: number | null;
   quality: QualitySignals;
@@ -1360,7 +1383,7 @@ export function districtKey(d: { id: string; name?: string | null; name_en?: str
  */
 export async function getRankingIndex(): Promise<RankingIndex> {
   try {
-    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v4'], { tags: ['units'], revalidate: 600 })();
+    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v6'], { tags: ['units'], revalidate: 600 })();
   } catch (err) {
     console.error('[getRankingIndex]', { message: err instanceof Error ? err.message : String(err) });
     return EMPTY_INDEX;
@@ -1373,7 +1396,7 @@ async function queryRankingIndex(): Promise<RankingIndex> {
     .from('units')
     .select(
       'id,unit_type,property_id,unit_specifications(max_guests),' +
-        'unit_info!inner(ad_title,latitude,longitude),unit_media(count),unit_rules(id),' +
+        'unit_info!inner(ad_title),unit_media(count),unit_rules(id),' +
         // Descriptions are counted, not fetched: only whether one exists matters.
         'unit_translations(count),' +
         'properties!inner(archived_at,geo_cities:city_id(name),geo_districts:district_id(id,name,name_en))',
@@ -1388,9 +1411,10 @@ async function queryRankingIndex(): Promise<RankingIndex> {
   if (error) throw new Error(`ranking index: ${error.message}`);
 
   const rows = ((data ?? []) as RawRow[]).filter(hasAdTitle);
-  const [quotes, effective] = await Promise.all([
+  const [quotes, effective, exact] = await Promise.all([
     fetchQuotes(supabase, rows.map((r) => r.id as string)),
     getEffectiveAmenities(),
+    viewPoints(),
   ]);
 
   const index: RankingIndex = { units: {}, districts: {}, districtIdByKey: {}, cities: {} };
@@ -1410,9 +1434,9 @@ async function queryRankingIndex(): Promise<RankingIndex> {
   };
 
   for (const r of rows) {
-    const info = one<RawRow>(r.unit_info);
-    const lat = typeof info?.latitude === 'number' ? info.latitude : null;
-    const lng = typeof info?.longitude === 'number' ? info.longitude : null;
+    const point = exact.get(r.id as string);
+    const lat = point?.lat ?? null;
+    const lng = point?.lng ?? null;
     const am = effective.get(r.id as string);
     const photos = Number(one<RawRow>(r.unit_media)?.count ?? 0);
     const quote = quotes.get(r.id as string);
@@ -1610,7 +1634,7 @@ export async function getPublicUnitBySlug(
 ): Promise<UnitListing | null> {
   const cached = await unstable_cache(
     () => queryPublicUnitBySlug(slugOrId, locale),
-    ['unit-by-slug-v4', slugOrId, locale],
+    ['unit-by-slug-v6', slugOrId, locale],
     { tags: ['units'], revalidate: 300 },
   )();
   if (cached) return cached;
@@ -1651,12 +1675,14 @@ async function queryPublicUnitBySlug(
 
   // No dates here: the detail page re-quotes live once the guest picks them
   // (see quoteStay). This call yields the representative nightly rate only.
-  const [policies, quotes, countryNames, effective] = await Promise.all([
+  const [policies, quotes, countryNames, effective, exact] = await Promise.all([
     fetchPolicies(supabase, [row.cancellation_policy_id], locale),
     fetchQuotes(supabase, [row.id as string]),
     countryNamesByIso(),
     getEffectiveAmenities(),
+    viewPoints([row.id as string]).catch(() => new Map<string, { lat: number; lng: number }>()),
   ]);
+  row.__point = exact.get(row.id as string) ?? null;
 
   const listing = mapRow(
     row,
@@ -1701,7 +1727,7 @@ export interface HotelPage {
   checkOut: string | null;
   media: UnitMediaItem[];
   services: HotelServiceKey[];
-  /** The first room's BLURRED point (approximateCoords) — never an address. */
+  /** The first room's public point (public_units_view, blurred in the DB) — never an address. */
   point: { lat: number; lng: number } | null;
   rooms: HotelRoom[];
 }
@@ -1784,8 +1810,8 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
   for (const r of rooms) {
     const f = index.units[r.id];
     if (!f || f.lat === null || f.lng === null) continue;
-    const a = approximateCoords(r.id, f.lat, f.lng);
-    if (a.latitude !== null && a.longitude !== null) { point = { lat: a.latitude, lng: a.longitude }; break; }
+    point = { lat: f.lat, lng: f.lng };
+    break;
   }
 
   const time = (v: unknown) => (typeof v === 'string' && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : null);
@@ -1818,7 +1844,7 @@ export async function getHotelPage(
 ): Promise<HotelPage | null> {
   const base = await unstable_cache(
     () => queryHotelBase(slug, locale),
-    ['hotel-page-v3', slug, locale],
+    ['hotel-page-v4', slug, locale],
     { tags: ['units'], revalidate: 600 },
   )().catch((err) => {
     console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });

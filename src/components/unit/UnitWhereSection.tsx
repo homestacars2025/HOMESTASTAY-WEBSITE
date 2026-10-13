@@ -8,7 +8,7 @@ import { UnitMapSection } from './UnitMapSection';
  *
  * Area-level only. The street address and a maps link are withheld until a
  * booking is confirmed and are not even fetched (see LISTING_SELECT); the
- * coordinates here are the blurred point from approximateCoords.
+ * coordinates here are public_units_view's point, blurred in the database.
  */
 export async function UnitWhereSection({
   unitId,

@@ -169,7 +169,7 @@ export default function UnitGoogleMap({
   locale,
 }: {
   unitId: string;
-  /** The BLURRED point (server-side approximateCoords) — never the address. */
+  /** The public point (public_units_view, blurred 40–70 m in the DB) — never the address. */
   latitude: number;
   longitude: number;
   apiKey: string;

@@ -225,7 +225,7 @@ export function itemListSchema(
  *   quote_units RPC, and is the same number the booking card shows.
  *
  * WHY THE COORDINATES ARE THE BLURRED ONES
- *   `unit.latitude/longitude` are already offset 20–50 m and rounded to 4 decimals by approximateCoords
+ *   `unit.latitude/longitude` are public_units_view's point — blurred 40–70 m in the database, rounded to 4 decimals
  *   before they leave the query layer; the exact address is withheld until a
  *   booking is confirmed. This emits the same approximate point the public map
  *   already shows — it never has access to the precise one.

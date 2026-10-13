@@ -31,7 +31,7 @@ export function UnitMapSection({
   locale,
 }: {
   unitId: string;
-  /** The blurred point (approximateCoords) — never the address. */
+  /** The public point (public_units_view, blurred in the DB) — never the address. */
   latitude: number | null;
   longitude: number | null;
   locale: string;
