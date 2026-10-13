@@ -14,7 +14,7 @@ import {
   type StayType,
   type StaysFilters,
 } from '@/lib/stays/filters';
-import { CATEGORY_TYPES, categoryOf, type Category } from '@/lib/stays/categories';
+import { categoryFor, categoryOf, type Category } from '@/lib/stays/categories';
 import { distanceKm, rankUnits, type QualitySignals, type RankRequest } from '@/lib/stays/ranking';
 import type {
   UnitCardData,
@@ -23,12 +23,14 @@ import type {
   UnitPricing,
   UnitSpecifications,
   UnitAmenities,
+  HotelServiceKey,
   UnitRules,
   UnitCancellationPolicy,
   UnitTypeEnum,
   UnitStyleEnum,
   BusinessModelEnum,
 } from '@/lib/types/unit';
+import { HOTEL_SERVICE_KEYS } from '@/lib/types/unit';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public listing queries — guest-facing /stays index and /stays/[id] detail.
@@ -54,7 +56,7 @@ const LISTING_SELECT = [
   // base_nightly_price is deliberately NOT selected — it is a deprecated cache
   // of cost x (1 + commission) and goes stale whenever the owner changes a
   // commission. Prices come from the quote_units RPC instead (see fetchQuotes).
-  'id,slug,unit_type,unit_name,status,unit_style,business_model,min_nights,currency,cancellation_policy_id',
+  'id,slug,property_id,unit_type,unit_name,status,unit_style,business_model,min_nights,currency,cancellation_policy_id',
   // Payment terms the owner set. Customer-facing (they decide what the guest
   // is asked to pay now), and granted to anon — no cost or commission here.
   'allow_full_prepay,allow_deposit,allow_pay_at_arrival',
@@ -388,6 +390,7 @@ function mapRow(
 
   return {
     id: row.id,
+    property_id: (row.property_id as string) ?? null,
     unit_type: (row.unit_type ?? 'other') as UnitTypeEnum,
     unit_name: row.unit_name ?? null,
     slug: row.slug ?? null,
@@ -588,34 +591,6 @@ const ZERO_AMENITY_COUNTS = Object.fromEntries(
   AMENITY_FILTERS.map((a) => [a, 0]),
 ) as Record<AmenityFilter, number>;
 
-const EMPTY_PAGE: StaysPage = { units: [], total: 0, amenityCounts: ZERO_AMENITY_COUNTS };
-
-/**
- * Public listing.
- *
- * The UNFILTERED first page is cached and tagged 'units' — it is identical for
- * every visitor and is the transcontinental query we most want to skip. Any
- * filter (city / guests / DATES / price / amenities / sort) goes straight to
- * the DB: availability MUST be live, or a guest could be shown a unit that is
- * already booked. So only the plain /stays index is cached; every search is fresh.
- */
-export async function getPublicUnits(
-  locale: string = SOURCE_LOCALE,
-  filters: StaysFilters = {},
-  page = 1,
-  pageSize = LISTING_PAGE_SIZE,
-): Promise<StaysPage> {
-  const unfiltered = Object.values(filters).every((v) => v === undefined);
-
-  if (unfiltered && page === 1 && pageSize === LISTING_PAGE_SIZE) {
-    return unstable_cache(
-      () => queryPublicUnits(locale, {}, 1, LISTING_PAGE_SIZE),
-      ['stays-unfiltered-v4', locale],
-      { tags: ['units'], revalidate: 600 },
-    )();
-  }
-  return queryPublicUnits(locale, filters, page, pageSize);
-}
 
 /** One row of the narrow candidate query — enough to filter, count, rank and sort. */
 interface Candidate {
@@ -628,6 +603,8 @@ interface Candidate {
   maxGuests: number | null;
   minNights: number;
   propertyId: string | null;
+  /** properties.property_type — hotel/resort units are Hotels whatever their type. */
+  propertyType: string | null;
   districtId: string | null;
   /** geo_cities.name — the canonical city, for "nearby cities" suggestions. */
   city: string | null;
@@ -660,68 +637,6 @@ function comparablePrice(quote: UnitPricing | undefined): number | null {
   if (!quote) return null;
   if (quote.total_usd !== null && quote.nights) return quote.total_usd / quote.nights;
   return quote.nightly_usd;
-}
-
-/**
- * The listing, in five steps:
- *
- *   1. Dates → the ids of units blocked for the stay (fail closed).
- *   2. District → its id, from the cached catalogue facets.
- *   3. ONE narrow query over the whole visible catalogue with every structural
- *      filter applied in the database: city, district, type, guests,
- *      min_nights, amenities (inner join on unit_amenities, each column = true)
- *      and not-blocked. Filtering here — not over a loaded page, which is what
- *      the app does with its 100 rows — is what makes the counts and the
- *      results exact across all ~260 units.
- *   4. Live prices from quote_units when the price filter or a price sort
- *      needs them; then sort with an id tiebreak, then page.
- *   5. Full card rows for that page's ids only.
- *
- * No precise location leaves this function: the candidate query selects no
- * coordinates at all, and the cards use CARD_SELECT (no address, no maps URL,
- * no lat/long).
- */
-async function queryPublicUnits(
-  locale: string = SOURCE_LOCALE,
-  filters: StaysFilters = {},
-  page = 1,
-  pageSize = LISTING_PAGE_SIZE,
-): Promise<StaysPage> {
-  const supabase = createPublicClient();
-  const resolved = await resolveCandidates(supabase, filters);
-  if (!resolved) return EMPTY_PAGE;
-
-  const { candidates, quotes, amenityCounts } = resolved;
-  const total = candidates.length;
-  const pageIds = candidates
-    .slice((page - 1) * pageSize, page * pageSize)
-    .map((c) => c.id);
-  if (pageIds.length === 0) return { units: [], total, amenityCounts };
-
-  // 5 ── Cards for this page only.
-  let cardQuery = supabase.from('units').select(CARD_SELECT).in('id', pageIds);
-  cardQuery = cardTrims(cardQuery, locale);
-  const { data: cards, error: cardError } = await cardQuery;
-
-  if (cardError) {
-    console.error('[getPublicUnits] cards', {
-      message: cardError.message,
-      code: cardError.code,
-      details: cardError.details,
-      hint: cardError.hint,
-    });
-    return EMPTY_PAGE;
-  }
-
-  const order = new Map(pageIds.map((id, i) => [id, i]));
-  const rows = ((cards ?? []) as RawRow[]).sort(
-    (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
-  );
-
-  const longStay = new Map(candidates.map((c) => [c.id, c.longStay ? c.minNights : null]));
-  const units = (await mapCardRows(supabase, rows, locale, filters.checkIn, filters.checkOut, quotes))
-    .map((u) => ({ ...u, long_stay_min: longStay.get(u.id) ?? null }));
-  return { units, total, amenityCounts };
 }
 
 /** One /stays card plus what the client needs to filter and count it. */
@@ -760,7 +675,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v3', locale],
+      ['stays-catalogue-v4', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -771,7 +686,74 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
   const supabase = createPublicClient();
   const resolved = await resolveCandidates(supabase, filters);
   if (!resolved || resolved.candidates.length === 0) return [];
-  return leanCards(supabase, resolved.candidates, locale, filters.checkIn, filters.checkOut, resolved.quotes);
+  const [cards, properties] = await Promise.all([
+    leanCards(supabase, resolved.candidates, locale, filters.checkIn, filters.checkOut, resolved.quotes),
+    getPropertyIndex(),
+  ]);
+  return groupByProperty(cards, resolved.candidates, properties, locale);
+}
+
+/**
+ * Hotels and resorts with more than 2 live units (show_as_property) become ONE
+ * card each. Only the units that matched the search are inside it; the card
+ * takes the place of its best-ranked unit (the first in the sorted list), its
+ * price is the cheapest of them ("from $X / night"), and it counts them
+ * ("N room types"). Every other unit stays its own card, exactly as before.
+ */
+function groupByProperty(
+  cards: StayCard[],
+  candidates: Candidate[],
+  properties: Record<string, PropertySummary>,
+  locale: string,
+): StayCard[] {
+  const propertyOf = new Map(candidates.map((c) => [c.id, c.propertyId]));
+  const groups = new Map<string, StayCard[]>();
+  const out: (StayCard | { group: string })[] = [];
+  for (const card of cards) {
+    const pid = propertyOf.get(card.id);
+    const p = pid ? properties[pid] : undefined;
+    if (!p?.showAsProperty) { out.push(card); continue; }
+    if (!groups.has(p.id)) { groups.set(p.id, []); out.push({ group: p.id }); }
+    groups.get(p.id)!.push(card);
+  }
+  if (!groups.size) return cards;
+
+  const perNight = (c: StayCard) =>
+    c.pricing.total_usd !== null && c.pricing.nights ? c.pricing.total_usd / c.pricing.nights : c.pricing.nightly_usd;
+
+  return out.map((entry) => {
+    if (!('group' in entry)) return entry;
+    const p = properties[entry.group];
+    const members = groups.get(entry.group)!;
+    const best = members[0];
+    const prices = members.map(perNight).filter((v): v is number => v !== null);
+    const from = prices.length ? Math.round(Math.min(...prices) * 100) / 100 : null;
+    const cover = p.coverUrl
+      ? [{ id: `prop-${p.id}`, unit_id: best.id, media_type: 'image', file_path: '', public_url: p.coverUrl, is_cover: true, sort_order: 0 }]
+      : best.media;
+    return {
+      ...best,
+      id: p.id,
+      slug: p.slug,
+      ad_title: propertyName(p, locale),
+      unit_name: null,
+      media: cover,
+      specifications: { bedrooms: null, beds: null, bathrooms: null },
+      pricing: { nightly_usd: from, total_usd: null, nights: best.pricing.nights },
+      allow_deposit: false,
+      allow_pay_at_arrival: false,
+      long_stay_min: null,
+      category: 'hotels' as const,
+      guests: Math.max(0, ...members.map((m) => m.guests ?? 0)) || null,
+      amenities: [...new Set(members.flatMap((m) => m.amenities))],
+      property: {
+        slug: p.slug,
+        type: p.type === 'resort' ? 'resort' : 'hotel',
+        rooms: members.length,
+        bestUnitId: best.id,
+      },
+    } satisfies StayCard;
+  });
 }
 
 /**
@@ -835,7 +817,7 @@ async function leanCards(
         bathrooms: u.specifications.bathrooms,
       },
       long_stay_min: c.longStay ? c.minNights : null,
-      category: categoryOf(c.unit_type),
+      category: categoryFor(c.unit_type, c.propertyType),
       geo: mapPoint(c.id, index.units[c.id]),
       guests: c.maxGuests,
       amenities: AMENITY_FILTERS.filter((a) => c.amenities[a]),
@@ -1015,8 +997,8 @@ async function resolveCandidates(
   amenityCounts: Record<AmenityFilter, number>;
 } | null> {
   const { city, district, area, guests, checkIn, checkOut, priceMin, priceMax } = filters;
-  // The category chip is a set of unit types (see lib/stays/categories).
-  const types = filters.category ? CATEGORY_TYPES[filters.category] : undefined;
+  // The category chip (see lib/stays/categories) is applied in code below:
+  // it depends on the property's type as well as the unit's.
   const amenities = filters.amenities ?? [];
   const sort: SortKey = filters.sort ?? DEFAULT_SORT;
   const wantsAvailability = !!checkIn && !!checkOut;
@@ -1025,13 +1007,14 @@ async function resolveCandidates(
 
   // 3 ── Candidates. Embeds are made INNER exactly when they filter the parent;
   // without !inner PostgREST nulls the embed and the filter silently does
-  // nothing. unit_amenities is always selected (for the counts) but only inner
-  // when an amenity is required.
+  // nothing. Amenities are NOT embedded: they come from
+  // unit_amenities_effective (the unit's own OR its property's), which has no
+  // foreign key to embed through — read beside this query (cached) and
+  // applied in code.
   const select = [
     'id,created_at,unit_type,min_nights,property_id',
     'unit_info!inner(ad_title)',
-    `properties!inner(archived_at,district_id,geo_cities:city_id${city ? '!inner' : ''}(name))`,
-    `unit_amenities${amenities.length ? '!inner' : ''}(${AMENITY_FILTERS.join(',')})`,
+    `properties!inner(archived_at,district_id,property_type,geo_cities:city_id${city ? '!inner' : ''}(name))`,
     `unit_specifications${guests ? '!inner' : ''}(max_guests)`,
   ].join(',');
 
@@ -1047,9 +1030,7 @@ async function resolveCandidates(
   // dropdown and the unit card both read. unit_info.city is free text and
   // disagrees with it (casing, and at least one unit filed under the wrong city).
   if (city) query = query.ilike('properties.geo_cities.name', likeLiteral(city));
-  if (types?.length) query = query.in('unit_type', [...types]);
   if (guests) query = query.gte('unit_specifications.max_guests', guests);
-  for (const a of amenities) query = query.is(`unit_amenities.${a}`, true);
   if (wantsAvailability) {
     // A unit whose minimum stay is longer than the search cannot be booked for
     // it, so it is not a result (same as the app). A null min_nights is 1.
@@ -1057,10 +1038,11 @@ async function resolveCandidates(
   }
 
   // 1 + 3 (+ the index) together.
-  const [blocked, { data, error }, index] = await Promise.all([
+  const [blocked, { data, error }, index, effective] = await Promise.all([
     wantsAvailability ? blockedUnitIds(supabase, checkIn, checkOut) : Promise.resolve([] as string[]),
     query,
     needsIndex ? getRankingIndex() : Promise.resolve(EMPTY_INDEX),
+    getEffectiveAmenities(),
   ]);
 
   if (blocked === null) return null; // fail closed — see blockedUnitIds
@@ -1093,7 +1075,7 @@ async function resolveCandidates(
     .filter((row) => !blockedSet.has(row.id as string))
     .filter((row) => !districtId || row.properties?.district_id === districtId)
     .map((row) => {
-      const am = one<RawRow>(row.unit_amenities);
+      const am = effective.get(row.id as string);
       const mg = one<RawRow>(row.unit_specifications)?.max_guests;
       return {
         id: row.id as string,
@@ -1106,10 +1088,15 @@ async function resolveCandidates(
         maxGuests: typeof mg === 'number' ? mg : null,
         minNights: typeof row.min_nights === 'number' && row.min_nights > 0 ? row.min_nights : 1,
         propertyId: (row.property_id as string) ?? null,
+        propertyType: (row.properties?.property_type as string) ?? null,
         districtId: (row.properties?.district_id as string) ?? null,
         city: (row.properties?.geo_cities?.name as string) ?? null,
       };
     });
+
+  // Amenities (every one required) and the category, in code — see above.
+  if (amenities.length) candidates = candidates.filter((c) => amenities.every((a) => c.amenities[a]));
+  if (filters.category) candidates = candidates.filter((c) => categoryFor(c.unit_type, c.propertyType) === filters.category);
 
   // 4 ── Prices, only when something reads them. Every candidate is quoted in
   // one RPC (~260 units in ~0.4s), because a bound or an order over a single
@@ -1208,6 +1195,104 @@ async function resolveCandidates(
   return { candidates, quotes, amenityCounts };
 }
 
+// ── Effective amenities ──────────────────────────────────────────────────────
+
+/** Every column of unit_amenities_effective (the unit's own OR its property's). */
+export const EFFECTIVE_AMENITY_COLUMNS = [
+  'tv', 'wifi', 'air_conditioning', 'heating', 'kitchen', 'dishwasher', 'washing_machine',
+  'hot_water', 'hair_dryer', 'iron', 'extra_bed', 'parking', 'elevator', 'pool', 'gym',
+  'self_check_in', 'breakfast', 'restaurant', 'reception_24h', 'spa', 'airport_shuttle',
+  'room_service', 'beach_access', 'laundry', 'kids_club', 'garden', 'bbq', 'sea_view',
+] as const;
+
+type EffectiveRow = Partial<Record<(typeof EFFECTIVE_AMENITY_COLUMNS)[number], boolean>>;
+
+/**
+ * unit_amenities_effective for every unit — what filters, counts, ranking and
+ * the unit page read instead of unit_amenities, so a hotel's pool or
+ * breakfast counts for each of its rooms. A view with no foreign key to embed
+ * through, so it is read whole (a few hundred small rows), cached and tagged
+ * 'units', and joined in code. Never throws: on failure, no amenities.
+ */
+export async function getEffectiveAmenities(): Promise<Map<string, EffectiveRow>> {
+  try {
+    const rows = await unstable_cache(
+      async () => {
+        const { data, error } = await createPublicClient()
+          .from('unit_amenities_effective')
+          .select(`unit_id,${EFFECTIVE_AMENITY_COLUMNS.join(',')}`);
+        if (error) throw new Error(`effective amenities: ${error.message}`);
+        return (data ?? []) as unknown as (EffectiveRow & { unit_id: string })[];
+      },
+      ['unit-amenities-effective-v1'],
+      { tags: ['units'], revalidate: 600 },
+    )();
+    return new Map(rows.map(({ unit_id, ...rest }) => [unit_id, rest]));
+  } catch (err) {
+    console.error('[getEffectiveAmenities]', { message: err instanceof Error ? err.message : String(err) });
+    return new Map();
+  }
+}
+
+// ── Properties (hotels & resorts) ────────────────────────────────────────────
+
+export interface PropertySummary {
+  id: string;
+  slug: string;
+  name: string;
+  type: string;
+  /** hotel or resort with more than 2 live units — shown as ONE card / page. */
+  showAsProperty: boolean;
+  cityName: string | null;
+  coverUrl: string | null;
+  /** property_translations names, by language. */
+  names: Record<string, string>;
+}
+
+/**
+ * public_properties_view, every property — which units collapse into a hotel
+ * card, and what that card is called. Cached and tagged 'units' (the same
+ * webhook drops it; see /api/revalidate).
+ */
+export async function getPropertyIndex(): Promise<Record<string, PropertySummary>> {
+  try {
+    return await unstable_cache(
+      async () => {
+        const supabase = createPublicClient();
+        const [{ data, error }, { data: tr }] = await Promise.all([
+          supabase.from('public_properties_view').select('id,slug,name,property_type,show_as_property,city_name,cover_url'),
+          supabase.from('property_translations').select('property_id,language_code,name'),
+        ]);
+        if (error) throw new Error(`properties: ${error.message}`);
+        const out: Record<string, PropertySummary> = {};
+        for (const r of (data ?? []) as RawRow[]) {
+          if (!r.id || !r.slug) continue;
+          out[r.id] = {
+            id: r.id, slug: r.slug, name: r.name ?? '', type: String(r.property_type ?? ''),
+            showAsProperty: r.show_as_property === true, cityName: r.city_name ?? null,
+            coverUrl: r.cover_url ?? null, names: {},
+          };
+        }
+        for (const t of (tr ?? []) as RawRow[]) {
+          const p = out[t.property_id];
+          if (p && typeof t.name === 'string' && t.name.trim()) p.names[t.language_code] = t.name.trim();
+        }
+        return out;
+      },
+      ['property-index-v1'],
+      { tags: ['units'], revalidate: 600 },
+    )();
+  } catch (err) {
+    console.error('[getPropertyIndex]', { message: err instanceof Error ? err.message : String(err) });
+    return {};
+  }
+}
+
+/** A property's name in the visitor's language: translation → Turkish → the base name. */
+export function propertyName(p: PropertySummary, locale: string): string {
+  return p.names[locale] || p.names[SOURCE_LOCALE] || p.name;
+}
+
 // ── Ranking index ────────────────────────────────────────────────────────────
 
 /** Per-unit facts the ranking reads that a search query does not carry. */
@@ -1257,7 +1342,6 @@ const NO_QUALITY: QualitySignals = {
 
 const EMPTY_INDEX: RankingIndex = { units: {}, districts: {}, districtIdByKey: {}, cities: {} };
 
-const ALL_AMENITY_COLUMNS = Object.keys(EMPTY_AMENITIES);
 
 /** The ?district= / ?area= key: name_en lowercased (ASCII, so URLs stay clean). */
 export function districtKey(d: { id: string; name?: string | null; name_en?: string | null }): string {
@@ -1276,7 +1360,7 @@ export function districtKey(d: { id: string; name?: string | null; name_en?: str
  */
 export async function getRankingIndex(): Promise<RankingIndex> {
   try {
-    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v3'], { tags: ['units'], revalidate: 600 })();
+    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v4'], { tags: ['units'], revalidate: 600 })();
   } catch (err) {
     console.error('[getRankingIndex]', { message: err instanceof Error ? err.message : String(err) });
     return EMPTY_INDEX;
@@ -1292,7 +1376,6 @@ async function queryRankingIndex(): Promise<RankingIndex> {
         'unit_info!inner(ad_title,latitude,longitude),unit_media(count),unit_rules(id),' +
         // Descriptions are counted, not fetched: only whether one exists matters.
         'unit_translations(count),' +
-        `unit_amenities(${ALL_AMENITY_COLUMNS.join(',')}),` +
         'properties!inner(archived_at,geo_cities:city_id(name),geo_districts:district_id(id,name,name_en))',
     )
     .eq('status', 'available')
@@ -1305,7 +1388,10 @@ async function queryRankingIndex(): Promise<RankingIndex> {
   if (error) throw new Error(`ranking index: ${error.message}`);
 
   const rows = ((data ?? []) as RawRow[]).filter(hasAdTitle);
-  const quotes = await fetchQuotes(supabase, rows.map((r) => r.id as string));
+  const [quotes, effective] = await Promise.all([
+    fetchQuotes(supabase, rows.map((r) => r.id as string)),
+    getEffectiveAmenities(),
+  ]);
 
   const index: RankingIndex = { units: {}, districts: {}, districtIdByKey: {}, cities: {} };
   // Centres are MEDIANS, not means: one unit with a wrong pin (a Sapanca
@@ -1327,7 +1413,7 @@ async function queryRankingIndex(): Promise<RankingIndex> {
     const info = one<RawRow>(r.unit_info);
     const lat = typeof info?.latitude === 'number' ? info.latitude : null;
     const lng = typeof info?.longitude === 'number' ? info.longitude : null;
-    const am = one<RawRow>(r.unit_amenities);
+    const am = effective.get(r.id as string);
     const photos = Number(one<RawRow>(r.unit_media)?.count ?? 0);
     const quote = quotes.get(r.id as string);
 
@@ -1343,7 +1429,7 @@ async function queryRankingIndex(): Promise<RankingIndex> {
       quality: {
         photos,
         hasDescription: Number(one<RawRow>(r.unit_translations)?.count ?? 0) > 0,
-        amenities: am ? ALL_AMENITY_COLUMNS.filter((c) => am[c] === true).length : 0,
+        amenities: am ? EFFECTIVE_AMENITY_COLUMNS.filter((c) => am[c] === true).length : 0,
         hasRules: !!one<RawRow>(r.unit_rules),
         hasPrice: !!quote && quote.nightly_usd !== null,
         realCover: photos > 0,
@@ -1524,7 +1610,7 @@ export async function getPublicUnitBySlug(
 ): Promise<UnitListing | null> {
   const cached = await unstable_cache(
     () => queryPublicUnitBySlug(slugOrId, locale),
-    ['unit-by-slug-v3', slugOrId, locale],
+    ['unit-by-slug-v4', slugOrId, locale],
     { tags: ['units'], revalidate: 300 },
   )();
   if (cached) return cached;
@@ -1565,17 +1651,213 @@ async function queryPublicUnitBySlug(
 
   // No dates here: the detail page re-quotes live once the guest picks them
   // (see quoteStay). This call yields the representative nightly rate only.
-  const [policies, quotes, countryNames] = await Promise.all([
+  const [policies, quotes, countryNames, effective] = await Promise.all([
     fetchPolicies(supabase, [row.cancellation_policy_id], locale),
     fetchQuotes(supabase, [row.id as string]),
     countryNamesByIso(),
+    getEffectiveAmenities(),
   ]);
 
-  return mapRow(
+  const listing = mapRow(
     row,
     policies.get(row.cancellation_policy_id) ?? null,
     locale,
     quotes.get(row.id as string) ?? EMPTY_PRICING,
     countryNames,
   );
+  // The unit's own amenities OR its property's (a hotel's pool, breakfast…).
+  const eff = effective.get(row.id as string);
+  if (eff) listing.amenities = { ...listing.amenities, ...eff } as UnitAmenities;
+  return listing;
+}
+
+// ── Hotel page ───────────────────────────────────────────────────────────────
+
+export interface HotelRoom {
+  id: string;
+  slug: string | null;
+  title: string;
+  cover: string | null;
+  maxGuests: number | null;
+  bedrooms: number | null;
+  beds: number | null;
+  bathrooms: number | null;
+  minNights: number;
+  pricing: UnitPricing;
+  /** null without dates; otherwise why it cannot be booked for them, or 'ok'. */
+  availability: null | 'ok' | 'booked' | 'minNights' | 'guests';
+}
+
+export interface HotelPage {
+  id: string;
+  slug: string;
+  name: string;
+  type: 'hotel' | 'resort';
+  /** geo_cities.name — canonical (links, ?city=). */
+  city: string | null;
+  description: string | null;
+  descriptionLang: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  media: UnitMediaItem[];
+  services: HotelServiceKey[];
+  /** The first room's BLURRED point (approximateCoords) — never an address. */
+  point: { lat: number; lng: number } | null;
+  rooms: HotelRoom[];
+}
+
+/** The static part of a hotel page, cached per hotel + language. */
+async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelPage, 'rooms'> & { rooms: HotelRoom[] } | null> {
+  const supabase = createPublicClient();
+  const { data: p, error } = await supabase
+    .from('public_properties_view')
+    .select('id,slug,name,property_type,description,description_lang,check_in_time,check_out_time,city_name,show_as_property')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (error) throw new Error(`hotel: ${error.message}`);
+  if (!p || p.show_as_property !== true) return null;
+
+  let roomsQuery = supabase
+    .from('units')
+    .select(CARD_SELECT)
+    .eq('property_id', p.id)
+    .eq('status', 'available')
+    .is('archived_at', null)
+    .not('unit_info.ad_title', 'is', null)
+    .is('properties.archived_at', null);
+  roomsQuery = cardTrims(roomsQuery, locale);
+
+  const [{ data: tr }, { data: media }, { data: am }, { data: unitRows, error: unitError }, index] = await Promise.all([
+    supabase.from('property_translations').select('language_code,name,description').eq('property_id', p.id),
+    supabase.from('property_media').select('id,public_url,is_cover,sort_order').eq('property_id', p.id)
+      .order('is_cover', { ascending: false }).order('sort_order', { ascending: true }),
+    supabase.from('property_amenities').select('*').eq('property_id', p.id).maybeSingle(),
+    roomsQuery,
+    getRankingIndex(),
+  ]);
+  if (unitError) throw new Error(`hotel rooms: ${unitError.message}`);
+
+  const rows = ((unitRows ?? []) as RawRow[]).filter(hasAdTitle);
+  const listings = await mapCardRows(supabase, rows, locale, undefined, undefined, undefined, false);
+  const minNightsOf = new Map(rows.map((r) => [r.id as string, typeof r.min_nights === 'number' && r.min_nights > 0 ? r.min_nights : 1]));
+  const maxGuestsOf = new Map(rows.map((r) => [r.id as string, one<RawRow>(r.unit_specifications)?.max_guests ?? null]));
+
+  const rooms: HotelRoom[] = listings
+    .map((u) => ({
+      id: u.id,
+      slug: u.slug,
+      title: u.ad_title ?? u.unit_name ?? '—',
+      cover: (u.media.find((m) => m.is_cover) ?? u.media[0])?.public_url ?? null,
+      maxGuests: (maxGuestsOf.get(u.id) as number | null) ?? null,
+      bedrooms: u.specifications.bedrooms,
+      beds: u.specifications.beds,
+      bathrooms: u.specifications.bathrooms,
+      minNights: minNightsOf.get(u.id) ?? 1,
+      pricing: u.pricing,
+      availability: null,
+    }))
+    .sort((a, b) => (a.pricing.nightly_usd ?? 1e9) - (b.pricing.nightly_usd ?? 1e9) || (a.id < b.id ? -1 : 1));
+
+  const translations = (tr ?? []) as RawRow[];
+  const mine = translations.find((t) => t.language_code === locale);
+  const source = translations.find((t) => t.language_code === SOURCE_LOCALE);
+
+  // Photos: the hotel's own first, then one from each room — so a hotel with
+  // three photos (or none) still fills the gallery.
+  const own: UnitMediaItem[] = ((media ?? []) as RawRow[])
+    .filter((m) => m.public_url)
+    .map((m, i) => ({ id: m.id, unit_id: p.id, media_type: 'image', file_path: '', public_url: m.public_url, is_cover: !!m.is_cover && i === 0, sort_order: i }));
+  const seen = new Set(own.map((m) => m.public_url));
+  const fromRooms: UnitMediaItem[] = listings.flatMap((u) => {
+    const c = u.media.find((m) => m.is_cover) ?? u.media[0];
+    if (!c || seen.has(c.public_url)) return [];
+    seen.add(c.public_url);
+    return [c];
+  });
+  // Card rows carry no media id, and the gallery keys by it: give each one.
+  const photos: UnitMediaItem[] = [...own, ...fromRooms].map((m, i) => ({ ...m, id: m.id || `hotel-${p.id}-${i}`, is_cover: i === 0, sort_order: i }));
+
+  const services = HOTEL_SERVICE_KEYS.filter((k) => (am as RawRow | null)?.[k] === true);
+
+  // The map: the first room's blurred point (the same one its own page shows).
+  let point: HotelPage['point'] = null;
+  for (const r of rooms) {
+    const f = index.units[r.id];
+    if (!f || f.lat === null || f.lng === null) continue;
+    const a = approximateCoords(r.id, f.lat, f.lng);
+    if (a.latitude !== null && a.longitude !== null) { point = { lat: a.latitude, lng: a.longitude }; break; }
+  }
+
+  const time = (v: unknown) => (typeof v === 'string' && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : null);
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: (mine?.name || source?.name || p.name || '').trim(),
+    type: p.property_type === 'resort' ? 'resort' : 'hotel',
+    city: p.city_name ?? null,
+    description: mine?.description || source?.description || p.description || null,
+    descriptionLang: mine?.description ? locale : source?.description ? SOURCE_LOCALE : (p.description_lang ?? null),
+    checkIn: time(p.check_in_time),
+    checkOut: time(p.check_out_time),
+    media: photos,
+    services,
+    point,
+    rooms,
+  };
+}
+
+/**
+ * A hotel / resort page: its details (cached per hotel + language, tagged
+ * 'units') and every live room. With dates, each room is priced for them and
+ * told whether it can be booked (calendar, minimum stay, guests) — live.
+ */
+export async function getHotelPage(
+  slug: string,
+  locale: string,
+  search: { checkIn?: string; checkOut?: string; guests?: number } = {},
+): Promise<HotelPage | null> {
+  const base = await unstable_cache(
+    () => queryHotelBase(slug, locale),
+    ['hotel-page-v3', slug, locale],
+    { tags: ['units'], revalidate: 600 },
+  )().catch((err) => {
+    console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });
+    return null;
+  });
+  if (!base) return null;
+
+  const { checkIn, checkOut, guests } = search;
+  if (!checkIn || !checkOut || !base.rooms.length) {
+    return {
+      ...base,
+      rooms: base.rooms.map((r) => ({ ...r, availability: guests && r.maxGuests !== null && r.maxGuests < guests ? 'guests' : null })),
+    };
+  }
+
+  const supabase = createPublicClient();
+  const ids = base.rooms.map((r) => r.id);
+  const [blocked, quotes] = await Promise.all([
+    blockedUnitIds(supabase, checkIn, checkOut),
+    fetchQuotes(supabase, ids, checkIn, checkOut),
+  ]);
+  const nights = nightsBetween(checkIn, checkOut);
+  const booked = new Set(blocked ?? ids); // unreadable calendar → nothing offered as free
+  const rooms = base.rooms.map((r): HotelRoom => ({
+    ...r,
+    pricing: quotes.get(r.id) ?? r.pricing,
+    availability: booked.has(r.id) ? 'booked'
+      : r.minNights > nights ? 'minNights'
+        : guests && r.maxGuests !== null && r.maxGuests < guests ? 'guests'
+          : 'ok',
+  }));
+  const rank = { ok: 0, guests: 1, minNights: 2, booked: 3 } as const;
+  const per = (r: HotelRoom) => (r.pricing.total_usd !== null && r.pricing.nights ? r.pricing.total_usd / r.pricing.nights : r.pricing.nightly_usd) ?? 1e9;
+  rooms.sort((a, b) => rank[a.availability as keyof typeof rank] - rank[b.availability as keyof typeof rank] || per(a) - per(b));
+  return { ...base, rooms };
+}
+
+/** Every hotel / resort page, for the sitemap. */
+export async function getHotelSlugs(): Promise<string[]> {
+  const { data } = await createPublicClient().from('public_properties_view').select('slug').eq('show_as_property', true);
+  return ((data ?? []) as RawRow[]).map((r) => r.slug).filter(Boolean);
 }

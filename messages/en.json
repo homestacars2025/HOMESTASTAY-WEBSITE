@@ -107,7 +107,13 @@
       "beds": "{count, plural, one {# bed} other {# beds}}",
       "bathrooms": "{count, plural, one {# bath} other {# baths}}"
     },
-    "longStay": "Long stays · min {count} nights"
+    "longStay": "Long stays · min {count} nights",
+    "roomTypes": "{count, plural, one {# room type} other {# room types}}",
+    "fromPrice": "from <p>{price}</p>",
+    "propertyType": {
+      "hotel": "Hotel",
+      "resort": "Resort"
+    }
   },
   "pages": {
     "home": {
@@ -452,6 +458,30 @@
       "contactTitle": "Get in touch",
       "contactBody": "Write to us any time — we answer in your language.",
       "contactCta": "Email us"
+    },
+    "hotel": {
+      "metaTitle": "{name} — {type} in {city} | Homesta Stay",
+      "metaDescription": "Book a room at {name} in {city}: {rooms} room types from ${price} a night, verified by Homesta Stay.",
+      "type": {
+        "hotel": "Hotel",
+        "resort": "Resort"
+      },
+      "checkIn": "Check-in from",
+      "checkOut": "Check-out until",
+      "services": "Hotel services",
+      "rooms": "Rooms",
+      "pricesFor": "Prices for {range} · {guests, plural, one {# guest} other {# guests}}",
+      "addDates": "Add your dates to see prices and availability for every room.",
+      "sleeps": "{count, plural, one {Sleeps #} other {Sleeps #}}",
+      "available": "Available for your dates",
+      "unavailable": {
+        "booked": "Not available for these dates",
+        "minNights": "Minimum stay {nights} nights",
+        "guests": "Too small for your group"
+      },
+      "viewBook": "View & book",
+      "datesTitle": "Your dates",
+      "showPrices": "Show prices"
     }
   },
   "unit": {
@@ -537,7 +567,8 @@
       "climate": "Climate",
       "kitchenLaundry": "Kitchen & Laundry",
       "bathroomComfort": "Bathroom & Comfort",
-      "buildingAccess": "Building & Access"
+      "buildingAccess": "Building & Access",
+      "hotelServices": "Hotel services"
     },
     "amenities": {
       "tv": "TV",
@@ -555,7 +586,19 @@
       "elevator": "Elevator",
       "pool": "Pool",
       "gym": "Gym",
-      "self_check_in": "Self check-in"
+      "self_check_in": "Self check-in",
+      "breakfast": "Breakfast",
+      "restaurant": "Restaurant",
+      "reception_24h": "24-hour reception",
+      "room_service": "Room service",
+      "spa": "Spa",
+      "airport_shuttle": "Airport shuttle",
+      "beach_access": "Beach access",
+      "sea_view": "Sea view",
+      "laundry": "Laundry service",
+      "kids_club": "Kids' club",
+      "garden": "Garden",
+      "bbq": "Barbecue"
     },
     "rulesTitle": "House rules",
     "rules": {
@@ -639,7 +682,8 @@
       "loading": "Looking nearby…",
       "searchError": "Couldn’t load nearby places right now.",
       "stayArea": "Your stay is in this area"
-    }
+    },
+    "partOf": "Part of <b>{hotel}</b>"
   },
   "auth": {
     "signIn": {

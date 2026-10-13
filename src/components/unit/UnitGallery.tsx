@@ -12,7 +12,8 @@ import type { UnitMediaItem } from '@/lib/types/unit';
 interface UnitGalleryProps {
   media: UnitMediaItem[];
   title: string;
-  unitId: string;
+  /** Omitted on a hotel page: there is no single unit to save. */
+  unitId?: string;
   /** Absolute canonical URL of this listing, for the share targets. */
   shareUrl: string;
   /** City · price · type — the same line the social card carries. */
@@ -120,7 +121,7 @@ export function UnitGallery({ media, title, unitId, shareUrl, shareText }: UnitG
             The counter above is start-anchored on mobile to stay clear of them. */}
         <div className="absolute top-3 end-3 flex items-center gap-2">
           <ShareButton url={shareUrl} title={title} text={shareText} />
-          <SaveButton unitId={unitId} floating={false} />
+          {unitId && <SaveButton unitId={unitId} floating={false} />}
         </div>
 
         {/* Dot indicators */}
@@ -165,7 +166,7 @@ export function UnitGallery({ media, title, unitId, shareUrl, shareText }: UnitG
                 swallows the inner click). */}
             <div className="absolute top-4 end-4 flex items-center gap-2">
               <ShareButton url={shareUrl} title={title} text={shareText} />
-              <SaveButton unitId={unitId} floating={false} />
+              {unitId && <SaveButton unitId={unitId} floating={false} />}
             </div>
           </div>
         )}

@@ -16,10 +16,11 @@ import {
   Dumbbell,
   KeyRound,
 } from 'lucide-react';
-import type { UnitAmenities } from '@/lib/types/unit';
+import { HOTEL_SERVICE_KEYS, type UnitAmenities } from '@/lib/types/unit';
+import { HOTEL_SERVICE_ICONS } from './hotel-service-icons';
 
 interface AmenityGroupDef {
-  key: 'connectivity' | 'climate' | 'kitchenLaundry' | 'bathroomComfort' | 'buildingAccess';
+  key: 'hotelServices' | 'connectivity' | 'climate' | 'kitchenLaundry' | 'bathroomComfort' | 'buildingAccess';
   items: Array<{
     field: keyof UnitAmenities;
     Icon: React.ElementType;
@@ -27,6 +28,12 @@ interface AmenityGroupDef {
 }
 
 const AMENITY_GROUPS: AmenityGroupDef[] = [
+  // A hotel's services (property_amenities, inherited through
+  // unit_amenities_effective) — first, because they are what a hotel is.
+  {
+    key:   'hotelServices',
+    items: HOTEL_SERVICE_KEYS.map((field) => ({ field, Icon: HOTEL_SERVICE_ICONS[field] })),
+  },
   {
     key:   'connectivity',
     items: [

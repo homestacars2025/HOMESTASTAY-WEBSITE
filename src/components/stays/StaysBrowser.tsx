@@ -139,7 +139,7 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
       price: c.pricing.nightly_usd !== null ? money.format(c.pricing.nightly_usd) : null,
       guests: c.guests,
       cover: (c.media.find((m) => m.is_cover) ?? c.media[0])?.public_url ?? null,
-      href: `/stays/${c.slug ?? c.id}${searchQuery ? `?${searchQuery}` : ''}`,
+      href: `${c.property ? `/hotels/${c.property.slug}` : `/stays/${c.slug ?? c.id}`}${searchQuery ? `?${searchQuery}` : ''}`,
       position: i + 1,
     }] : []));
   }, [mapOpen, filtered, money, searchQuery]);
@@ -201,7 +201,7 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
 
   return (
     <>
-      <SearchTracker filters={filters} category={category} ids={filtered.slice(0, 24).map((c) => c.id)} />
+      <SearchTracker filters={filters} category={category} ids={filtered.slice(0, 24).map((c) => c.property?.bestUnitId ?? c.id)} />
       <div className="mb-8">
         <CategoryRow
           items={items}

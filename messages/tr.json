@@ -107,7 +107,13 @@
       "beds": "{count, plural, other {# yatak}}",
       "bathrooms": "{count, plural, other {# banyo}}"
     },
-    "longStay": "Uzun konaklama · en az {count} gece"
+    "longStay": "Uzun konaklama · en az {count} gece",
+    "roomTypes": "{count} oda tipi",
+    "fromPrice": "en düşük <p>{price}</p>",
+    "propertyType": {
+      "hotel": "Otel",
+      "resort": "Tatil köyü"
+    }
   },
   "pages": {
     "home": {
@@ -452,6 +458,30 @@
       "contactTitle": "Bize ulaşın",
       "contactBody": "Dilediğiniz zaman yazın — kendi dilinizde yanıtlıyoruz.",
       "contactCta": "E-posta gönderin"
+    },
+    "hotel": {
+      "metaTitle": "{name} — {city} {type} | Homesta Stay",
+      "metaDescription": "{city} bölgesindeki {name} için oda ayırtın: {rooms} oda tipi, gecelik ${price}'dan başlayan fiyatlarla, Homesta Stay güvencesiyle.",
+      "type": {
+        "hotel": "Otel",
+        "resort": "Tatil köyü"
+      },
+      "checkIn": "Giriş:",
+      "checkOut": "Çıkış:",
+      "services": "Otel hizmetleri",
+      "rooms": "Odalar",
+      "pricesFor": "{range} · {guests} misafir için fiyatlar",
+      "addDates": "Her odanın fiyatını ve müsaitliğini görmek için tarih ekleyin.",
+      "sleeps": "{count} kişilik",
+      "available": "Tarihleriniz için müsait",
+      "unavailable": {
+        "booked": "Bu tarihlerde müsait değil",
+        "minNights": "En az {nights} gece",
+        "guests": "Grubunuz için küçük"
+      },
+      "viewBook": "Gör ve rezerve et",
+      "datesTitle": "Tarihleriniz",
+      "showPrices": "Fiyatları göster"
     }
   },
   "unit": {
@@ -537,7 +567,8 @@
       "climate": "İklim",
       "kitchenLaundry": "Mutfak ve Çamaşır",
       "bathroomComfort": "Banyo ve Konfor",
-      "buildingAccess": "Bina ve Erişim"
+      "buildingAccess": "Bina ve Erişim",
+      "hotelServices": "Otel hizmetleri"
     },
     "amenities": {
       "tv": "TV",
@@ -555,7 +586,19 @@
       "elevator": "Asansör",
       "pool": "Havuz",
       "gym": "Spor salonu",
-      "self_check_in": "Kendi başına giriş"
+      "self_check_in": "Kendi başına giriş",
+      "breakfast": "Kahvaltı",
+      "restaurant": "Restoran",
+      "reception_24h": "24 saat resepsiyon",
+      "room_service": "Oda servisi",
+      "spa": "Spa",
+      "airport_shuttle": "Havalimanı servisi",
+      "beach_access": "Plaja erişim",
+      "sea_view": "Deniz manzarası",
+      "laundry": "Çamaşırhane",
+      "kids_club": "Çocuk kulübü",
+      "garden": "Bahçe",
+      "bbq": "Mangal"
     },
     "rulesTitle": "Ev kuralları",
     "rules": {
@@ -639,7 +682,8 @@
       "loading": "Yakında aranıyor…",
       "searchError": "Yakındaki yerler şu anda yüklenemedi.",
       "stayArea": "Konaklamanız bu bölgede"
-    }
+    },
+    "partOf": "<b>{hotel}</b> bünyesinde"
   },
   "auth": {
     "signIn": {

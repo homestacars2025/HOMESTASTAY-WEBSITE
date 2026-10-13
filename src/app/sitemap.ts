@@ -167,6 +167,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  // ── Hotel / resort pages ──────────────────────────────────────────────────
+  // public_properties_view, show_as_property only (a hotel or resort with more
+  // than 2 live units). Every locale renders the page (translations fall back
+  // to the base name and description), so each gets the full hreflang set.
+  const { data: hotels, error: hotelsError } = await supabase
+    .from('public_properties_view')
+    .select('slug')
+    .eq('show_as_property', true);
+  if (hotelsError) {
+    console.error('[sitemap] public_properties_view failed — hotel pages omitted', {
+      message: hotelsError.message, code: hotelsError.code,
+    });
+  } else {
+    for (const row of hotels ?? []) {
+      const slug = String(row.slug ?? '').trim();
+      if (!slug) continue;
+      const path = `/hotels/${slug}`;
+      for (const locale of LOCALES) {
+        entries.push({
+          url: url(locale, path),
+          lastModified: new Date(),
+          changeFrequency: 'weekly',
+          priority: 0.8,
+          alternates: { languages: allLocaleAlternates(path) },
+        });
+      }
+    }
+  }
+
   // ── Size guard ────────────────────────────────────────────────────────────
   // At 159 units × 4 locales the file is nowhere near the ceiling, so splitting
   // now would be complexity bought for nothing. But silence at the limit is how

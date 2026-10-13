@@ -67,6 +67,19 @@ export interface UnitCardData {
   /** Set when the unit is a long stay (min ≥ 7 nights) on a search without
    *  dates: the card says so, since it is ranked last rather than hidden. */
   long_stay_min?: number | null;
+  /**
+   * Set when this card stands for a whole HOTEL or RESORT (show_as_property):
+   * its units collapsed into one card that links to /hotels/{slug}. id is then
+   * the property id, pricing.nightly_usd the cheapest MATCHING unit.
+   */
+  property?: {
+    slug: string;
+    type: 'hotel' | 'resort';
+    /** How many of its units match the search ("N room types"). */
+    rooms: number;
+    /** The best-ranked matching unit — for events and the map pin. */
+    bestUnitId: string;
+  } | null;
 }
 
 /** Mirrors a row in the unit_media table. Always use public_url for display. */
@@ -127,7 +140,29 @@ export interface UnitAmenities {
   pool: boolean;
   gym: boolean;
   self_check_in: boolean;
+  // Hotel services — set on the property (property_amenities) and inherited
+  // by its units through unit_amenities_effective. Optional: older rows and
+  // non-hotel units simply do not have them.
+  breakfast?: boolean;
+  restaurant?: boolean;
+  reception_24h?: boolean;
+  spa?: boolean;
+  airport_shuttle?: boolean;
+  room_service?: boolean;
+  beach_access?: boolean;
+  laundry?: boolean;
+  kids_club?: boolean;
+  garden?: boolean;
+  bbq?: boolean;
+  sea_view?: boolean;
 }
+
+/** The hotel-service amenity keys, in display order. */
+export const HOTEL_SERVICE_KEYS = [
+  'breakfast', 'restaurant', 'reception_24h', 'room_service', 'spa', 'airport_shuttle',
+  'beach_access', 'sea_view', 'laundry', 'kids_club', 'garden', 'bbq',
+] as const;
+export type HotelServiceKey = (typeof HOTEL_SERVICE_KEYS)[number];
 
 /**
  * Mirrors unit_rules columns.
@@ -167,6 +202,8 @@ export interface UnitCancellationPolicy {
 export interface UnitListing {
   // ── units table ─────────────────────────────────────────────────────────
   id: string;
+  /** units.property_id — links a hotel room to its hotel page. */
+  property_id: string | null;
   /** URL segment for this listing (/stays/{slug}). Null until the unit has one. */
   slug: string | null;
   unit_type: UnitTypeEnum;

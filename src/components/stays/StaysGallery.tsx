@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { UnitCard } from '@/components/home/UnitCard';
 import { MotionCard } from '@/components/motion/MotionCard';
 import { staggerContainer } from '@/lib/motion';
-import type { UnitListing } from '@/lib/types/unit';
+import type { UnitCardData } from '@/lib/types/unit';
 
 /**
  * The results grid.
@@ -19,7 +19,7 @@ import type { UnitListing } from '@/lib/types/unit';
  */
 
 interface StaysGalleryProps {
-  units: UnitListing[];
+  units: UnitCardData[];
   /** Passed straight to each card's link so the current search dates/guests
    *  survive the click into the unit page. */
   searchQuery?: string;

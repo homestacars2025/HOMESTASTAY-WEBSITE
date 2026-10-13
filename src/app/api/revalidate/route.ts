@@ -85,6 +85,9 @@ function row(body: Record<string, unknown> | null, key: string): Record<string, 
  * unit's card should stop being served too, and re-warming it is how we find
  * out it now 404s.
  */
+/** Tables whose changes touch hotel / resort pages (see the POST handler). */
+const PROPERTY_TABLES = new Set(['properties', 'property_media', 'property_translations', 'property_amenities']);
+
 /** Slugs are generated (lowercase, digits, hyphens); a UUID also resolves. */
 const SLUG_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/;
 
@@ -121,6 +124,19 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await payload(request);
+
+  // A hotel / resort changed (its row, photos, translations or services). The
+  // hotel pages, the property index and every listing are cached under
+  // 'units'; the hotel's own page paths are dropped on top when the row says
+  // which hotel it is (properties carries the slug; the satellite tables do
+  // not, and the tag alone refreshes them).
+  if (typeof body?.table === 'string' && PROPERTY_TABLES.has(body.table)) {
+    revalidateTag('units');
+    const slug = slugField(row(body, 'record'), 'slug') ?? slugField(row(body, 'old_record'), 'slug');
+    if (slug) for (const locale of routing.locales) revalidatePath(`/${locale}/hotels/${slug}`);
+    console.log('[revalidate] property', { table: body.table, slug });
+    return NextResponse.json({ revalidated: true, tag: 'units', table: body.table, slug });
+  }
 
   // A city page went live, came down, or had its copy edited in HP-ADMIN.
   // Nothing about inventory changed, and there is no share card to warm:

@@ -74,8 +74,12 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
   // Live-resolved. total/nights are present only when the search carried dates.
   const { nightly_usd: nightlyUsd, total_usd: totalUsd, nights } = unit.pricing;
 
-  const href =
-    `/stays/${unit.slug ?? unit.id}${searchQuery ? `?${searchQuery}` : ''}`;
+  // A hotel / resort card (units collapsed — see groupByProperty) links to the
+  // hotel page; the search rides along so its rooms are priced for the dates.
+  const hotel = unit.property ?? null;
+  const href = hotel
+    ? `/hotels/${hotel.slug}${searchQuery ? `?${searchQuery}` : ''}`
+    : `/stays/${unit.slug ?? unit.id}${searchQuery ? `?${searchQuery}` : ''}`;
 
   const CardLink = prefetchOnIntent ? IntentLink : Link;
 
@@ -84,7 +88,7 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
       href={href as '/stays/[slug]'}
       className={cn('block cursor-pointer group', className ?? 'w-full')}
       // Read by EventTracker (one delegated listener) for unit_click.
-      data-unit={unit.id}
+      data-unit={hotel ? hotel.bestUnitId : unit.id}
       data-pos={position}
       data-src={source}
     >
@@ -106,7 +110,8 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
           ) : (
             <div className="absolute inset-0 bg-paper-warm" />
           )}
-          <SaveButton unitId={unit.id} />
+          {/* Saving is per room: a hotel card has no single unit to save. */}
+          {!hotel && <SaveButton unitId={unit.id} />}
 
           {/* ONE badge at most, naming the easiest terms this unit offers:
               pay on arrival if it is there, otherwise a deposit, otherwise
@@ -118,7 +123,12 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
               badge is there in the first paint — no second query, no label
               appearing a moment late. No figures: the split depends on dates
               this card does not price. */}
-          {badge && (
+          {hotel && (
+            <span className="absolute top-3 start-3 inline-flex items-center rounded-[999px] bg-white/95 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-ink shadow-sm">
+              {t(`propertyType.${hotel.type}`)}
+            </span>
+          )}
+          {!hotel && badge && (
             <span className="absolute bottom-2 start-2 inline-flex items-center rounded-[999px] bg-white/95 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-stay shadow-sm">
               {tMode(badge)}
             </span>
@@ -150,13 +160,22 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
               neighbours and pull the grid row out of alignment. Reserving the
               height costs nothing and keeps the cards level. */}
           <p className="text-xs text-mute mb-1 min-h-[1.125rem] line-clamp-1">
-            {specLine || null}
+            {hotel ? t('roomTypes', { count: hotel.rooms }) : specLine || null}
           </p>
 
           {/* Price — resolved live, hidden entirely when the unit has no price.
               When the search carried dates the total is the resolver's SUM over
               the stay, so the grid and the detail page can never disagree. */}
-          {nightlyUsd !== null && (
+          {hotel && nightlyUsd !== null && (
+            <p className="text-sm">
+              {t.rich('fromPrice', {
+                price: `$${nightlyUsd}`,
+                p: (chunks) => <span className="font-semibold text-stay">{chunks}</span>,
+              })}
+              <span className="text-mute text-xs"> {t('perNight')}</span>
+            </p>
+          )}
+          {!hotel && nightlyUsd !== null && (
             <>
               <p className="text-sm">
                 <span className="font-semibold text-stay">${nightlyUsd}</span>

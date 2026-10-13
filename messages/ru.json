@@ -107,7 +107,13 @@
       "beds": "{count, plural, one {# кровать} few {# кровати} many {# кроватей} other {# кровати}}",
       "bathrooms": "{count, plural, one {# ванная} few {# ванные} many {# ванных} other {# ванной}}"
     },
-    "longStay": "Долгое проживание · от {count, plural, one {# ночи} few {# ночей} many {# ночей} other {# ночи}}"
+    "longStay": "Долгое проживание · от {count, plural, one {# ночи} few {# ночей} many {# ночей} other {# ночи}}",
+    "roomTypes": "{count, plural, one {# тип номера} few {# типа номеров} many {# типов номеров} other {# типа номеров}}",
+    "fromPrice": "от <p>{price}</p>",
+    "propertyType": {
+      "hotel": "Отель",
+      "resort": "Курорт"
+    }
   },
   "pages": {
     "home": {
@@ -452,6 +458,30 @@
       "contactTitle": "Свяжитесь с нами",
       "contactBody": "Пишите в любое время — ответим на вашем языке.",
       "contactCta": "Написать нам"
+    },
+    "hotel": {
+      "metaTitle": "{name} — {type}, {city} | Homesta Stay",
+      "metaDescription": "Забронируйте номер в {name} ({city}): {rooms} типов номеров от ${price} за ночь, проверено Homesta Stay.",
+      "type": {
+        "hotel": "Отель",
+        "resort": "Курорт"
+      },
+      "checkIn": "Заезд с",
+      "checkOut": "Выезд до",
+      "services": "Услуги отеля",
+      "rooms": "Номера",
+      "pricesFor": "Цены на {range} · {guests, plural, one {# гость} few {# гостя} many {# гостей} other {# гостя}}",
+      "addDates": "Укажите даты, чтобы увидеть цены и наличие для каждого номера.",
+      "sleeps": "{count, plural, one {До # гостя} few {До # гостей} many {До # гостей} other {До # гостя}}",
+      "available": "Доступен на ваши даты",
+      "unavailable": {
+        "booked": "Недоступен на эти даты",
+        "minNights": "Минимум {nights} ночей",
+        "guests": "Мал для вашей группы"
+      },
+      "viewBook": "Смотреть и бронировать",
+      "datesTitle": "Ваши даты",
+      "showPrices": "Показать цены"
     }
   },
   "unit": {
@@ -537,7 +567,8 @@
       "climate": "Климат",
       "kitchenLaundry": "Кухня и прачечная",
       "bathroomComfort": "Ванная и комфорт",
-      "buildingAccess": "Здание и доступ"
+      "buildingAccess": "Здание и доступ",
+      "hotelServices": "Услуги отеля"
     },
     "amenities": {
       "tv": "Телевизор",
@@ -555,7 +586,19 @@
       "elevator": "Лифт",
       "pool": "Бассейн",
       "gym": "Спортзал",
-      "self_check_in": "Самостоятельное заселение"
+      "self_check_in": "Самостоятельное заселение",
+      "breakfast": "Завтрак",
+      "restaurant": "Ресторан",
+      "reception_24h": "Круглосуточная стойка регистрации",
+      "room_service": "Обслуживание номеров",
+      "spa": "Спа",
+      "airport_shuttle": "Трансфер из аэропорта",
+      "beach_access": "Выход к пляжу",
+      "sea_view": "Вид на море",
+      "laundry": "Прачечная",
+      "kids_club": "Детский клуб",
+      "garden": "Сад",
+      "bbq": "Барбекю"
     },
     "rulesTitle": "Правила дома",
     "rules": {
@@ -639,7 +682,8 @@
       "loading": "Ищем рядом…",
       "searchError": "Не удалось загрузить места поблизости.",
       "stayArea": "Ваше жильё в этом районе"
-    }
+    },
+    "partOf": "Часть <b>{hotel}</b>"
   },
   "auth": {
     "signIn": {

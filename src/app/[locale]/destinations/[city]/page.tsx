@@ -19,7 +19,7 @@ import { FadeUp } from '@/components/motion/FadeUp';
 import { Link } from '@/i18n/navigation';
 import { resolveDestination } from '@/lib/queries/destinations';
 import { localizedCityName } from '@/lib/geo/city-name';
-import { getPublicUnits } from '@/lib/queries/stays';
+import { getStaysCatalogue } from '@/lib/queries/stays';
 
 /**
  * /[locale]/destinations/[city] — the city landing page.
@@ -159,15 +159,19 @@ export default async function DestinationPage({ params }: Props) {
   const { stats, content, slug } = destination;
   const path = `/destinations/${slug}`;
 
-  const [t, cityName, { units, total }] = await Promise.all([
+  const [t, cityName, catalogue] = await Promise.all([
     getTranslations({ locale, namespace: 'pages.destinations' }),
     // Display name only. The QUERY below must use the raw geo_cities.name —
-    // that is what getPublicUnits filters on (case-insensitive), and it is NOT
+    // that is what the catalogue filters on (case-insensitive), and it is NOT
     // unit_info.city, which is free text and disagrees with the lookup table.
     // See the note in queries/stays.
     localizedCityName(stats.cityName, locale),
-    getPublicUnits(locale, { city: stats.cityName }, 1),
+    // The same catalogue /stays uses — so a hotel shows here as ONE card, in
+    // the same recommended order.
+    getStaysCatalogue(locale, { city: stats.cityName }),
   ]);
+  const units = catalogue.slice(0, 24);
+  const total = catalogue.length;
 
   const heading = content?.h1 ?? t('headingFallback', { city: cityName });
   const hasMore = total > units.length;
@@ -192,7 +196,7 @@ export default async function DestinationPage({ params }: Props) {
     itemListSchema(
       units.map((u) => ({
         name: u.ad_title ?? u.unit_name ?? '',
-        url: canonical(locale, `/stays/${u.slug ?? u.id}`),
+        url: canonical(locale, u.property ? `/hotels/${u.property.slug}` : `/stays/${u.slug ?? u.id}`),
         image: (u.media.find((m) => m.is_cover) ?? u.media[0])?.public_url ?? null,
         price: u.pricing.nightly_usd,
       })),

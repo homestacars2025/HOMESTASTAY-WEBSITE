@@ -373,3 +373,48 @@ export function graph(...nodes: Array<object | null>) {
     '@graph': nodes.filter((n): n is object => n !== null),
   };
 }
+
+/**
+ * A hotel / resort page: Hotel (or Resort — both LodgingBusiness) with every
+ * room as a HotelRoom in containsPlace. Area-level location only: the city
+ * and the same blurred point the page's map shows; never a street address.
+ */
+export function hotelSchema(input: {
+  url: string;
+  locale: string;
+  type: 'hotel' | 'resort';
+  name: string;
+  description: string | null;
+  city: string | null;
+  images: string[];
+  point: { lat: number; lng: number } | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  services: string[];
+  fromUsd: number | null;
+  rooms: Array<{ name: string; url: string; maxGuests: number | null; beds: number | null }>;
+}) {
+  return prune({
+    '@type': input.type === 'resort' ? 'Resort' : 'Hotel',
+    '@id': `${input.url}#hotel`,
+    name: input.name,
+    description: input.description ?? undefined,
+    url: input.url,
+    image: input.images.slice(0, 12),
+    inLanguage: input.locale,
+    provider: { '@id': ORG_ID },
+    address: { '@type': 'PostalAddress', addressLocality: input.city ?? undefined, addressCountry: 'TR' },
+    geo: input.point ? { '@type': 'GeoCoordinates', latitude: input.point.lat, longitude: input.point.lng } : undefined,
+    checkinTime: input.checkIn ?? undefined,
+    checkoutTime: input.checkOut ?? undefined,
+    priceRange: input.fromUsd !== null ? `from $${Math.round(input.fromUsd)} per night` : undefined,
+    amenityFeature: input.services.map((name) => ({ '@type': 'LocationFeatureSpecification', name, value: true })),
+    containsPlace: input.rooms.map((r) => ({
+      '@type': 'HotelRoom',
+      name: r.name,
+      url: r.url,
+      occupancy: r.maxGuests ? { '@type': 'QuantitativeValue', maxValue: r.maxGuests } : undefined,
+      numberOfBeds: r.beds ?? undefined,
+    })),
+  });
+}

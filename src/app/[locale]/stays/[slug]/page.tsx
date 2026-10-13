@@ -27,7 +27,7 @@ import { UnitCancellationSection } from '@/components/unit/UnitCancellationSecti
 import { UnitWhereSection } from '@/components/unit/UnitWhereSection';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { Link } from '@/i18n/navigation';
-import { getPublicUnitBySlug } from '@/lib/queries/stays';
+import { getPropertyIndex, getPublicUnitBySlug, propertyName } from '@/lib/queries/stays';
 import {
   parseStaysSearchParams,
   parseStaysPage,
@@ -37,7 +37,12 @@ import { quoteStay } from '@/app/[locale]/stays/[slug]/actions';
 import { getUnitServices } from '@/lib/queries/unit-services';
 import { quotePaymentModes } from '@/lib/queries/payment-modes';
 import { FadeUp } from '@/components/motion/FadeUp';
-import type { UnitTypeEnum } from '@/lib/types/unit';
+import { HOTEL_SERVICE_KEYS, type UnitAmenities, type UnitTypeEnum } from '@/lib/types/unit';
+
+const AMENITY_KEYS: (keyof UnitAmenities)[] = [
+  'tv', 'wifi', 'air_conditioning', 'heating', 'kitchen', 'dishwasher', 'washing_machine', 'hot_water',
+  'hair_dryer', 'iron', 'extra_bed', 'parking', 'elevator', 'pool', 'gym', 'self_check_in', ...HOTEL_SERVICE_KEYS,
+];
 import { cardVersion } from '@/lib/seo/card-store';
 import { formatPlace } from '@/lib/geo/localize';
 
@@ -234,6 +239,12 @@ export default async function UnitDetailPage({
   // with no district print the city alone rather than a leading separator.
   const locationLine = formatPlace(locale, unit.region ?? unit.municipality, unit.city);
 
+  // A room of a hotel / resort shown as a property: link back to its page.
+  const property = unit.property_id ? (await getPropertyIndex())[unit.property_id] : undefined;
+  const hotel = property?.showAsProperty
+    ? { name: propertyName(property, locale), href: `/hotels/${property.slug}` }
+    : null;
+
   // ── Structured data ───────────────────────────────────────────────────────
   // The amenity labels are the SAME object UnitAmenitiesSection renders below,
   // so the amenityFeature list in the markup can never name something the page
@@ -280,6 +291,7 @@ export default async function UnitDetailPage({
     breadcrumbSchema([
       { name: tDest('breadcrumbHome'), url: canonical(locale, '') },
       { name: tDest('breadcrumbStays'), url: canonical(locale, '/stays') },
+      ...(hotel ? [{ name: hotel.name, url: canonical(locale, hotel.href) }] : []),
       { name: title, url: unitUrl },
     ]),
   );
@@ -331,6 +343,15 @@ export default async function UnitDetailPage({
             {/* Title + location + rating */}
             <FadeUp>
             <header className="mb-6">
+              {hotel && (
+                <Link
+                  href={hotel.href as '/stays'}
+                  className="mb-2 inline-flex items-center gap-1.5 rounded-[999px] bg-paper-warm px-3 py-1 text-xs font-medium text-ink transition-colors duration-[240ms] hover:bg-rule"
+                >
+                  {t.rich('partOf', { hotel: hotel.name, b: (chunks) => <span className="font-semibold">{chunks}</span> })}
+                  <span aria-hidden="true" className="inline-block rtl:rotate-180">→</span>
+                </Link>
+              )}
               <h1 className="text-[clamp(1.5rem,4vw,2.25rem)] font-medium tracking-[-0.035em] text-ink mb-2 leading-tight">
                 {title}
               </h1>
@@ -439,25 +460,11 @@ export default async function UnitDetailPage({
                     kitchenLaundry:  t('amenityGroups.kitchenLaundry'),
                     bathroomComfort: t('amenityGroups.bathroomComfort'),
                     buildingAccess:  t('amenityGroups.buildingAccess'),
+                    hotelServices:   t('amenityGroups.hotelServices'),
                   },
-                  items: {
-                    tv:               t('amenities.tv'),
-                    wifi:             t('amenities.wifi'),
-                    air_conditioning: t('amenities.air_conditioning'),
-                    heating:          t('amenities.heating'),
-                    kitchen:          t('amenities.kitchen'),
-                    dishwasher:       t('amenities.dishwasher'),
-                    washing_machine:  t('amenities.washing_machine'),
-                    hot_water:        t('amenities.hot_water'),
-                    hair_dryer:       t('amenities.hair_dryer'),
-                    iron:             t('amenities.iron'),
-                    extra_bed:        t('amenities.extra_bed'),
-                    parking:          t('amenities.parking'),
-                    elevator:         t('amenities.elevator'),
-                    pool:             t('amenities.pool'),
-                    gym:              t('amenities.gym'),
-                    self_check_in:    t('amenities.self_check_in'),
-                  },
+                  items: Object.fromEntries(
+                    AMENITY_KEYS.map((k) => [k, t(`amenities.${k}`)]),
+                  ) as Record<keyof UnitAmenities, string>,
                 }}
               />
             </div>

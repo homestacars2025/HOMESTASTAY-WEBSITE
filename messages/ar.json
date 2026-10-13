@@ -107,7 +107,13 @@
       "beds": "{count, plural, zero {بدون أسرّة} one {سرير واحد} two {سريران} few {# أسرّة} many {# سريرًا} other {# سرير}}",
       "bathrooms": "{count, plural, zero {بدون حمّام} one {حمّام واحد} two {حمّامان} few {# حمّامات} many {# حمّامًا} other {# حمّام}}"
     },
-    "longStay": "إقامة طويلة · {count, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}} كحد أدنى"
+    "longStay": "إقامة طويلة · {count, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}} كحد أدنى",
+    "roomTypes": "{count, plural, zero {لا غرف} one {نوع غرفة واحد} two {نوعا غرف} few {# أنواع غرف} many {# نوعًا من الغرف} other {# نوع غرفة}}",
+    "fromPrice": "ابتداءً من <p>{price}</p>",
+    "propertyType": {
+      "hotel": "فندق",
+      "resort": "منتجع"
+    }
   },
   "pages": {
     "home": {
@@ -452,6 +458,30 @@
       "contactTitle": "تواصل معنا",
       "contactBody": "راسلنا في أي وقت — نردّ بلغتك.",
       "contactCta": "راسلنا"
+    },
+    "hotel": {
+      "metaTitle": "{name} — {type} في {city} | Homesta Stay",
+      "metaDescription": "احجز غرفة في {name} في {city}: {rooms} أنواع غرف ابتداءً من ${price} لليلة، موثّقة من Homesta Stay.",
+      "type": {
+        "hotel": "فندق",
+        "resort": "منتجع"
+      },
+      "checkIn": "تسجيل الوصول من",
+      "checkOut": "تسجيل المغادرة حتى",
+      "services": "خدمات الفندق",
+      "rooms": "الغرف",
+      "pricesFor": "الأسعار لـ {range} · {guests, plural, one {ضيف واحد} two {ضيفان} few {# ضيوف} many {# ضيفًا} other {# ضيف}}",
+      "addDates": "أضف تواريخك لترى الأسعار والتوفر لكل غرفة.",
+      "sleeps": "تتسع لـ {count}",
+      "available": "متاحة في تواريخك",
+      "unavailable": {
+        "booked": "غير متاحة في هذه التواريخ",
+        "minNights": "أقل مدة إقامة {nights} ليالٍ",
+        "guests": "صغيرة على مجموعتك"
+      },
+      "viewBook": "عرض وحجز",
+      "datesTitle": "تواريخك",
+      "showPrices": "اعرض الأسعار"
     }
   },
   "unit": {
@@ -537,7 +567,8 @@
       "climate": "المناخ",
       "kitchenLaundry": "المطبخ والغسيل",
       "bathroomComfort": "الحمام والراحة",
-      "buildingAccess": "المبنى والوصول"
+      "buildingAccess": "المبنى والوصول",
+      "hotelServices": "خدمات الفندق"
     },
     "amenities": {
       "tv": "تلفزيون",
@@ -555,7 +586,19 @@
       "elevator": "مصعد",
       "pool": "مسبح",
       "gym": "صالة رياضية",
-      "self_check_in": "تسجيل وصول ذاتي"
+      "self_check_in": "تسجيل وصول ذاتي",
+      "breakfast": "إفطار",
+      "restaurant": "مطعم",
+      "reception_24h": "استقبال 24 ساعة",
+      "room_service": "خدمة الغرف",
+      "spa": "سبا",
+      "airport_shuttle": "نقل من وإلى المطار",
+      "beach_access": "وصول إلى الشاطئ",
+      "sea_view": "إطلالة على البحر",
+      "laundry": "خدمة غسيل",
+      "kids_club": "نادي أطفال",
+      "garden": "حديقة",
+      "bbq": "شواء"
     },
     "rulesTitle": "قواعد المنزل",
     "rules": {
@@ -639,7 +682,8 @@
       "loading": "نبحث بالقرب…",
       "searchError": "تعذّر تحميل الأماكن القريبة الآن.",
       "stayArea": "إقامتك في هذه المنطقة"
-    }
+    },
+    "partOf": "جزء من <b>{hotel}</b>"
   },
   "auth": {
     "signIn": {

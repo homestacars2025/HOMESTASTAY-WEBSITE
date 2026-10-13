@@ -58,3 +58,16 @@ export function parseCategory(raw: string | string[] | null | undefined): Catego
   }
   return null;
 }
+
+/** Property types whose units are hotel stays, whatever their unit_type. */
+export const HOTEL_PROPERTY_TYPES = new Set(['hotel', 'resort']);
+
+/**
+ * The chip a unit belongs to, knowing its property: every unit of a hotel or
+ * resort is under Hotels (a small hotel's "apartment" is still a hotel stay);
+ * otherwise the unit's own type decides.
+ */
+export function categoryFor(unitType: string | null | undefined, propertyType: string | null | undefined): Category | null {
+  if (propertyType && HOTEL_PROPERTY_TYPES.has(propertyType)) return 'hotels';
+  return categoryOf(unitType);
+}
