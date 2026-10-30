@@ -74,7 +74,7 @@ export interface UnitCardData {
    */
   property?: {
     slug: string;
-    type: 'hotel' | 'resort';
+    type: 'hotel' | 'resort' | 'aparthotel';
     /** How many of its units match the search ("N room types"). */
     rooms: number;
     /** The best-ranked matching unit — for events and the map pin. */

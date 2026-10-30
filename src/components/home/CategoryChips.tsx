@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { getCatalogueFacets } from '@/lib/queries/stays';
+import { getCatalogueFacets, getPropertyIndex } from '@/lib/queries/stays';
 import { CATEGORIES, CATEGORY_TYPES } from '@/lib/stays/categories';
 import { CategoryRow, type ChipItem } from '@/components/stays/CategoryRow';
 
@@ -8,15 +8,23 @@ import { CategoryRow, type ChipItem } from '@/components/stays/CategoryRow';
  * Each chip links to /stays?type=…, where the same row filters in place.
  *
  * A category chip renders only when the live catalogue holds bookable units of
- * its types (getCatalogueFacets, cached and tagged 'units'). No 'use client',
+ * its types (getCatalogueFacets, cached and tagged 'units') — Hotels when there
+ * is a hotel / resort / aparthotel to show (getPropertyIndex). No 'use client',
  * no state — plain links, no hydration cost on the homepage beyond the row.
  */
 export async function CategoryChips() {
-  const [t, { typeCounts }] = await Promise.all([getTranslations('categories'), getCatalogueFacets()]);
+  const [t, { typeCounts }, properties] = await Promise.all([
+    getTranslations('categories'),
+    getCatalogueFacets(),
+    getPropertyIndex(),
+  ]);
+  const hotels = Object.values(properties).filter((p) => p.showAsProperty).length;
 
   const items: ChipItem[] = [{ key: 'all', label: t('all'), href: '/stays' }];
   for (const c of CATEGORIES) {
-    const count = CATEGORY_TYPES[c].reduce((sum, type) => sum + (typeCounts[type] ?? 0), 0);
+    const count = c === 'hotels'
+      ? hotels
+      : CATEGORY_TYPES[c].reduce((sum, type) => sum + (typeCounts[type] ?? 0), 0);
     if (count > 0) items.push({ key: c, label: t(c), href: `/stays?type=${c}` });
   }
   // One category holding everything is not a filter, it is decoration.

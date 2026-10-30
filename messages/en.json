@@ -112,7 +112,8 @@
     "fromPrice": "from <p>{price}</p>",
     "propertyType": {
       "hotel": "Hotel",
-      "resort": "Resort"
+      "resort": "Resort",
+      "aparthotel": "Aparthotel"
     }
   },
   "pages": {
@@ -464,7 +465,8 @@
       "metaDescription": "Book a room at {name} in {city}: {rooms, plural, one {# room type} other {# room types}} from ${price} a night, verified by Homesta Stay.",
       "type": {
         "hotel": "Hotel",
-        "resort": "Resort"
+        "resort": "Resort",
+        "aparthotel": "Aparthotel"
       },
       "checkIn": "Check-in from",
       "checkOut": "Check-out until",

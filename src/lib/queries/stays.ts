@@ -13,7 +13,7 @@ import {
   type StayType,
   type StaysFilters,
 } from '@/lib/stays/filters';
-import { categoryFor, categoryOf, type Category } from '@/lib/stays/categories';
+import { categoryOf, type Category } from '@/lib/stays/categories';
 import { distanceKm, rankUnits, type QualitySignals, type RankRequest } from '@/lib/stays/ranking';
 import type {
   UnitCardData,
@@ -628,7 +628,7 @@ interface Candidate {
   maxGuests: number | null;
   minNights: number;
   propertyId: string | null;
-  /** properties.property_type — hotel/resort units are Hotels whatever their type. */
+  /** properties.property_type. */
   propertyType: string | null;
   districtId: string | null;
   /** geo_cities.name — the canonical city, for "nearby cities" suggestions. */
@@ -700,7 +700,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v6', locale],
+      ['stays-catalogue-v7', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -727,13 +727,13 @@ type CardSlot =
   | { kind: 'property'; propertyId: string; members: string[] };
 
 /**
- * A unit inside a hotel or resort that is ALSO listed as its own card. Only
- * apartments: a guest looking for a flat should find the hotel's apartment
- * under Apartment, while its rooms and suites are only ever reached through
- * the hotel.
+ * A unit inside a hotel / resort / aparthotel that is ALSO listed as its own
+ * card: everything but a room. A guest looking for a flat, a villa or a cabin
+ * finds the property's one under that chip; a room is only ever reached
+ * through its hotel.
  */
 function listedOnItsOwn(unitType: string): boolean {
-  return unitType === 'apartment';
+  return unitType !== 'room';
 }
 
 /**
@@ -741,15 +741,17 @@ function listedOnItsOwn(unitType: string): boolean {
  * list, the map, the chips, every count and similar places, so a count can
  * never disagree with the cards shown.
  *
- *   • every hotel / resort (show_as_property: one with at least 1 live unit)
- *     → ONE card, in the place of its best-ranked matching unit, holding all
- *     its matching units (category Hotels);
- *   • its apartments → ALSO their own card, in their own place (Apartment);
- *   • its other units → no card of their own;
- *   • every other unit → its own card, exactly as before.
+ *   • every hotel / resort / aparthotel (show_as_property: at least 1 live
+ *     unit) → ONE card, in the place of its best-ranked matching unit,
+ *     holding all its matching units — the only cards under Hotels;
+ *   • its rooms → no card of their own;
+ *   • its other units (apartment, suite, studio, villa, cabin, …) → ALSO
+ *     their own card, in their own place, under their own chip (categoryOf —
+ *     never Hotels; a suite has no chip and shows under All only);
+ *   • every other unit → its own card, as before.
  */
 function planCards(
-  units: Pick<Candidate, 'id' | 'unit_type' | 'propertyId' | 'propertyType'>[],
+  units: Pick<Candidate, 'id' | 'unit_type' | 'propertyId'>[],
   properties: Record<string, PropertySummary>,
 ): CardSlot[] {
   const slots: CardSlot[] = [];
@@ -757,7 +759,7 @@ function planCards(
   for (const u of units) {
     const p = u.propertyId ? properties[u.propertyId] : undefined;
     if (!p?.showAsProperty) {
-      slots.push({ kind: 'unit', id: u.id, category: categoryFor(u.unit_type, u.propertyType) });
+      slots.push({ kind: 'unit', id: u.id, category: categoryOf(u.unit_type) });
       continue;
     }
     let members = groups.get(p.id);
@@ -838,7 +840,7 @@ function assembleCards(
       amenities: [...new Set(members.flatMap((m) => m.amenities))],
       property: {
         slug: p.slug,
-        type: p.type === 'resort' ? 'resort' : 'hotel',
+        type: propertyKind(p.type),
         rooms: members.length,
         bestUnitId: best.id,
       },
@@ -907,7 +909,7 @@ async function leanCards(
         bathrooms: u.specifications.bathrooms,
       },
       long_stay_min: c.longStay ? c.minNights : null,
-      category: categoryFor(c.unit_type, c.propertyType),
+      category: categoryOf(c.unit_type),
       geo: mapPoint(index.units[c.id]),
       guests: c.maxGuests,
       amenities: AMENITY_FILTERS.filter((a) => c.amenities[a]),
@@ -962,7 +964,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v5', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v6', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -1380,7 +1382,7 @@ export interface PropertySummary {
   slug: string;
   name: string;
   type: string;
-  /** A hotel or resort with at least 1 live unit — shown as ONE card / page. */
+  /** A hotel, resort or aparthotel with at least 1 live unit — shown as ONE card / page. */
   showAsProperty: boolean;
   cityName: string | null;
   coverUrl: string | null;
@@ -1418,13 +1420,20 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
         }
         return out;
       },
-      ['property-index-v2'],
+      ['property-index-v3'],
       { tags: ['units'], revalidate: 600 },
     )();
   } catch (err) {
     console.error('[getPropertyIndex]', { message: err instanceof Error ? err.message : String(err) });
     return {};
   }
+}
+
+export type PropertyKind = 'hotel' | 'resort' | 'aparthotel';
+
+/** properties.property_type → the kind a hotel card / page names. */
+export function propertyKind(type: string | null | undefined): PropertyKind {
+  return type === 'resort' || type === 'aparthotel' ? type : 'hotel';
 }
 
 /** A property's name in the visitor's language: translation → Turkish → the base name. */
@@ -1834,7 +1843,7 @@ export interface HotelPage {
   id: string;
   slug: string;
   name: string;
-  type: 'hotel' | 'resort';
+  type: PropertyKind;
   /** geo_cities.name — canonical (links, ?city=). */
   city: string | null;
   description: string | null;
@@ -1935,7 +1944,7 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
     id: p.id,
     slug: p.slug,
     name: (mine?.name || source?.name || p.name || '').trim(),
-    type: p.property_type === 'resort' ? 'resort' : 'hotel',
+    type: propertyKind(p.property_type),
     city: p.city_name ?? null,
     description: mine?.description || source?.description || p.description || null,
     descriptionLang: mine?.description ? locale : source?.description ? SOURCE_LOCALE : (p.description_lang ?? null),
@@ -1960,7 +1969,7 @@ export async function getHotelPage(
 ): Promise<HotelPage | null> {
   const base = await unstable_cache(
     () => queryHotelBase(slug, locale),
-    ['hotel-page-v4', slug, locale],
+    ['hotel-page-v5', slug, locale],
     { tags: ['units'], revalidate: 600 },
   )().catch((err) => {
     console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });

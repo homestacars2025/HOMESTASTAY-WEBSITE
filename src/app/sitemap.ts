@@ -137,8 +137,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ── Hotel / resort pages ──────────────────────────────────────────────────
-  // public_properties_view, show_as_property only (a hotel or resort with at
-  // least 1 live unit). Every locale renders the page (translations fall back
+  // public_properties_view, show_as_property only (a hotel, resort or
+  // aparthotel with at least 1 live unit). Every locale renders the page (translations fall back
   // to the base name and description), so each gets the full hreflang set.
   // Read first: their rooms are left out of the unit pages below.
   const { data: hotels, error: hotelsError } = await supabase
@@ -166,9 +166,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // A hotel's rooms are listed through the hotel, as on /stays: only its
-  // apartments are units in their own right. Their pages still work (old
-  // links, shared cards) — they are just not advertised twice. If this read
+  // A hotel's ROOMS are listed through the hotel, as on /stays; its other
+  // units (apartments, suites, villas…) are units in their own right. Room
+  // pages still work (old links, shared cards) — just not advertised twice. If this read
   // fails the rooms stay in, which is the old, harmless behaviour.
   const hotelIds = (hotels ?? []).map((h) => h.id as string).filter(Boolean);
   const hotelRooms = new Set<string>();
@@ -183,7 +183,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
     for (const r of rooms ?? []) {
-      if (r.slug && r.unit_type !== 'apartment') hotelRooms.add(String(r.slug).trim());
+      if (r.slug && r.unit_type === 'room') hotelRooms.add(String(r.slug).trim());
     }
   }
 
