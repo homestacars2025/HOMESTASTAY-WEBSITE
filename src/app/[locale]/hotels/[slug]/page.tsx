@@ -8,11 +8,11 @@ import { UnitWhereSection } from '@/components/unit/UnitWhereSection';
 import { HOTEL_SERVICE_ICONS } from '@/components/unit/hotel-service-icons';
 import { SmartImage } from '@/components/media/SmartImage';
 import { JsonLd } from '@/components/seo/JsonLd';
-import { Link } from '@/i18n/navigation';
+import { Link, redirect } from '@/i18n/navigation';
 import { canonical, hreflangAlternates } from '@/lib/config/urls';
 import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/config/seo';
 import { graph, breadcrumbSchema, hotelSchema } from '@/lib/seo/schema';
-import { getHotelPage, type HotelRoom } from '@/lib/queries/stays';
+import { getHotelPage, getPropertyIndex, type HotelRoom } from '@/lib/queries/stays';
 import { localizedCityName } from '@/lib/geo/city-name';
 import { buildStaysQuery, parseStaysSearchParams } from '@/lib/stays/search-params';
 
@@ -66,7 +66,23 @@ export default async function HotelPage({ params, searchParams }: Props) {
     getTranslations({ locale, namespace: 'unit' }),
     getTranslations({ locale, namespace: 'pages.destinations' }),
   ]);
-  if (!hotel) notFound();
+  if (!hotel) {
+    // A property that exists but is not listed as one (today: no property
+    // photo) — TEMPORARY 307 to its city's stays, the visitor's dates and
+    // guests kept, so old links and shared cards land somewhere useful. Not a
+    // 308: the page comes back on its own once the property is listed again
+    // (the property webhook drops the cache). Never in the sitemap. An
+    // unknown slug is still a 404.
+    const property = Object.values(await getPropertyIndex()).find((p) => p.slug === slug);
+    if (!property) notFound();
+    const query = buildStaysQuery({
+      city: property.cityName ?? undefined,
+      checkIn: search.checkIn,
+      checkOut: search.checkOut,
+      guests: search.guests,
+    });
+    return redirect({ href: `/stays${query}`, locale });
+  }
 
   const city = hotel.city ? await localizedCityName(hotel.city, locale) : null;
   const url = canonical(locale, `/hotels/${slug}`);
