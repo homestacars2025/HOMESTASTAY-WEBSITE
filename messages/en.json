@@ -461,7 +461,7 @@
     },
     "hotel": {
       "metaTitle": "{name} — {type} in {city} | Homesta Stay",
-      "metaDescription": "Book a room at {name} in {city}: {rooms} room types from ${price} a night, verified by Homesta Stay.",
+      "metaDescription": "Book a room at {name} in {city}: {rooms, plural, one {# room type} other {# room types}} from ${price} a night, verified by Homesta Stay.",
       "type": {
         "hotel": "Hotel",
         "resort": "Resort"

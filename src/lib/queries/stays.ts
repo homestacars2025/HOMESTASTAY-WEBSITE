@@ -700,7 +700,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v5', locale],
+      ['stays-catalogue-v6', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -719,44 +719,109 @@ async function queryStaysCatalogue(locale: string, filters: StaysFilters): Promi
 }
 
 /**
- * Hotels and resorts with more than 2 live units (show_as_property) become ONE
- * card each. Only the units that matched the search are inside it; the card
- * takes the place of its best-ranked unit (the first in the sorted list), its
- * price is the cheapest of them ("from $X / night"), and it counts them
- * ("N room types"). Every other unit stays its own card, exactly as before.
+ * One card a search result becomes: a unit of its own, or a whole hotel /
+ * resort standing for its matching units.
  */
+type CardSlot =
+  | { kind: 'unit'; id: string; category: Category | null }
+  | { kind: 'property'; propertyId: string; members: string[] };
+
+/**
+ * A unit inside a hotel or resort that is ALSO listed as its own card. Only
+ * apartments: a guest looking for a flat should find the hotel's apartment
+ * under Apartment, while its rooms and suites are only ever reached through
+ * the hotel.
+ */
+function listedOnItsOwn(unitType: string): boolean {
+  return unitType === 'apartment';
+}
+
+/**
+ * The cards a sorted set of matched units becomes — the ONE rule behind the
+ * list, the map, the chips, every count and similar places, so a count can
+ * never disagree with the cards shown.
+ *
+ *   • every hotel / resort (show_as_property: one with at least 1 live unit)
+ *     → ONE card, in the place of its best-ranked matching unit, holding all
+ *     its matching units (category Hotels);
+ *   • its apartments → ALSO their own card, in their own place (Apartment);
+ *   • its other units → no card of their own;
+ *   • every other unit → its own card, exactly as before.
+ */
+function planCards(
+  units: Pick<Candidate, 'id' | 'unit_type' | 'propertyId' | 'propertyType'>[],
+  properties: Record<string, PropertySummary>,
+): CardSlot[] {
+  const slots: CardSlot[] = [];
+  const groups = new Map<string, string[]>();
+  for (const u of units) {
+    const p = u.propertyId ? properties[u.propertyId] : undefined;
+    if (!p?.showAsProperty) {
+      slots.push({ kind: 'unit', id: u.id, category: categoryFor(u.unit_type, u.propertyType) });
+      continue;
+    }
+    let members = groups.get(p.id);
+    if (!members) {
+      members = [];
+      groups.set(p.id, members);
+      slots.push({ kind: 'property', propertyId: p.id, members });
+    }
+    members.push(u.id);
+    if (listedOnItsOwn(u.unit_type)) slots.push({ kind: 'unit', id: u.id, category: categoryOf(u.unit_type) });
+  }
+  return slots;
+}
+
+function slotCategory(slot: CardSlot): Category | null {
+  return slot.kind === 'property' ? 'hotels' : slot.category;
+}
+
+function slotUnitIds(slot: CardSlot): string[] {
+  return slot.kind === 'property' ? slot.members : [slot.id];
+}
+
+/** The search's lean cards, regrouped by planCards (see there). */
 function groupByProperty(
   cards: StayCard[],
   candidates: Candidate[],
   properties: Record<string, PropertySummary>,
   locale: string,
 ): StayCard[] {
-  const propertyOf = new Map(candidates.map((c) => [c.id, c.propertyId]));
-  const groups = new Map<string, StayCard[]>();
-  const out: (StayCard | { group: string })[] = [];
-  for (const card of cards) {
-    const pid = propertyOf.get(card.id);
-    const p = pid ? properties[pid] : undefined;
-    if (!p?.showAsProperty) { out.push(card); continue; }
-    if (!groups.has(p.id)) { groups.set(p.id, []); out.push({ group: p.id }); }
-    groups.get(p.id)!.push(card);
-  }
-  if (!groups.size) return cards;
+  const carded = new Set(cards.map((c) => c.id));
+  return assembleCards(planCards(candidates.filter((c) => carded.has(c.id)), properties), cards, properties, locale);
+}
 
+/**
+ * Slots → cards. A unit slot is its lean card under the slot's category. A
+ * property slot is ONE card: the property's cover and name, the cheapest of
+ * its matching units ("from $X / night"), how many there are ("N room
+ * types"), linking to /hotels/{slug}.
+ */
+function assembleCards(
+  slots: CardSlot[],
+  cards: StayCard[],
+  properties: Record<string, PropertySummary>,
+  locale: string,
+): StayCard[] {
+  const byId = new Map(cards.map((c) => [c.id, c]));
   const perNight = (c: StayCard) =>
     c.pricing.total_usd !== null && c.pricing.nights ? c.pricing.total_usd / c.pricing.nights : c.pricing.nightly_usd;
 
-  return out.map((entry) => {
-    if (!('group' in entry)) return entry;
-    const p = properties[entry.group];
-    const members = groups.get(entry.group)!;
+  return slots.flatMap((slot): StayCard[] => {
+    if (slot.kind === 'unit') {
+      const card = byId.get(slot.id);
+      return card ? [{ ...card, category: slot.category }] : [];
+    }
+    const p = properties[slot.propertyId];
+    const members = slot.members.flatMap((id) => byId.get(id) ?? []);
+    if (!p || !members.length) return [];
     const best = members[0];
     const prices = members.map(perNight).filter((v): v is number => v !== null);
     const from = prices.length ? Math.round(Math.min(...prices) * 100) / 100 : null;
     const cover = p.coverUrl
       ? [{ id: `prop-${p.id}`, unit_id: best.id, media_type: 'image', file_path: '', public_url: p.coverUrl, is_cover: true, sort_order: 0 }]
       : best.media;
-    return {
+    return [{
       ...best,
       id: p.id,
       slug: p.slug,
@@ -777,7 +842,7 @@ function groupByProperty(
         rooms: members.length,
         bestUnitId: best.id,
       },
-    } satisfies StayCard;
+    } satisfies StayCard];
   });
 }
 
@@ -897,7 +962,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v4', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v5', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -919,13 +984,14 @@ async function querySimilarUnits(unitId: string, locale: string, req: SimilarReq
   // Prices for every unit of the city, fetched beside the search rather than
   // after it — the city's members are known from the index already.
   const cityIds = Object.keys(index.units).filter((id) => index.units[id].city === city);
-  const [resolved, quotes] = await Promise.all([
+  const [resolved, quotes, properties] = await Promise.all([
     resolveCandidates(
       supabase,
       { city, guests: req.guests, checkIn: req.checkIn, checkOut: req.checkOut },
       { rank: false },
     ),
     fetchQuotes(supabase, cityIds, req.checkIn, req.checkOut),
+    getPropertyIndex(),
   ]);
   if (!resolved) return [];
   const pool = resolved.candidates.filter((c) => c.id !== unitId);
@@ -961,44 +1027,93 @@ async function querySimilarUnits(unitId: string, locale: string, req: SimilarReq
     (x.c.id < y.c.id ? -1 : x.c.id > y.c.id ? 1 : 0),
   );
 
+  // The same cards the search shows (planCards): a hotel is one card, in the
+  // place of its best-scored room; its rooms are never cards of their own.
+  // This unit's own hotel is left out — the page already links to it.
+  const ordered = scored.map((s) => s.c);
+  const propertyOf = new Map(ordered.map((c) => [c.id, c.propertyId]));
   const perProperty = new Map<string, number>();
-  const picked: Candidate[] = [];
-  for (const s of scored) {
+  const picked: CardSlot[] = [];
+  for (const slot of planCards(ordered, properties)) {
     if (picked.length >= limit) break;
-    const prop = s.c.propertyId ?? s.c.id;
+    if (slot.kind === 'property' && slot.propertyId === b.propertyId) continue;
+    const prop = slot.kind === 'property' ? slot.propertyId : propertyOf.get(slot.id) ?? slot.id;
     const cap = prop === b.propertyId ? 1 : 2;
     const n = perProperty.get(prop) ?? 0;
     if (n >= cap) continue;
     perProperty.set(prop, n + 1);
-    picked.push(s.c);
+    picked.push(slot);
   }
-  return leanCards(supabase, picked.map((c) => ({ ...c, longStay: false })), locale, req.checkIn, req.checkOut, quotes);
+  const needed = new Set(picked.flatMap(slotUnitIds));
+  const cards = await leanCards(
+    supabase,
+    ordered.filter((c) => needed.has(c.id)).map((c) => ({ ...c, longStay: false })),
+    locale, req.checkIn, req.checkOut, quotes,
+  );
+  return assembleCards(picked, cards, properties, locale);
 }
 
 /**
- * How many units a search matches, and the amenity counts inside it — the
- * filter sheet's live "Show 42 stays" while a guest is still adjusting.
- * Steps 1–4 of the listing without the cards, so the number on the button is
- * the number the page will show.
+ * The cards a search shows (planCards), each with the units behind it — for
+ * counting without building cards. The category applies to the CARDS, as the
+ * chips do: Apartment counts a hotel's apartments, Hotels counts the hotels.
+ */
+async function matchSlots(
+  filters: StaysFilters,
+): Promise<{ slots: CardSlot[]; units: Map<string, Candidate> } | null> {
+  const { category, ...rest } = filters;
+  // Counting only: no order needed, so the ranking is skipped.
+  const [resolved, properties] = await Promise.all([
+    resolveCandidates(createPublicClient(), rest, { rank: false }),
+    getPropertyIndex(),
+  ]);
+  if (!resolved) return null;
+  const slots = planCards(resolved.candidates, properties)
+    .filter((s) => !category || slotCategory(s) === category);
+  return { slots, units: new Map(resolved.candidates.map((c) => [c.id, c])) };
+}
+
+/**
+ * How many cards a search shows, and the amenity counts across them — the
+ * filter sheet's live "Show 42 stays" while a guest is still adjusting. The
+ * same cards the page builds (planCards), so the number on the button is the
+ * number the page will show. A hotel card has an amenity when any of its
+ * matching units does, as on the page.
  */
 export async function countPublicUnits(
   filters: StaysFilters,
 ): Promise<Pick<StaysPage, 'total' | 'amenityCounts'>> {
-  // Counting only: no order needed, so the ranking is skipped.
-  const resolved = await resolveCandidates(createPublicClient(), filters, { rank: false });
-  if (!resolved) return { total: 0, amenityCounts: ZERO_AMENITY_COUNTS };
-  return { total: resolved.candidates.length, amenityCounts: resolved.amenityCounts };
+  const matched = await matchSlots(filters);
+  if (!matched) return { total: 0, amenityCounts: ZERO_AMENITY_COUNTS };
+  const amenityCounts = { ...ZERO_AMENITY_COUNTS };
+  for (const slot of matched.slots) {
+    const units = slotUnitIds(slot).flatMap((id) => matched.units.get(id) ?? []);
+    for (const a of AMENITY_FILTERS) if (units.some((u) => u.amenities[a])) amenityCounts[a] += 1;
+  }
+  return { total: matched.slots.length, amenityCounts };
 }
 
 /**
- * The bare match list for a search — no cards, no order. For the empty-search
- * suggestions, which only need to know what WOULD match a looser search.
+ * The bare match list for a search, one entry per card — no order. For the
+ * empty-search suggestions, which only need to know what WOULD match a looser
+ * search. A hotel card is one entry: its city, and the most guests any of its
+ * matching units sleeps.
  */
 export async function matchUnits(
   filters: StaysFilters,
 ): Promise<{ id: string; city: string | null; maxGuests: number | null }[] | null> {
-  const resolved = await resolveCandidates(createPublicClient(), filters, { rank: false });
-  return resolved ? resolved.candidates.map((c) => ({ id: c.id, city: c.city, maxGuests: c.maxGuests })) : null;
+  const matched = await matchSlots(filters);
+  if (!matched) return null;
+  return matched.slots.flatMap((slot) => {
+    const units = slotUnitIds(slot).flatMap((id) => matched.units.get(id) ?? []);
+    if (!units.length) return [];
+    const guests = units.map((u) => u.maxGuests ?? 0);
+    return [{
+      id: slot.kind === 'property' ? slot.propertyId : slot.id,
+      city: units[0].city,
+      maxGuests: Math.max(...guests) || null,
+    }];
+  });
 }
 
 /**
@@ -1020,8 +1135,7 @@ async function resolveCandidates(
   amenityCounts: Record<AmenityFilter, number>;
 } | null> {
   const { city, district, area, guests, checkIn, checkOut, priceMin, priceMax } = filters;
-  // The category chip (see lib/stays/categories) is applied in code below:
-  // it depends on the property's type as well as the unit's.
+  // The category chip is not applied here — see planCards.
   const amenities = filters.amenities ?? [];
   const sort: SortKey = filters.sort ?? DEFAULT_SORT;
   const wantsAvailability = !!checkIn && !!checkOut;
@@ -1117,9 +1231,11 @@ async function resolveCandidates(
       };
     });
 
-  // Amenities (every one required) and the category, in code — see above.
+  // Amenities (every one required), in code — see above. The category is NOT
+  // applied here: it belongs to the CARDS (a hotel's apartment is under
+  // Apartment as its own card AND inside the hotel card under Hotels), so
+  // callers apply it after planCards.
   if (amenities.length) candidates = candidates.filter((c) => amenities.every((a) => c.amenities[a]));
-  if (filters.category) candidates = candidates.filter((c) => categoryFor(c.unit_type, c.propertyType) === filters.category);
 
   // 4 ── Prices, only when something reads them. Every candidate is quoted in
   // one RPC (~260 units in ~0.4s), because a bound or an order over a single
@@ -1264,7 +1380,7 @@ export interface PropertySummary {
   slug: string;
   name: string;
   type: string;
-  /** hotel or resort with more than 2 live units — shown as ONE card / page. */
+  /** A hotel or resort with at least 1 live unit — shown as ONE card / page. */
   showAsProperty: boolean;
   cityName: string | null;
   coverUrl: string | null;
@@ -1302,7 +1418,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
         }
         return out;
       },
-      ['property-index-v1'],
+      ['property-index-v2'],
       { tags: ['units'], revalidate: 600 },
     )();
   } catch (err) {

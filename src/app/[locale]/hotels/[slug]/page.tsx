@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * A hotel or resort (show_as_property: more than 2 live units) — one page for
+ * A hotel or resort (show_as_property: at least 1 live unit) — one page for
  * the place and every room in it. Rooms are priced and checked for the dates
  * in the URL (the search's, or the small form below); "View & book" opens the
  * room's own page with them kept.

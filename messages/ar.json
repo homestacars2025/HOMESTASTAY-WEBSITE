@@ -461,7 +461,7 @@
     },
     "hotel": {
       "metaTitle": "{name} — {type} في {city} | Homesta Stay",
-      "metaDescription": "احجز غرفة في {name} في {city}: {rooms} أنواع غرف ابتداءً من ${price} لليلة، موثّقة من Homesta Stay.",
+      "metaDescription": "احجز غرفة في {name} في {city}: {rooms, plural, one {نوع غرفة واحد} two {نوعا غرف} few {# أنواع غرف} many {# نوع غرفة} other {# نوع غرفة}} ابتداءً من ${price} لليلة، موثّقة من Homesta Stay.",
       "type": {
         "hotel": "فندق",
         "resort": "منتجع"

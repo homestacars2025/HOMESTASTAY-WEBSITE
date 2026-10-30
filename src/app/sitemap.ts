@@ -136,44 +136,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // ── Unit pages ────────────────────────────────────────────────────────────
-  // v_sitemap_units already applies the public-visibility filter. Unit pages
-  // exist in all four locales (unit_translations, with a Turkish fallback), so
-  // every one gets the full hreflang set.
-  const { data: units, error: unitsError } = await supabase
-    .from('v_sitemap_units')
-    .select('slug, updated_at');
-
-  if (unitsError) {
-    console.error('[sitemap] v_sitemap_units failed — unit pages omitted', {
-      message: unitsError.message, code: unitsError.code,
-    });
-  } else {
-    for (const row of units ?? []) {
-      const slug = String(row.slug ?? '').trim();
-      if (!slug) continue;
-      const path = `/stays/${slug}`;
-      const lastModified = row.updated_at ? new Date(row.updated_at as string) : new Date();
-
-      for (const locale of LOCALES) {
-        entries.push({
-          url: url(locale, path),
-          lastModified,
-          changeFrequency: 'weekly',
-          priority: 0.7,
-          alternates: { languages: allLocaleAlternates(path) },
-        });
-      }
-    }
-  }
-
   // ── Hotel / resort pages ──────────────────────────────────────────────────
-  // public_properties_view, show_as_property only (a hotel or resort with more
-  // than 2 live units). Every locale renders the page (translations fall back
+  // public_properties_view, show_as_property only (a hotel or resort with at
+  // least 1 live unit). Every locale renders the page (translations fall back
   // to the base name and description), so each gets the full hreflang set.
+  // Read first: their rooms are left out of the unit pages below.
   const { data: hotels, error: hotelsError } = await supabase
     .from('public_properties_view')
-    .select('slug')
+    .select('id, slug')
     .eq('show_as_property', true);
   if (hotelsError) {
     console.error('[sitemap] public_properties_view failed — hotel pages omitted', {
@@ -190,6 +160,58 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: new Date(),
           changeFrequency: 'weekly',
           priority: 0.8,
+          alternates: { languages: allLocaleAlternates(path) },
+        });
+      }
+    }
+  }
+
+  // A hotel's rooms are listed through the hotel, as on /stays: only its
+  // apartments are units in their own right. Their pages still work (old
+  // links, shared cards) — they are just not advertised twice. If this read
+  // fails the rooms stay in, which is the old, harmless behaviour.
+  const hotelIds = (hotels ?? []).map((h) => h.id as string).filter(Boolean);
+  const hotelRooms = new Set<string>();
+  if (hotelIds.length) {
+    const { data: rooms, error: roomsError } = await supabase
+      .from('units')
+      .select('slug, unit_type')
+      .in('property_id', hotelIds);
+    if (roomsError) {
+      console.error('[sitemap] hotel rooms lookup failed — rooms kept', {
+        message: roomsError.message, code: roomsError.code,
+      });
+    }
+    for (const r of rooms ?? []) {
+      if (r.slug && r.unit_type !== 'apartment') hotelRooms.add(String(r.slug).trim());
+    }
+  }
+
+  // ── Unit pages ────────────────────────────────────────────────────────────
+  // v_sitemap_units already applies the public-visibility filter. Unit pages
+  // exist in all four locales (unit_translations, with a Turkish fallback), so
+  // every one gets the full hreflang set.
+  const { data: units, error: unitsError } = await supabase
+    .from('v_sitemap_units')
+    .select('slug, updated_at');
+
+  if (unitsError) {
+    console.error('[sitemap] v_sitemap_units failed — unit pages omitted', {
+      message: unitsError.message, code: unitsError.code,
+    });
+  } else {
+    for (const row of units ?? []) {
+      const slug = String(row.slug ?? '').trim();
+      if (!slug || hotelRooms.has(slug)) continue;
+      const path = `/stays/${slug}`;
+      const lastModified = row.updated_at ? new Date(row.updated_at as string) : new Date();
+
+      for (const locale of LOCALES) {
+        entries.push({
+          url: url(locale, path),
+          lastModified,
+          changeFrequency: 'weekly',
+          priority: 0.7,
           alternates: { languages: allLocaleAlternates(path) },
         });
       }

@@ -461,7 +461,7 @@
     },
     "hotel": {
       "metaTitle": "{name} — {type}, {city} | Homesta Stay",
-      "metaDescription": "Забронируйте номер в {name} ({city}): {rooms} типов номеров от ${price} за ночь, проверено Homesta Stay.",
+      "metaDescription": "Забронируйте номер в {name} ({city}): {rooms, plural, one {# тип номера} few {# типа номеров} many {# типов номеров} other {# типа номеров}} от ${price} за ночь, проверено Homesta Stay.",
       "type": {
         "hotel": "Отель",
         "resort": "Курорт"
