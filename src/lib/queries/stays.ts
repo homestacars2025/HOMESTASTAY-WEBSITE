@@ -700,7 +700,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v7', locale],
+      ['stays-catalogue-v8', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -820,9 +820,12 @@ function assembleCards(
     const best = members[0];
     const prices = members.map(perNight).filter((v): v is number => v !== null);
     const from = prices.length ? Math.round(Math.min(...prices) * 100) / 100 : null;
+    // The PROPERTY's photo only (public_properties_view.cover_url: property_media or
+    // properties.cover_photo_url) — never a room's. A property without one is
+    // not show_as_property, so in practice this is never empty.
     const cover = p.coverUrl
       ? [{ id: `prop-${p.id}`, unit_id: best.id, media_type: 'image', file_path: '', public_url: p.coverUrl, is_cover: true, sort_order: 0 }]
-      : best.media;
+      : [];
     return [{
       ...best,
       id: p.id,
@@ -964,7 +967,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v6', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v7', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -1420,7 +1423,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
         }
         return out;
       },
-      ['property-index-v3'],
+      ['property-index-v4'],
       { tags: ['units'], revalidate: 600 },
     )();
   } catch (err) {
@@ -1862,7 +1865,7 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
   const supabase = createPublicClient();
   const { data: p, error } = await supabase
     .from('public_properties_view')
-    .select('id,slug,name,property_type,description,description_lang,check_in_time,check_out_time,city_name,show_as_property')
+    .select('id,slug,name,property_type,description,description_lang,check_in_time,check_out_time,city_name,show_as_property,cover_url')
     .eq('slug', slug)
     .maybeSingle();
   if (error) throw new Error(`hotel: ${error.message}`);
@@ -1913,20 +1916,18 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
   const mine = translations.find((t) => t.language_code === locale);
   const source = translations.find((t) => t.language_code === SOURCE_LOCALE);
 
-  // Photos: the hotel's own first, then one from each room — so a hotel with
-  // three photos (or none) still fills the gallery.
+  // Photos: the PROPERTY's own only (property_media, else the view's
+  // cover_url — properties.cover_photo_url) — never a room's: rooms show
+  // their own photos in the list below. A property with no photo is not
+  // show_as_property, so it never gets this far.
   const own: UnitMediaItem[] = ((media ?? []) as RawRow[])
     .filter((m) => m.public_url)
     .map((m, i) => ({ id: m.id, unit_id: p.id, media_type: 'image', file_path: '', public_url: m.public_url, is_cover: !!m.is_cover && i === 0, sort_order: i }));
-  const seen = new Set(own.map((m) => m.public_url));
-  const fromRooms: UnitMediaItem[] = listings.flatMap((u) => {
-    const c = u.media.find((m) => m.is_cover) ?? u.media[0];
-    if (!c || seen.has(c.public_url)) return [];
-    seen.add(c.public_url);
-    return [c];
-  });
-  // Card rows carry no media id, and the gallery keys by it: give each one.
-  const photos: UnitMediaItem[] = [...own, ...fromRooms].map((m, i) => ({ ...m, id: m.id || `hotel-${p.id}-${i}`, is_cover: i === 0, sort_order: i }));
+  if (!own.length && typeof p.cover_url === 'string' && p.cover_url) {
+    own.push({ id: '', unit_id: p.id, media_type: 'image', file_path: '', public_url: p.cover_url, is_cover: true, sort_order: 0 });
+  }
+  // The gallery keys by id: give one to rows without.
+  const photos: UnitMediaItem[] = own.map((m, i) => ({ ...m, id: m.id || `hotel-${p.id}-${i}`, is_cover: i === 0, sort_order: i }));
 
   const services = HOTEL_SERVICE_KEYS.filter((k) => (am as RawRow | null)?.[k] === true);
 
@@ -1969,7 +1970,7 @@ export async function getHotelPage(
 ): Promise<HotelPage | null> {
   const base = await unstable_cache(
     () => queryHotelBase(slug, locale),
-    ['hotel-page-v5', slug, locale],
+    ['hotel-page-v6', slug, locale],
     { tags: ['units'], revalidate: 600 },
   )().catch((err) => {
     console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });
