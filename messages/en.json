@@ -1151,8 +1151,7 @@
     },
     "documents": {
       "label": "I have read and accept the <pre>Pre-Information Form</pre> and the <contract>Distance Sales Contract</contract>.",
-      "consent": "I have read the <pre>Pre-Information Form</pre> and the <contract>Distance Selling Agreement</contract>, and I accept this unit's cancellation policy: {policy}",
-      "policyInfo": "Show the cancellation policy"
+      "consent": "I have read the <pre>Pre-Information Form</pre> and the <contract>Distance Selling Agreement</contract>, and I accept this unit's cancellation policy: {policy}"
     },
     "errors": {
       "email": "Please enter a valid email address.",

@@ -8,7 +8,6 @@ import { GuestsStepper } from '@/components/shared/GuestsStepper';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { CountrySelect } from '@/components/booking/CountrySelect';
 import { PaymentModeChoice } from '@/components/booking/PaymentModeChoice';
-import { PolicyInfo } from '@/components/booking/PolicyInfo';
 import { createHoldAction } from '@/app/[locale]/book/[slug]/actions';
 import type { ServiceSelection } from '@/lib/services/types';
 import type { HoldFieldError, HoldResult } from '@/app/[locale]/book/[slug]/actions';
@@ -371,9 +370,10 @@ export function GuestDetailsForm({
           />
           <span className={`text-[13px] leading-relaxed ${invalid('documents') ? 'text-stay' : 'text-ink-soft'}`}>
             {/* The cancellation policy is named where it is agreed to, rather
-                than inside a payment card the guest may not have read. Its
-                full wording is one tap away (PolicyInfo). Without a policy on
-                the unit the original sentence stands unchanged. */}
+                than inside a payment card the guest may not have read. The
+                sentence ends on its name, so its full wording sits directly
+                under it, always open. Without a policy on the unit the
+                original sentence stands unchanged. */}
             {policy
               ? t.rich('documents.consent', {
                   policy: policy.name,
@@ -404,7 +404,11 @@ export function GuestDetailsForm({
                     </Link>
                   ),
                 })}
-            {policy && <PolicyInfo policy={policy} />}
+            {policy?.description && (
+              <span className="block mt-1 text-xs text-mute leading-relaxed">
+                {policy.description}
+              </span>
+            )}
           </span>
         </label>
       </div>

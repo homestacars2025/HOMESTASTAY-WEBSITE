@@ -1151,8 +1151,7 @@
     },
     "documents": {
       "label": "<pre>Ön Bilgilendirme Formu</pre>’nu ve <contract>Mesafeli Satış Sözleşmesi</contract>’ni okudum, kabul ediyorum.",
-      "consent": "<pre>Ön Bilgilendirme Formu</pre>'nu ve <contract>Mesafeli Satış Sözleşmesi</contract>'ni okudum, bu birimin iptal politikasını kabul ediyorum: {policy}",
-      "policyInfo": "İptal politikasını göster"
+      "consent": "<pre>Ön Bilgilendirme Formu</pre>'nu ve <contract>Mesafeli Satış Sözleşmesi</contract>'ni okudum, bu birimin iptal politikasını kabul ediyorum: {policy}"
     },
     "errors": {
       "email": "Lütfen geçerli bir e-posta adresi girin.",

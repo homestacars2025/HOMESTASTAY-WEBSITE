@@ -513,9 +513,9 @@ function mapRow(
 
 /**
  * Fetch cancellation policies for a set of ids in one query and index them by id,
- * resolving name/description for the visitor locale (locale → Turkish → legacy
- * base row). units.cancellation_policy_id has no FK constraint, so PostgREST
- * can't embed it — we resolve it with a small companion query instead.
+ * resolving name/description for the visitor locale (locale → English → base
+ * row). units.cancellation_policy_id has no FK constraint, so PostgREST can't
+ * embed it — we resolve it with a small companion query instead.
  */
 async function fetchPolicies(
   supabase: SupabaseClient,
@@ -528,7 +528,7 @@ async function fetchPolicies(
 
   const { data, error } = await supabase
     .from('unit_cancellation_policy')
-    .select('id, name, description, cancellation_policy_translations(language_code, name, description)')
+    .select('id, name, description, name_ar, name_en, name_tr, name_ru, description_ar, description_en, description_tr, description_ru')
     .in('id', unique);
 
   if (error) {
@@ -542,18 +542,33 @@ async function fetchPolicies(
   }
 
   for (const p of (data ?? []) as RawRow[]) {
-    const trans: RawRow[] = Array.isArray(p.cancellation_policy_translations)
-      ? p.cancellation_policy_translations
-      : [];
-    const match = trans.find((t) => t.language_code === locale) ?? null;
-    const source = trans.find((t) => t.language_code === SOURCE_LOCALE) ?? null;
     map.set(p.id as string, {
       id: p.id as string,
-      name: match?.name || source?.name || p.name || '',
-      description: match?.description || source?.description || p.description || '',
+      name: p[`name_${locale}`] || p.name_en || p.name || '',
+      description: p[`description_${locale}`] || p.description_en || p.description || '',
     });
   }
   return map;
+}
+
+/**
+ * The cancellation policy a booked unit carries NOW. Bookings keep no snapshot
+ * of their policy, so if the unit's policy changed after the booking, this is
+ * the new one, not the one the guest accepted.
+ */
+export async function getUnitPolicy(
+  supabase: SupabaseClient,
+  unitId: string,
+  locale: string,
+): Promise<UnitCancellationPolicy | null> {
+  const { data } = await supabase
+    .from('units')
+    .select('cancellation_policy_id')
+    .eq('id', unitId)
+    .maybeSingle();
+  const policyId = data?.cancellation_policy_id as string | null | undefined;
+  if (!policyId) return null;
+  return (await fetchPolicies(supabase, [policyId], locale)).get(policyId) ?? null;
 }
 
 /** True when a raw row carries a usable (non-empty) ad_title. */

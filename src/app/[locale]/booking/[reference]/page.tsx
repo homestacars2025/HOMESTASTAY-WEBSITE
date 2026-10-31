@@ -17,6 +17,8 @@ import {
 import { createClient as createSessionClient } from '@/lib/supabase/server';
 import { readBookingCookie } from '@/lib/booking/cookie';
 import { getWalletBalanceUsd } from '@/lib/queries/wallet';
+import { getUnitPolicy } from '@/lib/queries/stays';
+import { PolicyText } from '@/components/unit/PolicyText';
 import { CardPaymentForm } from '@/components/booking/CardPaymentForm';
 import { LydPaymentForm } from '@/components/booking/LydPaymentForm';
 import { WalletPaymentForm } from '@/components/booking/WalletPaymentForm';
@@ -60,12 +62,13 @@ interface PageProps {
 export default async function BookingResultPage({ params, searchParams }: PageProps) {
   const { locale, reference } = await params;
   const { pay, pending, error: payError } = await searchParams;
-  const [t, tMode, tFail] = await Promise.all([
+  const [t, tMode, tFail, tUnit] = await Promise.all([
     getTranslations({ locale, namespace: 'booking.result' }),
     getTranslations({ locale, namespace: 'booking.mode' }),
     // The same sentences the standalone failure page uses — one wording for
     // one event, wherever the guest happens to read it.
     getTranslations({ locale, namespace: 'booking.failed' }),
+    getTranslations({ locale, namespace: 'unit' }),
   ]);
 
   const cookieBookingId = await readBookingCookie();
@@ -95,9 +98,9 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // booking — it is the contractual amount for that specific attempt and is
   // never recomputed from the USD total (a refund must replay it exactly).
   //
-  // Alongside it, the extras snapshot (booking_services) — independent reads,
-  // so they share one wait.
-  const [{ data: payment }, extrasLines] = await Promise.all([
+  // Alongside it, the extras snapshot (booking_services) and the unit's
+  // cancellation policy — independent reads, so they share one wait.
+  const [{ data: payment }, extrasLines, policy] = await Promise.all([
     supabase
       .from('booking_payments')
       .select('amount_try, amount_usd, fx_rate_used, paid_at, payment_gateway, amount_lyd, response_message')
@@ -105,6 +108,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
       .eq('status', 'paid')
       .maybeSingle(),
     loadBookingServices(supabase, booking.id as string),
+    getUnitPolicy(supabase, booking.unit_id as string, locale),
   ]);
 
   // ── The payment state ────────────────────────────────────────────────────
@@ -670,6 +674,13 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
               />
             )}
           </>
+        )}
+
+        {policy && !isCanceled && (
+          <div className="border border-rule rounded-[14px] p-5 mt-4">
+            <p className="text-[15px] font-medium text-ink mb-2">{tUnit('cancellationTitle')}</p>
+            <PolicyText policy={policy} />
+          </div>
         )}
 
         <div className="mt-8">

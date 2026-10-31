@@ -7,6 +7,10 @@ import { getLegalDoc } from '@/content/legal';
 import { DOCUMENT_VERSION } from '@/lib/booking/documents';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadBookingServices, type BookingServiceLine } from '@/lib/booking/booking-services';
+import { getUnitPolicy } from '@/lib/queries/stays';
+import type { UnitCancellationPolicy } from '@/lib/types/unit';
+
+type EmailPolicy = { tr: UnitCancellationPolicy; en: UnitCancellationPolicy };
 
 /**
  * The paid-booking confirmation email.
@@ -108,6 +112,23 @@ async function renderDocumentPdf(
   return renderToBuffer(element);
 }
 
+/** Both languages of the email body. Null leaves the block out. */
+async function loadEmailPolicy(bookingId: string | undefined): Promise<EmailPolicy | null> {
+  if (!bookingId) return null;
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from('bookings')
+    .select('unit_id')
+    .eq('id', bookingId)
+    .maybeSingle();
+  if (!data?.unit_id) return null;
+  const [tr, en] = await Promise.all([
+    getUnitPolicy(supabase, data.unit_id as string, 'tr'),
+    getUnitPolicy(supabase, data.unit_id as string, 'en'),
+  ]);
+  return tr && en ? { tr, en } : null;
+}
+
 export async function sendBookingConfirmation(
   data: BookingConfirmationData,
 ): Promise<void> {
@@ -125,6 +146,7 @@ export async function sendBookingConfirmation(
     const extras: BookingServiceLine[] = data.bookingId
       ? await loadBookingServices(createAdminClient(), data.bookingId)
       : [];
+    const policy = await loadEmailPolicy(data.bookingId);
 
     // The booking summary is the Ön Bilgilendirme Formu's annex (EK-1).
     const annex: LegalAnnexRow[] = [
@@ -203,7 +225,7 @@ export async function sendBookingConfirmation(
       from: 'Homesta Stay <noreply@homestastay.com>',
       to: data.email,
       subject: `Ödeme alındı — ${data.reference} · Payment received`,
-      html: confirmationHtml(data, amountLine, extras),
+      html: confirmationHtml(data, amountLine, extras, policy),
       attachments: [
         { filename: `On-Bilgilendirme-Formu-${data.reference}.pdf`, content: preInfoPdf },
         { filename: `Mesafeli-Satis-Sozlesmesi-${data.reference}.pdf`, content: contractPdf },
@@ -232,8 +254,18 @@ function confirmationHtml(
   data: BookingConfirmationData,
   amountLine: string,
   extras: BookingServiceLine[],
+  policy: EmailPolicy | null,
 ): string {
   const ref = esc(data.reference);
+  const policyBlock = policy
+    ? `<div style="border:1px solid #E2DED4;border-radius:10px;padding:16px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#8C8881;">İptal politikası · Cancellation policy</p>
+      <p style="margin:0;font-size:14px;color:#0E0E10;">${esc(policy.tr.name)}</p>
+      <p style="margin:2px 0 0;font-size:12px;color:#8C8881;line-height:1.6;">${esc(policy.tr.description)}</p>
+      <p style="margin:12px 0 0;font-size:14px;color:#0E0E10;">${esc(policy.en.name)}</p>
+      <p style="margin:2px 0 0;font-size:12px;color:#8C8881;line-height:1.6;">${esc(policy.en.description)}</p>
+    </div>`
+    : '';
   // The stay and each extra, then one total — only when there are extras, so
   // every other booking's email is unchanged.
   const extrasBlock = extras.length > 0 && data.totalUsd !== null
@@ -281,6 +313,8 @@ function confirmationHtml(
     </div>` : ''}
 
     ${extrasBlock}
+
+    ${policyBlock}
 
     ${data.gateway === 'tlync'
       ? `<p style="margin:0 0 6px;font-size:13px;color:#45454B;line-height:1.6;">
