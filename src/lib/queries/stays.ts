@@ -551,26 +551,6 @@ async function fetchPolicies(
   return map;
 }
 
-/**
- * The cancellation policy a booked unit carries NOW. Bookings keep no snapshot
- * of their policy, so if the unit's policy changed after the booking, this is
- * the new one, not the one the guest accepted.
- */
-export async function getUnitPolicy(
-  supabase: SupabaseClient,
-  unitId: string,
-  locale: string,
-): Promise<UnitCancellationPolicy | null> {
-  const { data } = await supabase
-    .from('units')
-    .select('cancellation_policy_id')
-    .eq('id', unitId)
-    .maybeSingle();
-  const policyId = data?.cancellation_policy_id as string | null | undefined;
-  if (!policyId) return null;
-  return (await fetchPolicies(supabase, [policyId], locale)).get(policyId) ?? null;
-}
-
 /** True when a raw row carries a usable (non-empty) ad_title. */
 function hasAdTitle(row: RawRow): boolean {
   const title = one<RawRow>(row.unit_info)?.ad_title;

@@ -7,7 +7,7 @@ import { getLegalDoc } from '@/content/legal';
 import { DOCUMENT_VERSION } from '@/lib/booking/documents';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadBookingServices, type BookingServiceLine } from '@/lib/booking/booking-services';
-import { getUnitPolicy } from '@/lib/queries/stays';
+import { policyFromSnapshot } from '@/lib/booking/policy-snapshot';
 import type { UnitCancellationPolicy } from '@/lib/types/unit';
 
 type EmailPolicy = { tr: UnitCancellationPolicy; en: UnitCancellationPolicy };
@@ -112,20 +112,20 @@ async function renderDocumentPdf(
   return renderToBuffer(element);
 }
 
-/** Both languages of the email body. Null leaves the block out. */
+/**
+ * Both languages of the email body, from the policy the guest ACCEPTED
+ * (bookings.cancellation_policy_snapshot, taken on insert) — never the unit's
+ * current policy. Null leaves the block out.
+ */
 async function loadEmailPolicy(bookingId: string | undefined): Promise<EmailPolicy | null> {
   if (!bookingId) return null;
-  const supabase = createAdminClient();
-  const { data } = await supabase
+  const { data } = await createAdminClient()
     .from('bookings')
-    .select('unit_id')
+    .select('cancellation_policy_snapshot')
     .eq('id', bookingId)
     .maybeSingle();
-  if (!data?.unit_id) return null;
-  const [tr, en] = await Promise.all([
-    getUnitPolicy(supabase, data.unit_id as string, 'tr'),
-    getUnitPolicy(supabase, data.unit_id as string, 'en'),
-  ]);
+  const tr = policyFromSnapshot(data?.cancellation_policy_snapshot, 'tr');
+  const en = policyFromSnapshot(data?.cancellation_policy_snapshot, 'en');
   return tr && en ? { tr, en } : null;
 }
 

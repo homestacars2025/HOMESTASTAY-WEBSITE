@@ -17,7 +17,7 @@ import {
 import { createClient as createSessionClient } from '@/lib/supabase/server';
 import { readBookingCookie } from '@/lib/booking/cookie';
 import { getWalletBalanceUsd } from '@/lib/queries/wallet';
-import { getUnitPolicy } from '@/lib/queries/stays';
+import { policyFromSnapshot } from '@/lib/booking/policy-snapshot';
 import { PolicyText } from '@/components/unit/PolicyText';
 import { CardPaymentForm } from '@/components/booking/CardPaymentForm';
 import { LydPaymentForm } from '@/components/booking/LydPaymentForm';
@@ -86,7 +86,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
     // PostgREST returns them only when named explicitly. The status is the
     // one answer to "is this paid?" — paid_at alone cannot tell a deposit
     // booking (money in, cash still due) from a fully paid one.
-    .select('id, unit_id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, owner_decision, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, services_total_usd, customers(email, nationality, phone)')
+    .select('id, unit_id, booking_reference, status, paid_at, total_amount_usd, amount_charged_try, fx_rate_used, check_in, check_out, guests_count, owner_decision_due_at, owner_decision, payment_mode, committed_at, prepay_amount_try, prepay_amount_usd, balance_due_try, balance_due_usd, arrival_status, balance_settled_at, booking_payment_status, booking_payment_label, services_total_usd, cancellation_policy_snapshot, customers(email, nationality, phone)')
     .eq('booking_reference', reference)
     .maybeSingle();
 
@@ -98,9 +98,9 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
   // booking — it is the contractual amount for that specific attempt and is
   // never recomputed from the USD total (a refund must replay it exactly).
   //
-  // Alongside it, the extras snapshot (booking_services) and the unit's
-  // cancellation policy — independent reads, so they share one wait.
-  const [{ data: payment }, extrasLines, policy] = await Promise.all([
+  // Alongside it, the extras snapshot (booking_services) — independent reads,
+  // so they share one wait.
+  const [{ data: payment }, extrasLines] = await Promise.all([
     supabase
       .from('booking_payments')
       .select('amount_try, amount_usd, fx_rate_used, paid_at, payment_gateway, amount_lyd, response_message')
@@ -108,8 +108,11 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
       .eq('status', 'paid')
       .maybeSingle(),
     loadBookingServices(supabase, booking.id as string),
-    getUnitPolicy(supabase, booking.unit_id as string, locale),
   ]);
+
+  // The policy the guest ACCEPTED (snapshot taken on insert), in their
+  // language — never the unit's current policy, which the host may change.
+  const policy = policyFromSnapshot(booking.cancellation_policy_snapshot, locale);
 
   // ── The payment state ────────────────────────────────────────────────────
   // Computed by the database. An unrecognised value (an enum added there and
