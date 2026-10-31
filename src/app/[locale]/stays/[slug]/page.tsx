@@ -507,6 +507,7 @@ export default async function UnitDetailPage({
                       id_required:               t('rules.id_required'),
                       quiet_hours:               t('rules.quiet_hours'),
                       additional_rules:          t('rules.additional_rules'),
+                      ai_translated_notice:      t('rules.aiTranslatedNotice'),
                       allowed:                   t('rules.allowed'),
                       not_allowed:               t('rules.not_allowed'),
                       yes:                       t('rules.yes'),

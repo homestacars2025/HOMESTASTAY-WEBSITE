@@ -76,8 +76,9 @@ const LISTING_SELECT = [
   // iso_code comes back here and the name is resolved in lib/geo/countries.
   'properties!inner(name,property_type,cover_photo_url,geo_cities:city_id(id,name,name_ar,name_en,name_tr),geo_districts:district_id(id,name,name_ar,name_en,name_tr),geo_countries:country_id(id,name,iso_code))',
   // Locale-aware marketing copy. All non-Turkish rows are AI translations of the
-  // Turkish source. Resolved per visitor locale in mapRow (see resolveTranslation).
-  'unit_translations(language_code,ad_title,ad_description)',
+  // Turkish source. Resolved per visitor locale in mapRow (see resolveTranslation
+  // and resolveRules).
+  'unit_translations(language_code,ad_title,ad_description,additional_rules)',
 ].join(',');
 
 // A listing CARD renders only: cover image, title, city/region, price. It never
@@ -273,6 +274,8 @@ type TranslationRow = {
   language_code: string;
   ad_title: string | null;
   ad_description: string | null;
+  // Only LISTING_SELECT carries it: cards never show rules.
+  additional_rules?: string | null;
 };
 
 type ResolvedContent = {
@@ -321,6 +324,48 @@ function resolveTranslation(
     locale !== SOURCE_LOCALE && !!match && (!!match.ad_title || !!match.ad_description);
 
   return { ad_title, ad_description, content_language, is_machine_translated };
+}
+
+type ResolvedRules = Pick<
+  UnitRules,
+  'additional_rules' | 'additional_rules_language' | 'additional_rules_translated'
+>;
+
+/**
+ * Resolve the free-text house rules for the visitor's locale:
+ *   1. unit_translations row matching the visitor locale
+ *   2. English row
+ *   3. the original unit_rules text, in whatever language the host wrote it
+ * Text is passed through untouched (line breaks, bullets); only the emptiness
+ * check trims.
+ *
+ * A row counts as translated only when its text differs from the original.
+ * The row for the host's own language is a copy of the original, and
+ * rules_translated_at is stamped on it too, so that column cannot tell them
+ * apart. Nor can source_language, which describes the ad copy, not the rules.
+ */
+function resolveRules(
+  translations: TranslationRow[] | null | undefined,
+  locale: string,
+  original: string | null,
+): ResolvedRules {
+  const rows = Array.isArray(translations) ? translations : [];
+  const row = [locale, 'en']
+    .map((code) => rows.find((t) => t.language_code === code))
+    .find((t) => t?.additional_rules?.trim());
+
+  if (row?.additional_rules) {
+    return {
+      additional_rules: row.additional_rules,
+      additional_rules_language: row.language_code,
+      additional_rules_translated: row.additional_rules.trim() !== original?.trim(),
+    };
+  }
+  return {
+    additional_rules: original?.trim() ? original : null,
+    additional_rules_language: null,
+    additional_rules_translated: false,
+  };
 }
 
 /** Map one raw DB row into the guest-facing UnitListing shape the UI consumes. */
@@ -410,7 +455,7 @@ function mapRow(
         allow_unregistered_guests: !!rulesRow.allow_unregistered_guests,
         family_friendly: !!rulesRow.family_friendly,
         id_required: !!rulesRow.id_required,
-        additional_rules: rulesRow.additional_rules ?? null,
+        ...resolveRules(row.unit_translations, locale, rulesRow.additional_rules ?? null),
       }
     : null;
 
@@ -1762,7 +1807,7 @@ export async function getPublicUnitBySlug(
 ): Promise<UnitListing | null> {
   const cached = await unstable_cache(
     () => queryPublicUnitBySlug(slugOrId, locale),
-    ['unit-by-slug-v6', slugOrId, locale],
+    ['unit-by-slug-v7', slugOrId, locale],
     { tags: ['units'], revalidate: 300 },
   )();
   if (cached) return cached;

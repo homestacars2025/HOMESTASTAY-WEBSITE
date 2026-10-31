@@ -612,6 +612,7 @@
       "id_required": "ID required",
       "quiet_hours": "Quiet hours",
       "additional_rules": "Additional rules",
+      "aiTranslatedNotice": "These rules were automatically translated and may contain minor errors.",
       "allowed": "Allowed",
       "not_allowed": "Not allowed",
       "yes": "Yes",

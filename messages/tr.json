@@ -612,6 +612,7 @@
       "id_required": "Kimlik gerekli",
       "quiet_hours": "Sessizlik saatleri",
       "additional_rules": "Ek kurallar",
+      "aiTranslatedNotice": "Bu kurallar otomatik olarak çevrildi ve küçük hatalar içerebilir.",
       "allowed": "İzinli",
       "not_allowed": "İzinsiz",
       "yes": "Evet",

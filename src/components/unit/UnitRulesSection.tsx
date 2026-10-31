@@ -1,4 +1,4 @@
-import { Check, X, Clock } from 'lucide-react';
+import { Check, X, Clock, Languages } from 'lucide-react';
 import type { UnitRules } from '@/lib/types/unit';
 
 interface RuleItem {
@@ -41,6 +41,7 @@ interface UnitRulesSectionProps {
     id_required: string;
     quiet_hours: string;
     additional_rules: string;
+    ai_translated_notice: string;
     allowed: string;
     not_allowed: string;
     yes: string;
@@ -69,6 +70,12 @@ function YesNoIndicator({ value, labels }: { value: boolean; labels: { yes: stri
 }
 
 export function UnitRulesSection({ rules, labels }: UnitRulesSectionProps) {
+  // dir follows the language of the text itself, independent of the UI locale:
+  // Turkish rules under an Arabic UI stay ltr. The original's language is
+  // unknown, so the browser decides.
+  const language = rules.additional_rules_language;
+  const rulesDir = !language ? 'auto' : language === 'ar' ? 'rtl' : 'ltr';
+
   return (
     <section>
       <h2 className="text-base font-medium text-ink mb-5 tracking-[-0.015em]">
@@ -115,9 +122,15 @@ export function UnitRulesSection({ rules, labels }: UnitRulesSectionProps) {
             <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-mute mb-2">
               {labels.additional_rules}
             </p>
-            <p className="text-sm text-ink-soft leading-relaxed">
+            <p dir={rulesDir} className="text-sm text-ink-soft leading-relaxed whitespace-pre-line">
               {rules.additional_rules}
             </p>
+            {rules.additional_rules_translated && (
+              <p className="mt-3 flex items-center gap-1.5 text-xs italic text-mute">
+                <Languages className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                {labels.ai_translated_notice}
+              </p>
+            )}
           </div>
         )}
       </div>

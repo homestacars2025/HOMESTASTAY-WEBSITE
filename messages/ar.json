@@ -612,6 +612,7 @@
       "id_required": "الهوية مطلوبة",
       "quiet_hours": "ساعات الهدوء",
       "additional_rules": "قواعد إضافية",
+      "aiTranslatedNotice": "تمت ترجمة هذه القواعد آلياً وقد تحتوي على أخطاء طفيفة.",
       "allowed": "مسموح",
       "not_allowed": "غير مسموح",
       "yes": "نعم",

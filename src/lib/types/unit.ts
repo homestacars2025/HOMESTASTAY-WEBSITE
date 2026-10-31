@@ -165,7 +165,8 @@ export const HOTEL_SERVICE_KEYS = [
 export type HotelServiceKey = (typeof HOTEL_SERVICE_KEYS)[number];
 
 /**
- * Mirrors unit_rules columns.
+ * Mirrors unit_rules columns, except additional_rules, which is resolved for
+ * the visitor's locale (unit_translations → English → the original text).
  * quiet_hours_from / quiet_hours_to are stored as time ("HH:MM") in the DB.
  */
 export interface UnitRules {
@@ -179,6 +180,11 @@ export interface UnitRules {
   family_friendly: boolean;
   id_required: boolean;
   additional_rules: string | null;
+  // Language of the text ('en'|'ar'|'tr'|'ru'), or null for the original, whose
+  // language is unknown. Drives text direction, as content_language does.
+  additional_rules_language: string | null;
+  // True when the text came from a translation, so the UI shows the disclaimer.
+  additional_rules_translated: boolean;
 }
 
 /**
