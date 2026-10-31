@@ -8,7 +8,7 @@ import type { StayType } from '@/lib/stays/filters';
  *   apartment → apartment + studio   (studio is never its own chip)
  *   cabin     → cabin
  *   villa     → villa
- *   hotels    → NO unit type: the chip holds hotel / resort / aparthotel
+ *   hotels    → NO unit type: the chip holds hotel / resort
  *               cards only (one per property, see planCards), never a unit
  *   (All)     → everything bookable, including room / suite / farm / bed /
  *               other, which belong to no chip and appear only under All.
@@ -48,7 +48,7 @@ const ALIASES: Record<string, Category> = {
   apartment: 'apartment', apartments: 'apartment', studio: 'apartment', studios: 'apartment',
   cabin: 'cabin', cabins: 'cabin', bungalow: 'cabin',
   villa: 'villa', villas: 'villa',
-  hotels: 'hotels', hotel: 'hotels', resort: 'hotels', resorts: 'hotels', aparthotel: 'hotels', aparthotels: 'hotels',
+  hotels: 'hotels', hotel: 'hotels', resort: 'hotels', resorts: 'hotels',
   room: 'hotels', rooms: 'hotels', suite: 'hotels', suites: 'hotels',
 };
 

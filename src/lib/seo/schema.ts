@@ -375,15 +375,14 @@ export function graph(...nodes: Array<object | null>) {
 }
 
 /**
- * A hotel / resort / aparthotel page: Hotel (Resort for a resort — both
- * LodgingBusiness; schema.org has no aparthotel type) with every
+ * A hotel / resort page: Hotel (or Resort — both LodgingBusiness) with every
  * room as a HotelRoom in containsPlace. Area-level location only: the city
  * and the same blurred point the page's map shows; never a street address.
  */
 export function hotelSchema(input: {
   url: string;
   locale: string;
-  type: 'hotel' | 'resort' | 'aparthotel';
+  type: 'hotel' | 'resort';
   name: string;
   description: string | null;
   city: string | null;

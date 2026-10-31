@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { BedDouble, ChevronLeft, LogIn, LogOut, Users } from 'lucide-react';
+import { BedDouble, ChevronLeft, Languages, LogIn, LogOut, Users } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
 import { UnitWhereSection } from '@/components/unit/UnitWhereSection';
@@ -175,6 +175,12 @@ export default async function HotelPage({ params, searchParams }: Props) {
             {hotel.description && (
               <section className="mb-8">
                 <p dir="auto" lang={hotel.descriptionLang ?? undefined} className="whitespace-pre-line text-[15px] leading-relaxed text-ink-soft">{hotel.description}</p>
+                {hotel.descriptionAiTranslated && (
+                  <p className="mt-3 flex items-center gap-1.5 text-xs italic text-mute">
+                    <Languages className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    {t('aiTranslatedNotice')}
+                  </p>
+                )}
               </section>
             )}
 

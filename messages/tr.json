@@ -112,8 +112,7 @@
     "fromPrice": "en düşük <p>{price}</p>",
     "propertyType": {
       "hotel": "Otel",
-      "resort": "Tatil köyü",
-      "aparthotel": "Apart otel"
+      "resort": "Tatil köyü"
     }
   },
   "pages": {
@@ -461,12 +460,12 @@
       "contactCta": "E-posta gönderin"
     },
     "hotel": {
+      "aiTranslatedNotice": "Bu açıklama otomatik olarak çevrildi ve küçük hatalar içerebilir.",
       "metaTitle": "{name} — {city} {type} | Homesta Stay",
       "metaDescription": "{city} bölgesindeki {name} için oda ayırtın: {rooms} oda tipi, gecelik ${price}'dan başlayan fiyatlarla, Homesta Stay güvencesiyle.",
       "type": {
         "hotel": "Otel",
-        "resort": "Tatil köyü",
-        "aparthotel": "Apart otel"
+        "resort": "Tatil köyü"
       },
       "checkIn": "Giriş:",
       "checkOut": "Çıkış:",

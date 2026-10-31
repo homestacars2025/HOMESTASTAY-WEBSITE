@@ -740,7 +740,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v8', locale],
+      ['stays-catalogue-v9', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -767,7 +767,7 @@ type CardSlot =
   | { kind: 'property'; propertyId: string; members: string[] };
 
 /**
- * A unit inside a hotel / resort / aparthotel that is ALSO listed as its own
+ * A unit inside a hotel or resort that is ALSO listed as its own
  * card: everything but a room. A guest looking for a flat, a villa or a cabin
  * finds the property's one under that chip; a room is only ever reached
  * through its hotel.
@@ -781,8 +781,8 @@ function listedOnItsOwn(unitType: string): boolean {
  * list, the map, the chips, every count and similar places, so a count can
  * never disagree with the cards shown.
  *
- *   • every hotel / resort / aparthotel (show_as_property: at least 1 live
- *     unit) → ONE card, in the place of its best-ranked matching unit,
+ *   • every hotel / resort (show_as_property: at least 1 live unit and a
+ *     property photo) → ONE card, in the place of its best-ranked matching unit,
  *     holding all its matching units — the only cards under Hotels;
  *   • its rooms → no card of their own;
  *   • its other units (apartment, suite, studio, villa, cabin, …) → ALSO
@@ -1007,7 +1007,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v7', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v8', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -1425,7 +1425,7 @@ export interface PropertySummary {
   slug: string;
   name: string;
   type: string;
-  /** A hotel, resort or aparthotel with at least 1 live unit — shown as ONE card / page. */
+  /** A hotel or resort with at least 1 live unit and a property photo — ONE card / page. */
   showAsProperty: boolean;
   cityName: string | null;
   coverUrl: string | null;
@@ -1463,7 +1463,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
         }
         return out;
       },
-      ['property-index-v4'],
+      ['property-index-v5'],
       { tags: ['units'], revalidate: 600 },
     )();
   } catch (err) {
@@ -1472,16 +1472,19 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
   }
 }
 
-export type PropertyKind = 'hotel' | 'resort' | 'aparthotel';
+export type PropertyKind = 'hotel' | 'resort';
 
 /** properties.property_type → the kind a hotel card / page names. */
 export function propertyKind(type: string | null | undefined): PropertyKind {
-  return type === 'resort' || type === 'aparthotel' ? type : 'hotel';
+  return type === 'resort' ? 'resort' : 'hotel';
 }
 
-/** A property's name in the visitor's language: translation → Turkish → the base name. */
+/**
+ * A property's name in the visitor's language: property_translations for the
+ * locale → English → Turkish → properties.name. Same order on the property page.
+ */
 export function propertyName(p: PropertySummary, locale: string): string {
-  return p.names[locale] || p.names[SOURCE_LOCALE] || p.name;
+  return p.names[locale] || p.names.en || p.names[SOURCE_LOCALE] || p.name;
 }
 
 // ── Ranking index ────────────────────────────────────────────────────────────
@@ -1891,6 +1894,8 @@ export interface HotelPage {
   city: string | null;
   description: string | null;
   descriptionLang: string | null;
+  /** The description shown came from an ai_generated translation row. */
+  descriptionAiTranslated: boolean;
   checkIn: string | null;
   checkOut: string | null;
   media: UnitMediaItem[];
@@ -1922,7 +1927,7 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
   roomsQuery = cardTrims(roomsQuery, locale);
 
   const [{ data: tr }, { data: media }, { data: am }, { data: unitRows, error: unitError }, index] = await Promise.all([
-    supabase.from('property_translations').select('language_code,name,description').eq('property_id', p.id),
+    supabase.from('property_translations').select('language_code,name,description,ai_generated').eq('property_id', p.id),
     supabase.from('property_media').select('id,public_url,is_cover,sort_order').eq('property_id', p.id)
       .order('is_cover', { ascending: false }).order('sort_order', { ascending: true }),
     supabase.from('property_amenities').select('*').eq('property_id', p.id).maybeSingle(),
@@ -1952,9 +1957,15 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
     }))
     .sort((a, b) => (a.pricing.nightly_usd ?? 1e9) - (b.pricing.nightly_usd ?? 1e9) || (a.id < b.id ? -1 : 1));
 
+  // property_translations, visitor's language → English → Turkish, then the
+  // properties row. Name and description pick their row independently (a
+  // row may carry one without the other).
   const translations = (tr ?? []) as RawRow[];
-  const mine = translations.find((t) => t.language_code === locale);
-  const source = translations.find((t) => t.language_code === SOURCE_LOCALE);
+  const chain = [locale, 'en', SOURCE_LOCALE]
+    .map((lang) => translations.find((t) => t.language_code === lang))
+    .filter((t): t is RawRow => !!t);
+  const named = chain.find((t) => typeof t.name === 'string' && t.name.trim());
+  const described = chain.find((t) => typeof t.description === 'string' && t.description.trim());
 
   // Photos: the PROPERTY's own only (property_media, else the view's
   // cover_url — properties.cover_photo_url) — never a room's: rooms show
@@ -1984,11 +1995,12 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
   return {
     id: p.id,
     slug: p.slug,
-    name: (mine?.name || source?.name || p.name || '').trim(),
+    name: (named?.name || p.name || '').trim(),
     type: propertyKind(p.property_type),
     city: p.city_name ?? null,
-    description: mine?.description || source?.description || p.description || null,
-    descriptionLang: mine?.description ? locale : source?.description ? SOURCE_LOCALE : (p.description_lang ?? null),
+    description: described?.description || p.description || null,
+    descriptionLang: described ? (described.language_code as string) : (p.description_lang ?? null),
+    descriptionAiTranslated: described?.ai_generated === true,
     checkIn: time(p.check_in_time),
     checkOut: time(p.check_out_time),
     media: photos,
@@ -2010,7 +2022,7 @@ export async function getHotelPage(
 ): Promise<HotelPage | null> {
   const base = await unstable_cache(
     () => queryHotelBase(slug, locale),
-    ['hotel-page-v6', slug, locale],
+    ['hotel-page-v7', slug, locale],
     { tags: ['units'], revalidate: 600 },
   )().catch((err) => {
     console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });

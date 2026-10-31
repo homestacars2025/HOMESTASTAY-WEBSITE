@@ -112,8 +112,7 @@
     "fromPrice": "ابتداءً من <p>{price}</p>",
     "propertyType": {
       "hotel": "فندق",
-      "resort": "منتجع",
-      "aparthotel": "شقق فندقية"
+      "resort": "منتجع"
     }
   },
   "pages": {
@@ -461,12 +460,12 @@
       "contactCta": "راسلنا"
     },
     "hotel": {
+      "aiTranslatedNotice": "تُرجم هذا الوصف تلقائيًا وقد يحتوي على أخطاء بسيطة.",
       "metaTitle": "{name} — {type} في {city} | Homesta Stay",
       "metaDescription": "احجز غرفة في {name} في {city}: {rooms, plural, one {نوع غرفة واحد} two {نوعا غرف} few {# أنواع غرف} many {# نوع غرفة} other {# نوع غرفة}} ابتداءً من ${price} لليلة، موثّقة من Homesta Stay.",
       "type": {
         "hotel": "فندق",
-        "resort": "منتجع",
-        "aparthotel": "شقق فندقية"
+        "resort": "منتجع"
       },
       "checkIn": "تسجيل الوصول من",
       "checkOut": "تسجيل المغادرة حتى",

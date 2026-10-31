@@ -112,8 +112,7 @@
     "fromPrice": "от <p>{price}</p>",
     "propertyType": {
       "hotel": "Отель",
-      "resort": "Курорт",
-      "aparthotel": "Апарт-отель"
+      "resort": "Курорт"
     }
   },
   "pages": {
@@ -461,12 +460,12 @@
       "contactCta": "Написать нам"
     },
     "hotel": {
+      "aiTranslatedNotice": "Это описание переведено автоматически и может содержать неточности.",
       "metaTitle": "{name} — {type}, {city} | Homesta Stay",
       "metaDescription": "Забронируйте номер в {name} ({city}): {rooms, plural, one {# тип номера} few {# типа номеров} many {# типов номеров} other {# типа номеров}} от ${price} за ночь, проверено Homesta Stay.",
       "type": {
         "hotel": "Отель",
-        "resort": "Курорт",
-        "aparthotel": "Апарт-отель"
+        "resort": "Курорт"
       },
       "checkIn": "Заезд с",
       "checkOut": "Выезд до",

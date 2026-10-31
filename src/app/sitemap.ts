@@ -137,8 +137,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ── Hotel / resort pages ──────────────────────────────────────────────────
-  // public_properties_view, show_as_property only (a hotel, resort or
-  // aparthotel with at least 1 live unit). Every locale renders the page (translations fall back
+  // public_properties_view, show_as_property only (a hotel or resort with at
+  // least 1 live unit and a property photo). Every locale renders the page (translations fall back
   // to the base name and description), so each gets the full hreflang set.
   // Read first: their rooms are left out of the unit pages below.
   const { data: hotels, error: hotelsError } = await supabase

@@ -9,7 +9,7 @@ import { CategoryRow, type ChipItem } from '@/components/stays/CategoryRow';
  *
  * A category chip renders only when the live catalogue holds bookable units of
  * its types (getCatalogueFacets, cached and tagged 'units') — Hotels when there
- * is a hotel / resort / aparthotel to show (getPropertyIndex). No 'use client',
+ * is a hotel / resort to show (getPropertyIndex). No 'use client',
  * no state — plain links, no hydration cost on the homepage beyond the row.
  */
 export async function CategoryChips() {
