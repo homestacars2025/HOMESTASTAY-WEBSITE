@@ -166,7 +166,12 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
           {/* Price — resolved live, hidden entirely when the unit has no price.
               When the search carried dates the total is the resolver's SUM over
               the stay, so the grid and the detail page can never disagree. */}
-          {hotel && nightlyUsd !== null && (
+          {/* Price on request (the flag — never inferred from a missing price):
+              that line instead of ANY price, on unit and hotel cards alike. */}
+          {unit.price_on_request && (
+            <p className="text-sm font-medium text-ink">{t('priceOnRequest')}</p>
+          )}
+          {hotel && !unit.price_on_request && nightlyUsd !== null && (
             <p className="text-sm">
               {t.rich('fromPrice', {
                 price: `$${nightlyUsd}`,
@@ -175,7 +180,7 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
               <span className="text-mute text-xs"> {t('perNight')}</span>
             </p>
           )}
-          {!hotel && nightlyUsd !== null && (
+          {!hotel && !unit.price_on_request && nightlyUsd !== null && (
             <>
               <p className="text-sm">
                 <span className="font-semibold text-stay">${nightlyUsd}</span>

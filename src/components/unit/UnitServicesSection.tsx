@@ -20,6 +20,8 @@ interface UnitServicesSectionProps {
     /** "{price} / guest / night" — one template per pricing unit. */
     price:    (unit: ServicePricingUnit, price: string) => string;
   };
+  /** Price on request — list the services without any price. */
+  hidePrices?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ interface UnitServicesSectionProps {
  * lucide set happens here, so none of it ships to the browser. The section is
  * omitted entirely when the unit has no services.
  */
-export function UnitServicesSection({ services, labels }: UnitServicesSectionProps) {
+export function UnitServicesSection({ services, labels, hidePrices = false }: UnitServicesSectionProps) {
   if (services.length === 0) return null;
 
   return (
@@ -50,9 +52,12 @@ export function UnitServicesSection({ services, labels }: UnitServicesSectionPro
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <p className="text-sm font-medium text-ink">{s.name}</p>
-                  <p className="text-sm font-semibold text-stay tabular-nums whitespace-nowrap">
-                    {labels.price(s.pricing_unit, formatServiceUsd(s.price_usd))}
-                  </p>
+                  {/* Price on request: the services are listed, never priced. */}
+                  {!hidePrices && (
+                    <p className="text-sm font-semibold text-stay tabular-nums whitespace-nowrap">
+                      {labels.price(s.pricing_unit, formatServiceUsd(s.price_usd))}
+                    </p>
+                  )}
                 </div>
                 {s.description && (
                   <p className="mt-1 text-sm text-ink-soft leading-relaxed">{s.description}</p>

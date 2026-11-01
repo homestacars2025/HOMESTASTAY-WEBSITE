@@ -198,7 +198,7 @@ export default async function DestinationPage({ params }: Props) {
         name: u.ad_title ?? u.unit_name ?? '',
         url: canonical(locale, u.property ? `/hotels/${u.property.slug}` : `/stays/${u.slug ?? u.id}`),
         image: (u.media.find((m) => m.is_cover) ?? u.media[0])?.public_url ?? null,
-        price: u.pricing.nightly_usd,
+        price: u.price_on_request ? null : u.pricing.nightly_usd,
       })),
     ),
   );

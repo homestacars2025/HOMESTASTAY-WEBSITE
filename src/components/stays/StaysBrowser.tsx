@@ -133,8 +133,9 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
       title: c.ad_title ?? c.unit_name ?? '—',
       // "$78" — the same plain USD the cards show (Intl's currency style reads
       // "$US 78" in Arabic).
-      price: c.pricing.nightly_usd !== null ? `$${Math.round(c.pricing.nightly_usd)}` : null,
+      price: !c.price_on_request && c.pricing.nightly_usd !== null ? `$${Math.round(c.pricing.nightly_usd)}` : null,
       from: Boolean(c.property),
+      onRequest: Boolean(c.price_on_request),
       guests: c.guests,
       cover: (c.media.find((m) => m.is_cover) ?? c.media[0])?.public_url ?? null,
       href: `${c.property ? `/hotels/${c.property.slug}` : `/stays/${c.slug ?? c.id}`}${searchQuery ? `?${searchQuery}` : ''}`,
@@ -320,6 +321,8 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
                   perNight: tCard('perNight'),
                   sleeps: (n) => t('map.sleeps', { count: n }),
                   from: (price) => t('map.fromPin', { price }),
+                  onRequest: tCard('onRequestShort'),
+                  priceOnRequest: tCard('priceOnRequest'),
                 }}
               />
 

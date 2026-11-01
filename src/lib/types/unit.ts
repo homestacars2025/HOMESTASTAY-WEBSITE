@@ -64,6 +64,13 @@ export interface UnitCardData {
   /** The cover only (or empty). */
   media: UnitMediaItem[];
   specifications: Pick<UnitSpecifications, 'bedrooms' | 'beds' | 'bathrooms'>;
+  /**
+   * "Price on request" (public_units_view / public_properties_view
+   * .price_on_request): the card shows that instead of ANY price, and the
+   * guest requests an offer rather than booking. Always read from the flag —
+   * a missing price is never taken to mean "on request".
+   */
+  price_on_request?: boolean;
   /** Set when the unit is a long stay (min ≥ 7 nights) on a search without
    *  dates: the card says so, since it is ranked last rather than hidden. */
   long_stay_min?: number | null;
@@ -234,6 +241,12 @@ export interface UnitListing {
   // setting the owner changes at will — so any stored price is stale the moment
   // it moves. Prices are always derived, never read from storage.
   pricing: UnitPricing;
+  /**
+   * public_units_view.price_on_request (property setting, per-unit override,
+   * resolved by the database). True → NO price anywhere (pricing is empty),
+   * "Request an offer" instead of booking.
+   */
+  price_on_request: boolean;
 
   // ── unit_info table (one-to-one with units) ──────────────────────────────
   ad_title: string | null;       // marketing title shown to guests

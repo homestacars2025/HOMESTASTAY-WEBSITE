@@ -234,6 +234,33 @@ async function viewPoints(unitIds?: string[]): Promise<Map<string, { lat: number
   );
 }
 
+/**
+ * Every unit whose price is ON REQUEST (public_units_view.price_on_request —
+ * the property's setting, or the unit's own override, resolved by the
+ * database). The one source of the flag: never infer it from a missing price.
+ * Cached and tagged 'units', so the unit / property webhooks refresh it.
+ * A failure THROWS (nothing cached) — callers that must not fail use
+ * getOnRequestIds, which degrades to "none on request"; the database still
+ * returns no price and refuses any booking for those units.
+ */
+async function queryOnRequestIds(): Promise<string[]> {
+  const { data, error } = await createPublicClient()
+    .from('public_units_view')
+    .select('id')
+    .eq('price_on_request', true);
+  if (error) throw new Error(`price_on_request: ${error.message}`);
+  return ((data ?? []) as RawRow[]).map((r) => r.id as string);
+}
+
+export async function getOnRequestIds(): Promise<Set<string>> {
+  try {
+    return new Set(await unstable_cache(queryOnRequestIds, ['on-request-units-v1'], { tags: ['units'], revalidate: 600 })());
+  } catch (err) {
+    console.error('[getOnRequestIds]', { message: err instanceof Error ? err.message : String(err) });
+    return new Set();
+  }
+}
+
 /** Read the single row of a one-to-one embed (PostgREST returns [row] or []). */
 function one<T>(embed: T[] | T | null | undefined): T | null {
   if (Array.isArray(embed)) return embed[0] ?? null;
@@ -377,6 +404,8 @@ function mapRow(
   /** ISO → translated country names. See lib/geo/countries for why it is passed
    *  in rather than joined: the two country tables have no foreign key. */
   countryNames: Map<string, { name_en?: string | null; name_tr?: string | null; name_ar?: string | null }>,
+  /** public_units_view.price_on_request — empties pricing whatever was passed. */
+  priceOnRequest = false,
 ): UnitListing {
   const info = one<RawRow>(row.unit_info);
   const specsRow = one<RawRow>(row.unit_specifications);
@@ -475,7 +504,10 @@ function mapRow(
     allow_deposit: row.allow_deposit === true,
     allow_pay_at_arrival: row.allow_pay_at_arrival === true,
     currency: 'USD',
-    pricing,
+    // On request: no price at all, whatever a quote said (belt and braces —
+    // quote_units already returns no row for these units).
+    pricing: priceOnRequest ? EMPTY_PRICING : pricing,
+    price_on_request: priceOnRequest,
 
     ad_title: content.ad_title,
     ad_description: content.ad_description,
@@ -618,13 +650,14 @@ async function mapCardRows(
   withPolicies = true,
 ): Promise<UnitListing[]> {
   const rows = data.filter(hasAdTitle);
-  const [policies, quotes, countryNames] = await Promise.all([
+  const [policies, quotes, countryNames, onRequest] = await Promise.all([
     withPolicies
       ? fetchPolicies(supabase, rows.map((r) => r.cancellation_policy_id), locale)
       : Promise.resolve(new Map<string, UnitCancellationPolicy>()),
     prefetchedQuotes ?? fetchQuotes(supabase, rows.map((r) => r.id as string), checkIn, checkOut),
     // One cached lookup for the whole page, not one per unit.
     countryNamesByIso(),
+    getOnRequestIds(),
   ]);
   return rows.map((r) =>
     mapRow(
@@ -633,6 +666,7 @@ async function mapCardRows(
       locale,
       quotes.get(r.id as string) ?? EMPTY_PRICING,
       countryNames,
+      onRequest.has(r.id as string),
     ),
   );
 }
@@ -740,7 +774,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v9', locale],
+      ['stays-catalogue-v10', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -858,7 +892,12 @@ function assembleCards(
     const members = slot.members.flatMap((id) => byId.get(id) ?? []);
     if (!p || !members.length) return [];
     const best = members[0];
-    const prices = members.map(perNight).filter((v): v is number => v !== null);
+    // "From $X" only from units WITH a public price, and never for a property
+    // on request (or one whose matching units are all on request) — that card
+    // says "Price on request" instead.
+    const priced = members.filter((m) => !m.price_on_request);
+    const onRequest = p.priceOnRequest || priced.length === 0;
+    const prices = onRequest ? [] : priced.map(perNight).filter((v): v is number => v !== null);
     const from = prices.length ? Math.round(Math.min(...prices) * 100) / 100 : null;
     // The PROPERTY's photo only (public_properties_view.cover_url: property_media or
     // properties.cover_photo_url) — never a room's. A property without one is
@@ -878,6 +917,7 @@ function assembleCards(
       allow_deposit: false,
       allow_pay_at_arrival: false,
       long_stay_min: null,
+      price_on_request: onRequest,
       category: 'hotels' as const,
       guests: Math.max(0, ...members.map((m) => m.guests ?? 0)) || null,
       amenities: [...new Set(members.flatMap((m) => m.amenities))],
@@ -952,6 +992,7 @@ async function leanCards(
         bathrooms: u.specifications.bathrooms,
       },
       long_stay_min: c.longStay ? c.minNights : null,
+      price_on_request: u.price_on_request,
       category: categoryOf(c.unit_type),
       geo: mapPoint(index.units[c.id]),
       guests: c.maxGuests,
@@ -1007,7 +1048,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v8', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v9', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -1290,11 +1331,16 @@ async function resolveCandidates(
   let quotes: Map<string, UnitPricing> | undefined;
   const price = new Map<string, number | null>();
 
+  // Price on request (the flag, never a missing price): out of any price
+  // range, and last in either price order.
+  const onRequest = byPrice || hasPriceBound ? await getOnRequestIds() : new Set<string>();
+
   if ((byPrice || hasPriceBound) && candidates.length > 0) {
     quotes = await fetchQuotes(supabase, candidates.map((c) => c.id), checkIn, checkOut);
     for (const c of candidates) price.set(c.id, comparablePrice(quotes.get(c.id)));
 
     if (hasPriceBound) {
+      candidates = candidates.filter((c) => !onRequest.has(c.id));
       // A unit with no quote cannot be shown to be inside the range, so it is
       // not a result — never guessed in. (fetchQuotes returns an empty map on
       // error, which empties a price-bounded search: loud, not mispriced.)
@@ -1357,6 +1403,9 @@ async function resolveCandidates(
     switch (sort) {
       case 'price_asc':
       case 'price_desc': {
+        const ra = onRequest.has(a.id);
+        const rb = onRequest.has(b.id);
+        if (ra !== rb) return ra ? 1 : -1;
         const pa = price.get(a.id) ?? null;
         const pb = price.get(b.id) ?? null;
         if (pa === null || pb === null) {
@@ -1427,6 +1476,8 @@ export interface PropertySummary {
   type: string;
   /** A hotel or resort with at least 1 live unit and a property photo — ONE card / page. */
   showAsProperty: boolean;
+  /** public_properties_view.price_on_request — the hotel card shows no price. */
+  priceOnRequest: boolean;
   cityName: string | null;
   coverUrl: string | null;
   /** property_translations names, by language. */
@@ -1444,7 +1495,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
       async () => {
         const supabase = createPublicClient();
         const [{ data, error }, { data: tr }] = await Promise.all([
-          supabase.from('public_properties_view').select('id,slug,name,property_type,show_as_property,city_name,cover_url'),
+          supabase.from('public_properties_view').select('id,slug,name,property_type,show_as_property,price_on_request,city_name,cover_url'),
           supabase.from('property_translations').select('property_id,language_code,name'),
         ]);
         if (error) throw new Error(`properties: ${error.message}`);
@@ -1453,7 +1504,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
           if (!r.id || !r.slug) continue;
           out[r.id] = {
             id: r.id, slug: r.slug, name: r.name ?? '', type: String(r.property_type ?? ''),
-            showAsProperty: r.show_as_property === true, cityName: r.city_name ?? null,
+            showAsProperty: r.show_as_property === true, priceOnRequest: r.price_on_request === true, cityName: r.city_name ?? null,
             coverUrl: r.cover_url ?? null, names: {},
           };
         }
@@ -1463,7 +1514,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
         }
         return out;
       },
-      ['property-index-v5'],
+      ['property-index-v6'],
       { tags: ['units'], revalidate: 600 },
     )();
   } catch (err) {
@@ -1554,7 +1605,7 @@ export function districtKey(d: { id: string; name?: string | null; name_en?: str
  */
 export async function getRankingIndex(): Promise<RankingIndex> {
   try {
-    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v6'], { tags: ['units'], revalidate: 600 })();
+    return await unstable_cache(queryRankingIndex, ['stays-ranking-index-v7'], { tags: ['units'], revalidate: 600 })();
   } catch (err) {
     console.error('[getRankingIndex]', { message: err instanceof Error ? err.message : String(err) });
     return EMPTY_INDEX;
@@ -1582,10 +1633,11 @@ async function queryRankingIndex(): Promise<RankingIndex> {
   if (error) throw new Error(`ranking index: ${error.message}`);
 
   const rows = ((data ?? []) as RawRow[]).filter(hasAdTitle);
-  const [quotes, effective, exact] = await Promise.all([
+  const [quotes, effective, exact, onRequest] = await Promise.all([
     fetchQuotes(supabase, rows.map((r) => r.id as string)),
     getEffectiveAmenities(),
     viewPoints(),
+    queryOnRequestIds().then((ids) => new Set(ids)),
   ]);
 
   const index: RankingIndex = { units: {}, districts: {}, districtIdByKey: {}, cities: {} };
@@ -1626,7 +1678,9 @@ async function queryRankingIndex(): Promise<RankingIndex> {
         hasDescription: Number(one<RawRow>(r.unit_translations)?.count ?? 0) > 0,
         amenities: am ? EFFECTIVE_AMENITY_COLUMNS.filter((c) => am[c] === true).length : 0,
         hasRules: !!one<RawRow>(r.unit_rules),
-        hasPrice: !!quote && quote.nightly_usd !== null,
+        // On request is a deliberate setting, not a missing price — never a
+        // "no price" demotion.
+        hasPrice: onRequest.has(r.id as string) || (!!quote && quote.nightly_usd !== null),
         realCover: photos > 0,
       },
     };
@@ -1805,7 +1859,7 @@ export async function getPublicUnitBySlug(
 ): Promise<UnitListing | null> {
   const cached = await unstable_cache(
     () => queryPublicUnitBySlug(slugOrId, locale),
-    ['unit-by-slug-v7', slugOrId, locale],
+    ['unit-by-slug-v8', slugOrId, locale],
     { tags: ['units'], revalidate: 300 },
   )();
   if (cached) return cached;
@@ -1846,12 +1900,13 @@ async function queryPublicUnitBySlug(
 
   // No dates here: the detail page re-quotes live once the guest picks them
   // (see quoteStay). This call yields the representative nightly rate only.
-  const [policies, quotes, countryNames, effective, exact] = await Promise.all([
+  const [policies, quotes, countryNames, effective, exact, onRequest] = await Promise.all([
     fetchPolicies(supabase, [row.cancellation_policy_id], locale),
     fetchQuotes(supabase, [row.id as string]),
     countryNamesByIso(),
     getEffectiveAmenities(),
     viewPoints([row.id as string]).catch(() => new Map<string, { lat: number; lng: number }>()),
+    getOnRequestIds(),
   ]);
   row.__point = exact.get(row.id as string) ?? null;
 
@@ -1861,6 +1916,7 @@ async function queryPublicUnitBySlug(
     locale,
     quotes.get(row.id as string) ?? EMPTY_PRICING,
     countryNames,
+    onRequest.has(row.id as string),
   );
   // The unit's own amenities OR its property's (a hotel's pool, breakfast…).
   const eff = effective.get(row.id as string);
@@ -1881,6 +1937,8 @@ export interface HotelRoom {
   bathrooms: number | null;
   minNights: number;
   pricing: UnitPricing;
+  /** public_units_view.price_on_request — no price, "Request an offer". */
+  priceOnRequest: boolean;
   /** null without dates; otherwise why it cannot be booked for them, or 'ok'. */
   availability: null | 'ok' | 'booked' | 'minNights' | 'guests';
 }
@@ -1896,6 +1954,8 @@ export interface HotelPage {
   descriptionLang: string | null;
   /** The description shown came from an ai_generated translation row. */
   descriptionAiTranslated: boolean;
+  /** public_properties_view.price_on_request — no "from $X" anywhere. */
+  priceOnRequest: boolean;
   checkIn: string | null;
   checkOut: string | null;
   media: UnitMediaItem[];
@@ -1910,7 +1970,7 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
   const supabase = createPublicClient();
   const { data: p, error } = await supabase
     .from('public_properties_view')
-    .select('id,slug,name,property_type,description,description_lang,check_in_time,check_out_time,city_name,show_as_property,cover_url')
+    .select('id,slug,name,property_type,description,description_lang,check_in_time,check_out_time,city_name,show_as_property,price_on_request,cover_url')
     .eq('slug', slug)
     .maybeSingle();
   if (error) throw new Error(`hotel: ${error.message}`);
@@ -1953,6 +2013,7 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
       bathrooms: u.specifications.bathrooms,
       minNights: minNightsOf.get(u.id) ?? 1,
       pricing: u.pricing,
+      priceOnRequest: u.price_on_request,
       availability: null,
     }))
     .sort((a, b) => (a.pricing.nightly_usd ?? 1e9) - (b.pricing.nightly_usd ?? 1e9) || (a.id < b.id ? -1 : 1));
@@ -2001,6 +2062,7 @@ async function queryHotelBase(slug: string, locale: string): Promise<Omit<HotelP
     description: described?.description || p.description || null,
     descriptionLang: described ? (described.language_code as string) : (p.description_lang ?? null),
     descriptionAiTranslated: described?.ai_generated === true,
+    priceOnRequest: p.price_on_request === true,
     checkIn: time(p.check_in_time),
     checkOut: time(p.check_out_time),
     media: photos,
@@ -2022,7 +2084,7 @@ export async function getHotelPage(
 ): Promise<HotelPage | null> {
   const base = await unstable_cache(
     () => queryHotelBase(slug, locale),
-    ['hotel-page-v7', slug, locale],
+    ['hotel-page-v8', slug, locale],
     { tags: ['units'], revalidate: 600 },
   )().catch((err) => {
     console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });
@@ -2048,7 +2110,7 @@ export async function getHotelPage(
   const booked = new Set(blocked ?? ids); // unreadable calendar → nothing offered as free
   const rooms = base.rooms.map((r): HotelRoom => ({
     ...r,
-    pricing: quotes.get(r.id) ?? r.pricing,
+    pricing: r.priceOnRequest ? r.pricing : quotes.get(r.id) ?? r.pricing,
     availability: booked.has(r.id) ? 'booked'
       : r.minNights > nights ? 'minNights'
         : guests && r.maxGuests !== null && r.maxGuests < guests ? 'guests'

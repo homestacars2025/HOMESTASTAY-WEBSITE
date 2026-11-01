@@ -44,6 +44,9 @@ export default async function BookPage({ params, searchParams }: PageProps) {
 
   const unit = await getPublicUnitBySlug(slug, locale);
   if (!unit) notFound();
+  // Price on request: there is nothing to book here (the database refuses the
+  // hold anyway) — back to the unit page, where the guest requests an offer.
+  if (unit.price_on_request) redirect(`/${locale}/stays/${slug}`);
 
   // Null for an anonymous visitor — booking without an account stays supported
   // (CLAUDE.md §4). When there IS one, these details are the booking's

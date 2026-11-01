@@ -42,6 +42,8 @@ export interface MapUnit {
   price: string | null;
   /** A hotel / resort card: the pin reads "from $X". */
   from: boolean;
+  /** Price on request (the flag): the pin and card say so — never a price. */
+  onRequest: boolean;
   guests: number | null;
   cover: string | null;
   href: string;
@@ -62,7 +64,7 @@ interface StaysMapProps {
   onActive: (id: string | null) => void;
   /** The guest moved the map themselves (not a refit). */
   onUserMove: (bounds: Bounds) => void;
-  labels: { perNight: string; sleeps: (n: number) => string; from: (price: string) => string };
+  labels: { perNight: string; sleeps: (n: number) => string; from: (price: string) => string; onRequest: string; priceOnRequest: string };
 }
 
 const MAX_ZOOM = 16;
@@ -253,7 +255,8 @@ export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onAc
     setTapId((cur) => (cur === u.id ? null : u.id));
   }
 
-  const pinText = (u: MapUnit) => (u.price ? (u.from ? labels.from(u.price) : u.price) : '•');
+  const pinText = (u: MapUnit) =>
+    u.onRequest ? labels.onRequest : u.price ? (u.from ? labels.from(u.price) : u.price) : '•';
   const tapped = tapId ? byId.get(tapId) : undefined;
 
   const card = (u: MapUnit, compact: boolean) => (
@@ -271,7 +274,8 @@ export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onAc
         <span className="block text-sm font-semibold leading-snug text-ink line-clamp-2">{u.title}</span>
         <span className="mt-0.5 block text-xs text-mute">
           {u.guests ? `${labels.sleeps(u.guests)} · ` : ''}
-          {u.price && (
+          {u.onRequest && <span className="font-medium text-ink">{labels.priceOnRequest}</span>}
+          {!u.onRequest && u.price && (
             <>
               <span className="font-semibold text-stay">{u.from ? labels.from(u.price) : u.price}</span> {labels.perNight}
             </>
@@ -298,7 +302,7 @@ export default function StaysMap({ units, apiKey, locale, fitKey, activeId, onAc
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); pinClick(u); }}
-              aria-label={`${u.title}${u.price ? ` · ${pinText(u)}` : ''}`}
+              aria-label={`${u.title}${u.price || u.onRequest ? ` · ${pinText(u)}` : ''}`}
               className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums shadow-[0_2px_8px_rgba(0,0,0,0.18)] ring-1 transition-[background-color,color,transform] duration-[240ms] ${
                 on ? 'scale-110 bg-stay text-white ring-stay' : 'bg-white text-ink ring-black/10'
               }`}

@@ -12,6 +12,8 @@ interface GuestsStepperProps {
   decrementLabel: string;
   incrementLabel: string;
   inputLabel: string;
+  /** Lowest allowed value — 1 for guests/adults (the default), 0 for children. */
+  min?: number;
 }
 
 export function GuestsStepper({
@@ -20,17 +22,18 @@ export function GuestsStepper({
   decrementLabel,
   incrementLabel,
   inputLabel,
+  min = 1,
 }: GuestsStepperProps) {
-  function dec() { onChange(Math.max(1, value - 1)); }
+  function dec() { onChange(Math.max(min, value - 1)); }
   function inc() { onChange(Math.min(MAX_GUESTS, value + 1)); }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = parseInt(e.target.value, 10);
-    if (!isNaN(raw)) onChange(Math.min(MAX_GUESTS, Math.max(1, raw)));
+    if (!isNaN(raw)) onChange(Math.min(MAX_GUESTS, Math.max(min, raw)));
   }
   function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
     const raw = parseInt(e.target.value, 10);
-    onChange(isNaN(raw) || raw < 1 ? 1 : raw > MAX_GUESTS ? MAX_GUESTS : raw);
+    onChange(isNaN(raw) || raw < min ? min : raw > MAX_GUESTS ? MAX_GUESTS : raw);
   }
 
   return (
@@ -38,7 +41,7 @@ export function GuestsStepper({
       <button
         type="button"
         onClick={dec}
-        disabled={value <= 1}
+        disabled={value <= min}
         aria-label={decrementLabel}
         className="w-8 h-8 flex items-center justify-center rounded-full border border-rule text-ink-soft transition-colors duration-[240ms] hover:bg-paper-warm disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
       >
@@ -47,7 +50,7 @@ export function GuestsStepper({
 
       <input
         type="number"
-        min={1}
+        min={min}
         max={MAX_GUESTS}
         value={value}
         onChange={handleChange}

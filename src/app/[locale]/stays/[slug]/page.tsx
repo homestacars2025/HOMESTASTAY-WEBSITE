@@ -10,12 +10,13 @@ import {
 } from '@/lib/config/seo';
 import {
   socialCardDescription, socialCardTitle, formatCardPrice, cardPlace, unitTypeLabelFor,
-  unitOgImage,
+  unitOgImage, unitOgImageUrl,
 } from '@/lib/seo/social-card';
 import { ChevronLeft, Languages } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { UnitGallery } from '@/components/unit/UnitGallery';
 import { BookingCard } from '@/components/unit/BookingCard';
+import { RequestOfferCard } from '@/components/offer/RequestOfferCard';
 import { UnitViewTracker } from '@/components/analytics/UnitViewTracker';
 import { SimilarPlaces, SimilarPlacesSkeleton } from '@/components/unit/SimilarPlaces';
 import { Suspense } from 'react';
@@ -113,15 +114,21 @@ export async function generateMetadata({
   // whenever that copy is not there yet. The version is derived from the three
   // facts the card draws that actually move — see cardVersion.
   const cover = unit.media.find((m) => m.is_cover) ?? unit.media[0];
-  const image = await unitOgImage(
-    slug,
-    locale,
-    cardVersion({
-      price: nightly,
-      title: unit.ad_title ?? unit.unit_name ?? null,
-      cover: cover?.public_url ?? null,
-    }),
-  );
+  // Price on request: never the STORED card — its path is fixed per unit and
+  // locale, so a copy drawn while the unit still had a price would keep it.
+  // The route renders fresh (no price: the database quotes nothing), under its
+  // own URL key so no CDN copy of the priced card can answer either.
+  const image = unit.price_on_request
+    ? `${unitOgImageUrl(slug, locale)}&por=1`
+    : await unitOgImage(
+        slug,
+        locale,
+        cardVersion({
+          price: nightly,
+          title: unit.ad_title ?? unit.unit_name ?? null,
+          cover: cover?.public_url ?? null,
+        }),
+      );
 
   return {
     title,
@@ -203,7 +210,10 @@ export default async function UnitDetailPage({
   // Priced for the dates the guest arrived with, so the total AND the deposit
   // are right on first paint — the deposit line is otherwise only drawn after
   // a date change, which never happens when the dates came in the URL.
-  const priceable = Boolean(search.checkIn && search.checkOut);
+  // Never for a price-on-request unit: the database refuses to quote it, and
+  // nothing price-shaped may reach this page.
+  const onRequest = unit.price_on_request;
+  const priceable = !onRequest && Boolean(search.checkIn && search.checkOut);
   // Extra services ride along in the same wait — cached and tagged 'units'
   // like the unit itself, so they add no round trip on a warm page.
   const [initialQuote, initialModes, services] = await Promise.all([
@@ -479,6 +489,7 @@ export default async function UnitDetailPage({
                 <div className="mb-6">
                   <UnitServicesSection
                     services={services}
+                    hidePrices={onRequest}
                     labels={{
                       title:    t('services.title'),
                       price:    (pricingUnit, price) => t(`services.price.${pricingUnit}`, { price }),
@@ -547,7 +558,18 @@ export default async function UnitDetailPage({
             </FadeUp>
           </div>
 
-          {/* ── Booking card (desktop side / mobile bottom bar) ──────────── */}
+          {/* ── Booking card (desktop side / mobile bottom bar) — or, for a
+              price-on-request unit, "Request an offer" and no price at all. */}
+          {onRequest ? (
+            <RequestOfferCard
+              unitId={unit.id}
+              unitTitle={title}
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+              initialCheckIn={search.checkIn}
+              initialCheckOut={search.checkOut}
+              initialGuests={search.guests}
+            />
+          ) : (
           <BookingCard
             pricing={unit.pricing}
             minNights={unit.min_nights}
@@ -566,6 +588,7 @@ export default async function UnitDetailPage({
             initialModeQuote={initialModes}
             services={services}
           />
+          )}
         </div>
 
         {/* ── 8. SIMILAR PLACES — streamed; never holds up the page above. */}

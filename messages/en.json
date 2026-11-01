@@ -110,6 +110,8 @@
     "longStay": "Long stays · min {count} nights",
     "roomTypes": "{count, plural, one {# room type} other {# room types}}",
     "fromPrice": "from <p>{price}</p>",
+    "priceOnRequest": "Price on request",
+    "onRequestShort": "On request",
     "propertyType": {
       "hotel": "Hotel",
       "resort": "Resort"
@@ -1391,5 +1393,48 @@
     "title": "Saved",
     "empty": "Nothing saved yet. Tap the ♡ on any place to keep it here.",
     "browse": "Browse stays"
+  },
+  "offer": {
+    "requestOffer": "Request an offer",
+    "cardHint": "This place doesn't publish its prices. Send your dates and we'll reply on WhatsApp with an offer at the best price.",
+    "modalTitle": "Request an offer",
+    "dates": "Dates",
+    "adults": "Adults",
+    "children": "Children",
+    "childrenHint": "Ages 0–17",
+    "decrement": "Remove one",
+    "increment": "Add one",
+    "phoneLabel": "WhatsApp number",
+    "searchCountry": "Search country",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "intro": "You'll receive an offer at the best price on WhatsApp to complete your booking.",
+    "consent": "By sending, you agree to be contacted on WhatsApp.",
+    "submit": "Send request",
+    "sending": "Sending…",
+    "close": "Close",
+    "missingDates": "Choose your check-in and check-out dates.",
+    "missingPhone": "Enter your WhatsApp number.",
+    "errors": {
+      "unit_not_available": "This place isn't available for those dates. Try other dates.",
+      "unit_not_on_request": "This place can now be booked directly — reload the page to see its price.",
+      "invalid_dates": "Those dates don't work. Check the check-in and check-out dates.",
+      "invalid_guests": "Add at least one adult.",
+      "too_many_guests": "That's more guests than this place sleeps.",
+      "invalid_phone": "That WhatsApp number doesn't look right. Check the country code and number.",
+      "invalid_email": "Enter a valid email address.",
+      "consent_required": "Please agree to be contacted on WhatsApp.",
+      "rate_limited": "You've sent several requests today. Please try again tomorrow or message us on WhatsApp.",
+      "captcha": "We couldn't confirm you're human. Please try again.",
+      "unavailable": "Something went wrong. Please try again in a moment."
+    },
+    "successTitle": "Request received",
+    "successBody": "Your request number is {reference}.",
+    "duplicateNote": "You already sent this request — here it is again.",
+    "whatsappButton": "Send on WhatsApp",
+    "successSecondary": "We'll also contact you on WhatsApp or by email.",
+    "whatsappText": "Hello Homesta Stay! I'd like an offer for {title}, {checkIn} – {checkOut}, {guests}. Request {reference}",
+    "guestsSummary": "{adults, plural, one {# adult} other {# adults}}{children, plural, =0 {} one {, # child} other {, # children}}",
+    "metaDescriptionOnRequest": "{name} in {city}: {rooms, plural, one {# room type} other {# room types}}, price on request. Request an offer from Homesta Stay."
   }
 }

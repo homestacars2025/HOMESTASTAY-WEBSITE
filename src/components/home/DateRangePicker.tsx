@@ -122,6 +122,8 @@ export function DateRangePicker({ selected, onSelect, locale }: Props) {
         mode="range"
         selected={selected}
         onSelect={handleSelect}
+        // Open on the chosen month (dates carried in from a search), not today's.
+        defaultMonth={selected?.from}
         disabled={{ before: today }}
         numberOfMonths={isDesktop ? 2 : 1}
         locale={dfnLocale}

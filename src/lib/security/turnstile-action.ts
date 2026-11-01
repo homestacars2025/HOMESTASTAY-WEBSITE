@@ -4,3 +4,6 @@ export const TURNSTILE_ACTION_PHONE = 'phone';
 
 /** The Turnstile `action` for the public "List your property" form (/host). */
 export const TURNSTILE_ACTION_HOST_LEAD = 'host_lead';
+
+/** The Turnstile `action` for "Request an offer" (price-on-request units). */
+export const TURNSTILE_ACTION_OFFER = 'offer_request';

@@ -495,7 +495,9 @@ export async function GET(
 
   const card = await renderCard({
     photoUrl: ogImage(cover?.public_url),
-    price: formatCardPrice(unit.pricing.nightly_usd),
+    // Price on request: the flag decides, never a missing price — no figure
+    // is drawn, whatever any cache or quote says.
+    price: unit.price_on_request ? null : formatCardPrice(unit.pricing.nightly_usd),
     caption,
   });
 

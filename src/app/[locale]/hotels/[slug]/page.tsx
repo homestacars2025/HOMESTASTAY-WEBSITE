@@ -14,6 +14,7 @@ import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/
 import { graph, breadcrumbSchema, hotelSchema } from '@/lib/seo/schema';
 import { getHotelPage, getPropertyIndex, type HotelRoom } from '@/lib/queries/stays';
 import { localizedCityName } from '@/lib/geo/city-name';
+import { RequestOfferButton } from '@/components/offer/RequestOfferButton';
 import { buildStaysQuery, parseStaysSearchParams } from '@/lib/stays/search-params';
 
 type Props = {
@@ -26,14 +27,21 @@ const perNight = (r: HotelRoom) =>
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const [hotel, t] = await Promise.all([getHotelPage(slug, locale), getTranslations({ locale, namespace: 'pages.hotel' })]);
+  const [hotel, t, tOffer] = await Promise.all([
+    getHotelPage(slug, locale),
+    getTranslations({ locale, namespace: 'pages.hotel' }),
+    getTranslations({ locale, namespace: 'offer' }),
+  ]);
   if (!hotel) return {};
   const city = hotel.city ? await localizedCityName(hotel.city, locale) : '';
-  const prices = hotel.rooms.map(perNight).filter((v): v is number => v !== null);
+  // Price on request: no figure anywhere — not in the description either.
+  const prices = hotel.priceOnRequest ? [] : hotel.rooms.filter((r) => !r.priceOnRequest).map(perNight).filter((v): v is number => v !== null);
   const from = prices.length ? Math.round(Math.min(...prices)) : null;
   const title = t('metaTitle', { name: hotel.name, type: t(`type.${hotel.type}`), city });
   const description = (hotel.description?.replace(/\s+/g, ' ').slice(0, 155))
-    || t('metaDescription', { name: hotel.name, city, rooms: hotel.rooms.length, price: from ?? '' });
+    || (from === null
+      ? tOffer('metaDescriptionOnRequest', { name: hotel.name, city, rooms: hotel.rooms.length })
+      : t('metaDescription', { name: hotel.name, city, rooms: hotel.rooms.length, price: from }));
   const url = canonical(locale, `/hotels/${slug}`);
   const image = hotel.media[0]?.public_url;
   return {
@@ -88,8 +96,11 @@ export default async function HotelPage({ params, searchParams }: Props) {
   const url = canonical(locale, `/hotels/${slug}`);
   const dated = Boolean(search.checkIn && search.checkOut);
   const roomQuery = buildStaysQuery({ checkIn: search.checkIn, checkOut: search.checkOut, guests: search.guests });
-  const prices = hotel.rooms.map(perNight).filter((v): v is number => v !== null);
+  // "From $X" (and the schema's priceRange) only from rooms WITH a public
+  // price, and never for a property on request.
+  const prices = hotel.priceOnRequest ? [] : hotel.rooms.filter((r) => !r.priceOnRequest).map(perNight).filter((v): v is number => v !== null);
   const from = prices.length ? Math.min(...prices) : null;
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
   const range = dated
     ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' })
         .formatRange(new Date(`${search.checkIn}T00:00:00Z`), new Date(`${search.checkOut}T00:00:00Z`))
@@ -170,6 +181,12 @@ export default async function HotelPage({ params, searchParams }: Props) {
                   <span className="text-mute text-xs"> · {tCard('roomTypes', { count: hotel.rooms.length })}</span>
                 </p>
               )}
+              {hotel.priceOnRequest && (
+                <p className="mt-3 text-sm">
+                  <span className="font-medium text-ink">{tCard('priceOnRequest')}</span>
+                  <span className="text-mute text-xs"> · {tCard('roomTypes', { count: hotel.rooms.length })}</span>
+                </p>
+              )}
             </header>
 
             {hotel.description && (
@@ -243,7 +260,8 @@ export default async function HotelPage({ params, searchParams }: Props) {
                         {dated && r.availability === 'ok' && <p className="mt-1 text-xs font-medium text-ink">{t('available')}</p>}
                         <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
                           <div className="min-w-[8rem] flex-1 text-sm">
-                            {nightly !== null && (
+                            {r.priceOnRequest && <span className="font-medium text-ink">{tCard('priceOnRequest')}</span>}
+                            {!r.priceOnRequest && nightly !== null && (
                               <>
                                 <span className="font-semibold text-stay">${Math.round(nightly * 100) / 100}</span>
                                 <span className="text-xs text-mute"> {tCard('perNight')}</span>
@@ -253,6 +271,19 @@ export default async function HotelPage({ params, searchParams }: Props) {
                               </>
                             )}
                           </div>
+                          {r.priceOnRequest ? (
+                            <RequestOfferButton
+                              unitId={r.id}
+                              unitTitle={r.title}
+                              siteKey={siteKey}
+                              checkIn={search.checkIn}
+                              checkOut={search.checkOut}
+                              guests={search.guests}
+                              className={`inline-flex min-h-11 shrink-0 items-center rounded-[999px] px-4 text-sm font-medium transition-opacity duration-[240ms] hover:opacity-90 ${
+                                bookable ? 'bg-stay text-white' : 'border border-rule text-ink'
+                              }`}
+                            />
+                          ) : (
                           <Link
                             href={`/stays/${r.slug ?? r.id}${roomQuery}` as '/stays'}
                             data-unit={r.id}
@@ -263,6 +294,7 @@ export default async function HotelPage({ params, searchParams }: Props) {
                           >
                             {t('viewBook')}
                           </Link>
+                          )}
                         </div>
                       </div>
                     </li>

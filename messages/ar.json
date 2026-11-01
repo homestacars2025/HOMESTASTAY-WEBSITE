@@ -110,6 +110,8 @@
     "longStay": "إقامة طويلة · {count, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}} كحد أدنى",
     "roomTypes": "{count, plural, zero {لا غرف} one {نوع غرفة واحد} two {نوعا غرف} few {# أنواع غرف} many {# نوعًا من الغرف} other {# نوع غرفة}}",
     "fromPrice": "ابتداءً من <p>{price}</p>",
+    "priceOnRequest": "السعر عند الطلب",
+    "onRequestShort": "عند الطلب",
     "propertyType": {
       "hotel": "فندق",
       "resort": "منتجع"
@@ -1391,5 +1393,48 @@
     "title": "المحفوظة",
     "empty": "لم تحفظ شيئًا بعد. اضغط ♡ على أي مكان ليبقى هنا.",
     "browse": "تصفّح الإقامات"
+  },
+  "offer": {
+    "requestOffer": "اطلب عرض سعر",
+    "cardHint": "لا يعلن هذا المكان أسعاره. أرسل تواريخك وسنرسل لك عرضًا بأفضل سعر عبر واتساب.",
+    "modalTitle": "اطلب عرض سعر",
+    "dates": "التواريخ",
+    "adults": "البالغون",
+    "children": "الأطفال",
+    "childrenHint": "من 0 إلى 17 عامًا",
+    "decrement": "إنقاص واحد",
+    "increment": "إضافة واحد",
+    "phoneLabel": "رقم واتساب",
+    "searchCountry": "ابحث عن الدولة",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "you@example.com",
+    "intro": "ستصلك عبر واتساب أفضل عروض الأسعار لإتمام حجزك.",
+    "consent": "بالإرسال، توافق على التواصل معك عبر واتساب.",
+    "submit": "إرسال الطلب",
+    "sending": "جارٍ الإرسال…",
+    "close": "إغلاق",
+    "missingDates": "اختر تاريخَي الوصول والمغادرة.",
+    "missingPhone": "أدخل رقم واتساب الخاص بك.",
+    "errors": {
+      "unit_not_available": "هذا المكان غير متاح في هذه التواريخ. جرّب تواريخ أخرى.",
+      "unit_not_on_request": "أصبح بالإمكان حجز هذا المكان مباشرة — حدّث الصفحة لرؤية السعر.",
+      "invalid_dates": "هذه التواريخ غير صالحة. تحقّق من تاريخَي الوصول والمغادرة.",
+      "invalid_guests": "أضف بالغًا واحدًا على الأقل.",
+      "too_many_guests": "عدد الضيوف أكبر مما يتّسع له هذا المكان.",
+      "invalid_phone": "يبدو أن رقم واتساب غير صحيح. تحقّق من رمز الدولة والرقم.",
+      "invalid_email": "أدخل بريدًا إلكترونيًا صالحًا.",
+      "consent_required": "يُرجى الموافقة على التواصل معك عبر واتساب.",
+      "rate_limited": "أرسلت عدة طلبات اليوم. حاول مجددًا غدًا أو راسلنا عبر واتساب.",
+      "captcha": "تعذّر التحقق. يُرجى المحاولة مرة أخرى.",
+      "unavailable": "حدث خطأ ما. يُرجى المحاولة بعد قليل."
+    },
+    "successTitle": "تم استلام طلبك",
+    "successBody": "رقم طلبك هو {reference}.",
+    "duplicateNote": "سبق أن أرسلت هذا الطلب — ها هو مجددًا.",
+    "whatsappButton": "أرسل عبر واتساب",
+    "successSecondary": "سنتواصل معك أيضًا عبر واتساب أو البريد الإلكتروني.",
+    "whatsappText": "مرحبًا Homesta Stay! أودّ الحصول على عرض سعر لـ {title}، من {checkIn} إلى {checkOut}، {guests}. الطلب {reference}",
+    "guestsSummary": "{adults, plural, one {بالغ واحد} two {بالغان} few {# بالغين} many {# بالغًا} other {# بالغ}}{children, plural, =0 {} one {، طفل واحد} two {، طفلان} few {، # أطفال} many {، # طفلًا} other {، # طفل}}",
+    "metaDescriptionOnRequest": "{name} في {city}: {rooms, plural, one {نوع غرفة واحد} two {نوعا غرف} few {# أنواع غرف} many {# نوع غرفة} other {# نوع غرفة}}، السعر عند الطلب. اطلب عرض سعر من Homesta Stay."
   }
 }

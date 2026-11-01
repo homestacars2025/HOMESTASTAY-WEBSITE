@@ -110,6 +110,8 @@
     "longStay": "Uzun konaklama · en az {count} gece",
     "roomTypes": "{count} oda tipi",
     "fromPrice": "en düşük <p>{price}</p>",
+    "priceOnRequest": "Fiyat talep üzerine",
+    "onRequestShort": "Talep üzerine",
     "propertyType": {
       "hotel": "Otel",
       "resort": "Tatil köyü"
@@ -1391,5 +1393,48 @@
     "title": "Kaydedilenler",
     "empty": "Henüz kaydedilen yok. Bir yeri burada tutmak için ♡ simgesine dokunun.",
     "browse": "Konaklamalara göz at"
+  },
+  "offer": {
+    "requestOffer": "Teklif iste",
+    "cardHint": "Bu tesis fiyatlarını yayınlamıyor. Tarihlerinizi gönderin, en iyi fiyatla teklifimizi WhatsApp'tan iletelim.",
+    "modalTitle": "Teklif iste",
+    "dates": "Tarihler",
+    "adults": "Yetişkin",
+    "children": "Çocuk",
+    "childrenHint": "0–17 yaş",
+    "decrement": "Bir azalt",
+    "increment": "Bir artır",
+    "phoneLabel": "WhatsApp numarası",
+    "searchCountry": "Ülke ara",
+    "emailLabel": "E-posta",
+    "emailPlaceholder": "ornek@eposta.com",
+    "intro": "Rezervasyonunuzu tamamlamanız için en iyi fiyatlı teklifimizi WhatsApp'tan alacaksınız.",
+    "consent": "Göndererek WhatsApp üzerinden iletişime geçilmesini kabul etmiş olursunuz.",
+    "submit": "Talebi gönder",
+    "sending": "Gönderiliyor…",
+    "close": "Kapat",
+    "missingDates": "Giriş ve çıkış tarihlerinizi seçin.",
+    "missingPhone": "WhatsApp numaranızı girin.",
+    "errors": {
+      "unit_not_available": "Bu tesis seçtiğiniz tarihlerde müsait değil. Başka tarihler deneyin.",
+      "unit_not_on_request": "Bu tesis artık doğrudan rezerve edilebiliyor — fiyatı görmek için sayfayı yenileyin.",
+      "invalid_dates": "Bu tarihler geçerli değil. Giriş ve çıkış tarihlerini kontrol edin.",
+      "invalid_guests": "En az bir yetişkin ekleyin.",
+      "too_many_guests": "Bu tesisin kapasitesinden fazla misafir seçtiniz.",
+      "invalid_phone": "WhatsApp numarası doğru görünmüyor. Ülke kodunu ve numarayı kontrol edin.",
+      "invalid_email": "Geçerli bir e-posta adresi girin.",
+      "consent_required": "Lütfen WhatsApp üzerinden iletişime geçilmesini kabul edin.",
+      "rate_limited": "Bugün birkaç talep gönderdiniz. Lütfen yarın tekrar deneyin ya da bize WhatsApp'tan yazın.",
+      "captcha": "Doğrulama yapılamadı. Lütfen tekrar deneyin.",
+      "unavailable": "Bir sorun oluştu. Lütfen biraz sonra tekrar deneyin."
+    },
+    "successTitle": "Talebiniz alındı",
+    "successBody": "Talep numaranız: {reference}.",
+    "duplicateNote": "Bu talebi zaten göndermiştiniz — işte tekrar.",
+    "whatsappButton": "WhatsApp'tan gönder",
+    "successSecondary": "Ayrıca size WhatsApp veya e-posta ile ulaşacağız.",
+    "whatsappText": "Merhaba Homesta Stay! {title} için teklif almak istiyorum: {checkIn} – {checkOut}, {guests}. Talep {reference}",
+    "guestsSummary": "{adults} yetişkin{children, plural, =0 {} other {, # çocuk}}",
+    "metaDescriptionOnRequest": "{city} bölgesinde {name}: {rooms} oda tipi, fiyat talep üzerine. Homesta Stay'den teklif isteyin."
   }
 }
