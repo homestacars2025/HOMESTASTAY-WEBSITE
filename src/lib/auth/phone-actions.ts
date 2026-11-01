@@ -1,6 +1,7 @@
 'use server';
 
 import { headers } from 'next/headers';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createSessionClient } from '@/lib/supabase/server';
@@ -45,14 +46,21 @@ const DAY = 24 * 60 * MIN;
 const tail = (phone: string) => `…${phone.slice(-4)}`;
 
 /**
- * E.164 shape here; the deeper "is this a real number for its country" check
- * is phone_account_check's ('invalid'), and the browser already ran
- * libphonenumber's for instant feedback.
+ * The number as it will be sent, or null.
+ *
+ * Re-parsed here whatever the browser sent: a trunk 0 after the country code
+ * (+90 0542…, the 2026-10-09 orphan account), a 00 international prefix,
+ * spaces, dashes and brackets all normalise to the one real E.164 number, and
+ * its length must be valid for its country. Only that normalised value ever
+ * reaches signInWithOtp / updateUser.
  */
 function validPhone(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
-  const phone = raw.replace(/[^\d+]/g, '');
-  return E164_RE.test(phone) ? phone : null;
+  const cleaned = raw.trim().replace(/^00/, '+').replace(/[^\d+]/g, '');
+  if (!cleaned.startsWith('+')) return null;
+  const parsed = parsePhoneNumberFromString(cleaned);
+  if (!parsed || !parsed.isValid()) return null;
+  return E164_RE.test(parsed.number) ? parsed.number : null;
 }
 
 /** Captcha + limits, shared by both actions. Null when the request may go on. */

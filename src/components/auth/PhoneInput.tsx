@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocale } from 'next-intl';
 import { getCountries, getCountryCallingCode } from 'react-phone-number-input';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import type { CountryCode } from 'libphonenumber-js';
 import { ChevronDown, Search } from 'lucide-react';
 
@@ -144,10 +145,38 @@ export function PhoneInput({
   const searchRef    = useRef<HTMLInputElement>(null);
   const numberRef    = useRef<HTMLInputElement>(null);
 
-  // Sync E.164 to parent whenever country or local number changes
+  /**
+   * The field's value as E.164, emitted to the parent on every change.
+   *
+   * Never "dial code + whatever was typed": a Turkish guest types 0542… after
+   * +90, and gluing the two gave +9005428434091 — a number that is not theirs
+   * (it reached Supabase on 2026-10-09 and created an orphan account). The
+   * national part is parsed for the selected country instead, so the trunk
+   * prefix is dropped exactly where that country uses one (TR, LY, UK…) and
+   * kept where it is part of the number (Italy's +39 06…). Spaces, dashes,
+   * dots and brackets go with it.
+   *
+   * A pasted full number — +90 542… or 00 90 542… — switches the country
+   * picker to match and keeps only the national part in the box.
+   */
   function emit(country: Country, raw: string) {
-    const digits = raw.replace(/\D/g, '');
-    onChange(digits ? `${country.dialCode}${digits}` : '');
+    const trimmed = raw.trim();
+    const digits = trimmed.replace(/\D/g, '');
+    if (!digits) { onChange(''); return; }
+
+    if (/^(\+|00)/.test(trimmed)) {
+      const intl = parsePhoneNumberFromString(`+${digits.replace(/^00/, '')}`);
+      const match = intl?.country ? ALL_COUNTRIES.find((c) => c.code === intl.country) : undefined;
+      if (intl && match) {
+        setSelected(match);
+        setLocalNumber(intl.nationalNumber);
+        onChange(intl.number);
+        return;
+      }
+    }
+
+    const parsed = parsePhoneNumberFromString(digits, country.code);
+    onChange(parsed ? parsed.number : `${country.dialCode}${digits.replace(/^0+/, '')}`);
   }
 
   // Close dropdown on outside click

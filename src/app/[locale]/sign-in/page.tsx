@@ -4,7 +4,7 @@ import { Header } from '@/components/home/Header';
 import { SignInForm } from '@/components/auth/SignInForm';
 import { PhoneSignInForm } from '@/components/auth/PhoneSignInForm';
 import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
-import { MethodSwitchLink } from '@/components/auth/MethodSwitchLink';
+import { MethodSwitchButton } from '@/components/auth/MethodSwitchLink';
 import { isGoogleAuthEnabled } from '@/lib/auth/providers';
 import { safeReturnPath } from '@/lib/auth/profile-gap';
 import { isTurnstileConfigured } from '@/lib/security/turnstile';
@@ -104,7 +104,16 @@ export default async function SignInPage({
             {guestWho !== null ? (
               <HostPortalInterstitial locale={locale} who={guestWho} next={next} />
             ) : current === 'email' ? (
-              <SignInForm returnUrl={returnUrl} next={next} googleEnabled={googleEnabled} />
+              <div className="flex flex-col gap-5">
+                <SignInForm returnUrl={returnUrl} next={next} googleEnabled={googleEnabled} />
+                {/* Back to the phone door — the host-portal entry stays email. */}
+                {phoneAvailable && !hostPortal && (
+                  <>
+                    <AuthDivider />
+                    <MethodSwitchButton page="/sign-in" to="phone" returnUrl={returnUrl} />
+                  </>
+                )}
+              </div>
             ) : (
               <div className="flex flex-col gap-5">
                 {/* The email form reports OAuth failures itself; here the
@@ -115,17 +124,15 @@ export default async function SignInPage({
                   </div>
                 )}
                 <PhoneSignInForm returnUrl={returnUrl} intent="sign-in" siteKey={siteKey} />
-                {googleEnabled && (
-                  <>
-                    <AuthDivider />
-                    <GoogleButton returnUrl={returnUrl} />
-                  </>
-                )}
+                {/* Under "or": the other two doors as equal buttons. */}
+                <AuthDivider />
+                <div className="flex flex-col gap-3">
+                  {googleEnabled && <GoogleButton returnUrl={returnUrl} />}
+                  <MethodSwitchButton page="/sign-in" to="email" returnUrl={returnUrl} />
+                </div>
               </div>
             )}
           </div>
-
-          {phoneAvailable && !hostPortal && <MethodSwitchLink page="/sign-in" current={current} returnUrl={returnUrl} />}
 
         </div>
       </main>

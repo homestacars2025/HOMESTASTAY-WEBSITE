@@ -1,36 +1,38 @@
 import { getTranslations } from 'next-intl/server';
+import { Mail, Smartphone } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 
 /**
- * "Continue with email" / "Continue with phone" under the auth card.
+ * "Continue with email" / "Continue with phone" — a full button under "or",
+ * the same shape, size and weight as "Continue with Google" beside it, so the
+ * three ways in read as equals (no small text link to hunt for).
  *
- * The method lives in the URL (?method=email), not in client state: the page
- * renders the right form on the server, the back button undoes the switch,
- * and a link from elsewhere — "this email has an account, sign in with it" —
- * can open the email form directly.
+ * The method lives in the URL (?method=email): the page renders the right form
+ * on the server, the back button undoes the switch, and a link from elsewhere
+ * ("this number belongs to an email account") can open the email form directly.
  */
-export async function MethodSwitchLink({
+export async function MethodSwitchButton({
   page,
-  current,
+  to,
   returnUrl,
 }: {
   page: '/sign-in' | '/sign-up';
-  current: 'phone' | 'email';
+  to: 'email' | 'phone';
   returnUrl?: string;
 }) {
   const t = await getTranslations('auth.method');
   const query: Record<string, string> = {};
-  if (current === 'phone') query.method = 'email';
+  if (to === 'email') query.method = 'email';
   if (returnUrl) query.returnUrl = returnUrl;
+  const Icon = to === 'email' ? Mail : Smartphone;
 
   return (
-    <p className="mt-6 text-center text-sm">
-      <Link
-        href={{ pathname: page, query }}
-        className="inline-flex min-h-11 items-center text-ink font-medium underline underline-offset-2 hover:opacity-70 transition-opacity duration-[240ms]"
-      >
-        {t(current === 'phone' ? 'useEmail' : 'usePhone')}
-      </Link>
-    </p>
+    <Link
+      href={{ pathname: page, query }}
+      className="w-full flex items-center justify-center gap-2.5 rounded-[999px] border border-rule bg-paper text-ink text-sm font-medium py-3 transition-colors duration-[240ms] hover:bg-paper-warm"
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
+      {t(to === 'email' ? 'continueWithEmail' : 'continueWithPhone')}
+    </Link>
   );
 }

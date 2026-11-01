@@ -900,8 +900,8 @@
       "otherAccount": "Başka bir hesap kullan"
     },
     "method": {
-      "useEmail": "Bunun yerine e-posta ile devam et",
-      "usePhone": "Bunun yerine telefonla devam et"
+      "continueWithEmail": "E-posta ile devam et",
+      "continueWithPhone": "Telefonla devam et"
     },
     "phone": {
       "label": "Telefon numarası",

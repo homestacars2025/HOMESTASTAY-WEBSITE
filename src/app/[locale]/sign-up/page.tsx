@@ -3,7 +3,7 @@ import { Header } from '@/components/home/Header';
 import { SignUpForm } from '@/components/auth/SignUpForm';
 import { PhoneSignInForm } from '@/components/auth/PhoneSignInForm';
 import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
-import { MethodSwitchLink } from '@/components/auth/MethodSwitchLink';
+import { MethodSwitchButton } from '@/components/auth/MethodSwitchLink';
 import { isGoogleAuthEnabled } from '@/lib/auth/providers';
 import { safeReturnPath } from '@/lib/auth/profile-gap';
 import { isTurnstileConfigured } from '@/lib/security/turnstile';
@@ -61,21 +61,27 @@ export default async function SignUpPage({
           {/* Card */}
           <div className="relative z-10 bg-white border border-rule rounded-[14px] p-6 sm:p-8 shadow-[0_2px_20px_rgba(0,0,0,0.06)]">
             {current === 'email' ? (
-              <SignUpForm returnUrl={returnUrl} googleEnabled={googleEnabled} />
-            ) : (
               <div className="flex flex-col gap-5">
-                <PhoneSignInForm returnUrl={returnUrl} intent="sign-up" siteKey={siteKey} />
-                {googleEnabled && (
+                <SignUpForm returnUrl={returnUrl} googleEnabled={googleEnabled} />
+                {phoneAvailable && (
                   <>
                     <AuthDivider />
-                    <GoogleButton returnUrl={returnUrl} />
+                    <MethodSwitchButton page="/sign-up" to="phone" returnUrl={returnUrl} />
                   </>
                 )}
               </div>
+            ) : (
+              <div className="flex flex-col gap-5">
+                <PhoneSignInForm returnUrl={returnUrl} intent="sign-up" siteKey={siteKey} />
+                {/* Under "or": the other two doors as equal buttons. */}
+                <AuthDivider />
+                <div className="flex flex-col gap-3">
+                  {googleEnabled && <GoogleButton returnUrl={returnUrl} />}
+                  <MethodSwitchButton page="/sign-up" to="email" returnUrl={returnUrl} />
+                </div>
+              </div>
             )}
           </div>
-
-          {phoneAvailable && <MethodSwitchLink page="/sign-up" current={current} returnUrl={returnUrl} />}
 
         </div>
       </main>

@@ -900,8 +900,8 @@
       "otherAccount": "Use a different account"
     },
     "method": {
-      "useEmail": "Continue with email instead",
-      "usePhone": "Continue with phone instead"
+      "continueWithEmail": "Continue with email",
+      "continueWithPhone": "Continue with phone"
     },
     "phone": {
       "label": "Phone number",
