@@ -1,7 +1,7 @@
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { Instagram, Facebook } from 'lucide-react';
-import { BrandMark } from '@/components/brand/BrandMark';
+import { Wordmark } from '@/components/brand/Wordmark';
 import { CONTACT_EMAIL, SOCIAL_LINKS } from '@/lib/config/social';
 import { COMPANY } from '@/lib/config/company';
 
@@ -31,26 +31,16 @@ export function SiteFooter() {
 
           {/* Brand column */}
           <div className="md:col-span-1 flex flex-col gap-4">
-            {/* The brand size lives on the LINK, not on the mark: BrandMark is
-                sized in em, so one font-size here drives the arch and the gap
-                together and the lockup rescales as a unit. 0.33em is the same
-                mark-to-wordmark ratio the header's lockup SVG carries in its
-                geometry — the two have to agree, or the logo reads differently
-                at the top and bottom of the same page. */}
+            {/* The header's lockup, same 28px height — one file pair, so the
+                logo cannot read differently at the top and bottom of a page. */}
             <Link
               href={`/${locale}`}
-              className="inline-flex items-center gap-[0.33em] text-[28px]"
-              aria-label="Homesta Stay — home"
+              className="inline-flex items-center"
+              aria-label="Homesta — home"
             >
-              <BrandMark className="text-stay" />
-              <span
-                className="font-medium tracking-[-0.045em] text-[17px] leading-none"
-                style={{ fontFeatureSettings: '"ss01","cv11","cv06"' }}
-              >
-                <span className="text-white">homesta</span>
-                {' '}
-                <span className="text-stay">stay</span>
-              </span>
+              {/* The same lockup as the header, light variant for the ink
+                  background (the wordmark in white, the arch unchanged). */}
+              <Wordmark variant="light" />
             </Link>
 
             <p className="text-[13px] leading-snug max-w-[200px]">
