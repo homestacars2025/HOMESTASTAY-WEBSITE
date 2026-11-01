@@ -1433,8 +1433,8 @@
     "duplicateNote": "Вы уже отправляли этот запрос — вот он снова.",
     "whatsappButton": "Отправить в WhatsApp",
     "successSecondary": "Мы также свяжемся с вами в WhatsApp или по эл. почте.",
-    "whatsappText": "Здравствуйте, Homesta Stay! Хочу получить предложение по {title}: {checkIn} – {checkOut}, {guests}. Запрос {reference}",
-    "guestsSummary": "{adults, plural, one {# взрослый} few {# взрослых} many {# взрослых} other {# взрослого}}{children, plural, =0 {} one {, # ребёнок} few {, # ребёнка} many {, # детей} other {, # ребёнка}}",
+    "whatsappText": "Здравствуйте, Homesta Stay 👋\nХочу получить ценовое предложение:\n\n🏠 Жильё: {title}\n🛬 Заезд: {checkIn}\n🛫 Выезд: {checkOut}\n👥 Гости: {guests}\n🔖 Номер запроса: {reference}",
+    "guestsSummary": "{adults} взр.{children, plural, =0 {} other { + # дет.}}",
     "metaDescriptionOnRequest": "{name}, {city}: {rooms, plural, one {# тип номера} few {# типа номеров} many {# типов номеров} other {# типа номеров}}, цена по запросу. Запросите предложение в Homesta Stay."
   }
 }

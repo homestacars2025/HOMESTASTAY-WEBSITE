@@ -1433,8 +1433,8 @@
     "duplicateNote": "سبق أن أرسلت هذا الطلب — ها هو مجددًا.",
     "whatsappButton": "أرسل عبر واتساب",
     "successSecondary": "سنتواصل معك أيضًا عبر واتساب أو البريد الإلكتروني.",
-    "whatsappText": "مرحبًا Homesta Stay! أودّ الحصول على عرض سعر لـ {title}، من {checkIn} إلى {checkOut}، {guests}. الطلب {reference}",
-    "guestsSummary": "{adults, plural, one {بالغ واحد} two {بالغان} few {# بالغين} many {# بالغًا} other {# بالغ}}{children, plural, =0 {} one {، طفل واحد} two {، طفلان} few {، # أطفال} many {، # طفلًا} other {، # طفل}}",
+    "whatsappText": "مرحباً Homesta Stay 👋\nأودّ الحصول على عرض سعر:\n\n🏠 الوحدة: {title}\n🛬 الدخول: {checkIn}\n🛫 الخروج: {checkOut}\n👥 الضيوف: {guests}\n🔖 رقم الطلب: {reference}",
+    "guestsSummary": "{adults, plural, one {# بالغ} other {# بالغين}}{children, plural, =0 {} one { + # طفل} other { + # أطفال}}",
     "metaDescriptionOnRequest": "{name} في {city}: {rooms, plural, one {نوع غرفة واحد} two {نوعا غرف} few {# أنواع غرف} many {# نوع غرفة} other {# نوع غرفة}}، السعر عند الطلب. اطلب عرض سعر من Homesta Stay."
   }
 }

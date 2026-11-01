@@ -14,15 +14,13 @@ import { TURNSTILE_ACTION_OFFER } from '@/lib/security/turnstile-action';
 import { toISODate } from '@/lib/stays/search-params';
 import type { DateRange } from '@/components/home/DateRangePicker';
 import { requestOffer, type OfferError } from '@/app/[locale]/stays/[slug]/offer-actions';
+import { offerMessageDate } from '@/components/offer/whatsapp-text';
 
 const DateRangePicker = dynamic(
   () => import('@/components/home/DateRangePicker').then((m) => ({ default: m.DateRangePicker })),
   { ssr: false },
 );
 
-function formatDate(d: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
-}
 
 export interface RequestOfferModalProps {
   unitId: string;
@@ -94,13 +92,24 @@ export function RequestOfferModal({ unitId, unitTitle, siteKey, initialRange, in
   const waText = sent && range.from && range.to
     ? t('whatsappText', {
         title: unitTitle,
-        checkIn: formatDate(range.from, locale),
-        checkOut: formatDate(range.to, locale),
+        checkIn: offerMessageDate(range.from, locale),
+        checkOut: offerMessageDate(range.to, locale),
         guests,
         reference: sent.reference,
       })
     : '';
-  const waHref = sent ? `https://wa.me/${sent.whatsappNumber}?text=${encodeURIComponent(waText)}` : '#';
+  // One line per field: encodeURIComponent turns each \n into %0A, which
+  // WhatsApp opens as real line breaks. The reference stays exactly as the
+  // database returned it — the chat is linked to the request by it.
+  //
+  // api.whatsapp.com/send, NOT wa.me: wa.me answers a browser with a redirect
+  // that re-encodes the text and turns every emoji (👋 🏠 🛬 …, and any in the
+  // unit's title) into "�" — measured 2026-11-01. api.whatsapp.com is the
+  // redirect's own target, opens the app the same way, and keeps the text
+  // byte for byte.
+  const waHref = sent
+    ? `https://api.whatsapp.com/send?phone=${sent.whatsappNumber}&text=${encodeURIComponent(waText)}`
+    : '#';
 
   const label = 'font-mono text-[10px] uppercase tracking-[0.1em] text-mute mb-3 block';
 

@@ -1433,8 +1433,8 @@
     "duplicateNote": "You already sent this request — here it is again.",
     "whatsappButton": "Send on WhatsApp",
     "successSecondary": "We'll also contact you on WhatsApp or by email.",
-    "whatsappText": "Hello Homesta Stay! I'd like an offer for {title}, {checkIn} – {checkOut}, {guests}. Request {reference}",
-    "guestsSummary": "{adults, plural, one {# adult} other {# adults}}{children, plural, =0 {} one {, # child} other {, # children}}",
+    "whatsappText": "Hello Homesta Stay 👋\nI'd like to get a price offer:\n\n🏠 Stay: {title}\n🛬 Check-in: {checkIn}\n🛫 Check-out: {checkOut}\n👥 Guests: {guests}\n🔖 Request: {reference}",
+    "guestsSummary": "{adults, plural, one {# adult} other {# adults}}{children, plural, =0 {} one { + # child} other { + # children}}",
     "metaDescriptionOnRequest": "{name} in {city}: {rooms, plural, one {# room type} other {# room types}}, price on request. Request an offer from Homesta Stay."
   }
 }

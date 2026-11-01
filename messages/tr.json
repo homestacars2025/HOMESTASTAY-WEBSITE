@@ -1433,8 +1433,8 @@
     "duplicateNote": "Bu talebi zaten göndermiştiniz — işte tekrar.",
     "whatsappButton": "WhatsApp'tan gönder",
     "successSecondary": "Ayrıca size WhatsApp veya e-posta ile ulaşacağız.",
-    "whatsappText": "Merhaba Homesta Stay! {title} için teklif almak istiyorum: {checkIn} – {checkOut}, {guests}. Talep {reference}",
-    "guestsSummary": "{adults} yetişkin{children, plural, =0 {} other {, # çocuk}}",
+    "whatsappText": "Merhaba Homesta Stay 👋\nFiyat teklifi almak istiyorum:\n\n🏠 Konaklama: {title}\n🛬 Giriş: {checkIn}\n🛫 Çıkış: {checkOut}\n👥 Misafir: {guests}\n🔖 Talep no: {reference}",
+    "guestsSummary": "{adults} yetişkin{children, plural, =0 {} other { + # çocuk}}",
     "metaDescriptionOnRequest": "{city} bölgesinde {name}: {rooms} oda tipi, fiyat talep üzerine. Homesta Stay'den teklif isteyin."
   }
 }
