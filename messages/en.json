@@ -112,6 +112,7 @@
     "fromPrice": "from <p>{price}</p>",
     "priceOnRequest": "Price on request",
     "onRequestShort": "On request",
+    "requestOffer": "Request an offer",
     "propertyType": {
       "hotel": "Hotel",
       "resort": "Resort"

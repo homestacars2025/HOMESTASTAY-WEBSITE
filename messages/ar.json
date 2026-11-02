@@ -112,6 +112,7 @@
     "fromPrice": "ابتداءً من <p>{price}</p>",
     "priceOnRequest": "السعر عند الطلب",
     "onRequestShort": "عند الطلب",
+    "requestOffer": "اطلب عرض سعر",
     "propertyType": {
       "hotel": "فندق",
       "resort": "منتجع"

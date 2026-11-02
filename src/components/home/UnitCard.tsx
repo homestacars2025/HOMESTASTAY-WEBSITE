@@ -167,9 +167,11 @@ export function UnitCard({ unit, className, searchQuery, priority = false, prefe
               When the search carried dates the total is the resolver's SUM over
               the stay, so the grid and the detail page can never disagree. */}
           {/* Price on request (the flag — never inferred from a missing price):
-              that line instead of ANY price, on unit and hotel cards alike. */}
+              that line instead of ANY price. A hotel card gets it only when it
+              has no online price at all ("Request an offer"); a mixed hotel
+              shows its online rooms' "from $X" (see assembleCards). */}
           {unit.price_on_request && (
-            <p className="text-sm font-medium text-ink">{t('priceOnRequest')}</p>
+            <p className="text-sm font-medium text-ink">{hotel ? t('requestOffer') : t('priceOnRequest')}</p>
           )}
           {hotel && !unit.price_on_request && nightlyUsd !== null && (
             <p className="text-sm">

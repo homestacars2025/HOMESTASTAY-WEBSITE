@@ -112,6 +112,7 @@
     "fromPrice": "от <p>{price}</p>",
     "priceOnRequest": "Цена по запросу",
     "onRequestShort": "По запросу",
+    "requestOffer": "Запросить предложение",
     "propertyType": {
       "hotel": "Отель",
       "resort": "Курорт"

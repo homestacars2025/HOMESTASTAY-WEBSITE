@@ -112,6 +112,7 @@
     "fromPrice": "en düşük <p>{price}</p>",
     "priceOnRequest": "Fiyat talep üzerine",
     "onRequestShort": "Talep üzerine",
+    "requestOffer": "Teklif iste",
     "propertyType": {
       "hotel": "Otel",
       "resort": "Tatil köyü"

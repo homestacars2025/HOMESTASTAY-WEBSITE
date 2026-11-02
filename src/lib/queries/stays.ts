@@ -774,7 +774,7 @@ export async function getStaysCatalogue(locale: string, filters: StaysFilters): 
   if (unfiltered) {
     return unstable_cache(
       () => queryStaysCatalogue(locale, {}),
-      ['stays-catalogue-v10', locale],
+      ['stays-catalogue-v11', locale],
       { tags: ['units'], revalidate: 600 },
     )();
   }
@@ -892,13 +892,16 @@ function assembleCards(
     const members = slot.members.flatMap((id) => byId.get(id) ?? []);
     if (!p || !members.length) return [];
     const best = members[0];
-    // "From $X" only from units WITH a public price, and never for a property
-    // on request (or one whose matching units are all on request) — that card
-    // says "Price on request" instead.
+    // Mixed properties are normal: each unit is online or on request on its
+    // own. "From $X" is the cheapest ONLINE matching unit (its live quote, so a
+    // dated search prices the stay), else the property's min_base_price (the
+    // cheapest online unit overall). Only with no online price at all, and the
+    // property on request, does the card say "Request an offer".
     const priced = members.filter((m) => !m.price_on_request);
-    const onRequest = p.priceOnRequest || priced.length === 0;
-    const prices = onRequest ? [] : priced.map(perNight).filter((v): v is number => v !== null);
-    const from = prices.length ? Math.round(Math.min(...prices) * 100) / 100 : null;
+    const live = priced.map(perNight).filter((v): v is number => v !== null);
+    const fromRaw = live.length ? Math.min(...live) : p.minBasePrice;
+    const from = fromRaw !== null && fromRaw > 0 ? Math.round(fromRaw * 100) / 100 : null;
+    const onRequest = from === null && (p.priceOnRequest || priced.length === 0);
     // The PROPERTY's photo only (public_properties_view.cover_url: property_media or
     // properties.cover_photo_url) — never a room's. A property without one is
     // not show_as_property, so in practice this is never empty.
@@ -1048,7 +1051,7 @@ export async function getSimilarUnits(
     if (!dated) {
       return await unstable_cache(
         () => querySimilarUnits(unitId, locale, { guests: req.guests }, limit),
-        ['similar-units-v9', unitId, locale, String(req.guests ?? ''), String(limit)],
+        ['similar-units-v10', unitId, locale, String(req.guests ?? ''), String(limit)],
         { tags: ['units'], revalidate: 300 },
       )();
     }
@@ -1476,8 +1479,16 @@ export interface PropertySummary {
   type: string;
   /** A hotel or resort with at least 1 live unit and a property photo — ONE card / page. */
   showAsProperty: boolean;
-  /** public_properties_view.price_on_request — the hotel card shows no price. */
+  /**
+   * public_properties_view.price_on_request — true only when EVERY live unit
+   * is on request. Decides the property CARD / page header only; each unit's
+   * own flow is its own public_units_view.price_on_request (getOnRequestIds).
+   */
   priceOnRequest: boolean;
+  /** public_properties_view.has_on_request_units — at least one unit is on request. */
+  hasOnRequestUnits: boolean;
+  /** public_properties_view.min_base_price — the cheapest ONLINE unit; null when none. */
+  minBasePrice: number | null;
   cityName: string | null;
   coverUrl: string | null;
   /** property_translations names, by language. */
@@ -1495,7 +1506,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
       async () => {
         const supabase = createPublicClient();
         const [{ data, error }, { data: tr }] = await Promise.all([
-          supabase.from('public_properties_view').select('id,slug,name,property_type,show_as_property,price_on_request,city_name,cover_url'),
+          supabase.from('public_properties_view').select('id,slug,name,property_type,show_as_property,price_on_request,has_on_request_units,min_base_price,city_name,cover_url'),
           supabase.from('property_translations').select('property_id,language_code,name'),
         ]);
         if (error) throw new Error(`properties: ${error.message}`);
@@ -1504,7 +1515,10 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
           if (!r.id || !r.slug) continue;
           out[r.id] = {
             id: r.id, slug: r.slug, name: r.name ?? '', type: String(r.property_type ?? ''),
-            showAsProperty: r.show_as_property === true, priceOnRequest: r.price_on_request === true, cityName: r.city_name ?? null,
+            showAsProperty: r.show_as_property === true, priceOnRequest: r.price_on_request === true,
+            hasOnRequestUnits: r.has_on_request_units === true,
+            minBasePrice: typeof r.min_base_price === 'number' ? r.min_base_price : r.min_base_price != null ? Number(r.min_base_price) : null,
+            cityName: r.city_name ?? null,
             coverUrl: r.cover_url ?? null, names: {},
           };
         }
@@ -1514,7 +1528,7 @@ export async function getPropertyIndex(): Promise<Record<string, PropertySummary
         }
         return out;
       },
-      ['property-index-v6'],
+      ['property-index-v7'],
       { tags: ['units'], revalidate: 600 },
     )();
   } catch (err) {
@@ -1954,7 +1968,7 @@ export interface HotelPage {
   descriptionLang: string | null;
   /** The description shown came from an ai_generated translation row. */
   descriptionAiTranslated: boolean;
-  /** public_properties_view.price_on_request — no "from $X" anywhere. */
+  /** public_properties_view.price_on_request — EVERY live unit on request (header only). */
   priceOnRequest: boolean;
   checkIn: string | null;
   checkOut: string | null;
@@ -2084,7 +2098,7 @@ export async function getHotelPage(
 ): Promise<HotelPage | null> {
   const base = await unstable_cache(
     () => queryHotelBase(slug, locale),
-    ['hotel-page-v8', slug, locale],
+    ['hotel-page-v9', slug, locale],
     { tags: ['units'], revalidate: 600 },
   )().catch((err) => {
     console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });

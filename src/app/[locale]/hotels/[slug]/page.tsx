@@ -34,14 +34,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   if (!hotel) return {};
   const city = hotel.city ? await localizedCityName(hotel.city, locale) : '';
-  // Price on request: no figure anywhere — not in the description either.
-  const prices = hotel.priceOnRequest ? [] : hotel.rooms.filter((r) => !r.priceOnRequest).map(perNight).filter((v): v is number => v !== null);
+  // Only rooms with a public price count; each room decides for itself.
+  const prices = hotel.rooms.filter((r) => !r.priceOnRequest).map(perNight).filter((v): v is number => v !== null);
   const from = prices.length ? Math.round(Math.min(...prices)) : null;
   const title = t('metaTitle', { name: hotel.name, type: t(`type.${hotel.type}`), city });
   const description = (hotel.description?.replace(/\s+/g, ' ').slice(0, 155))
-    || (from === null
+    || (from === null && hotel.priceOnRequest
       ? tOffer('metaDescriptionOnRequest', { name: hotel.name, city, rooms: hotel.rooms.length })
-      : t('metaDescription', { name: hotel.name, city, rooms: hotel.rooms.length, price: from }));
+      : t('metaDescription', { name: hotel.name, city, rooms: hotel.rooms.length, price: from ?? '' }));
   const url = canonical(locale, `/hotels/${slug}`);
   const image = hotel.media[0]?.public_url;
   return {
@@ -97,8 +97,9 @@ export default async function HotelPage({ params, searchParams }: Props) {
   const dated = Boolean(search.checkIn && search.checkOut);
   const roomQuery = buildStaysQuery({ checkIn: search.checkIn, checkOut: search.checkOut, guests: search.guests });
   // "From $X" (and the schema's priceRange) only from rooms WITH a public
-  // price, and never for a property on request.
-  const prices = hotel.priceOnRequest ? [] : hotel.rooms.filter((r) => !r.priceOnRequest).map(perNight).filter((v): v is number => v !== null);
+  // price — each room decides for itself; a mixed hotel shows its online
+  // rooms' "from" and the on-request rooms say so in their own rows.
+  const prices = hotel.rooms.filter((r) => !r.priceOnRequest).map(perNight).filter((v): v is number => v !== null);
   const from = prices.length ? Math.min(...prices) : null;
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
   const range = dated
@@ -181,7 +182,7 @@ export default async function HotelPage({ params, searchParams }: Props) {
                   <span className="text-mute text-xs"> · {tCard('roomTypes', { count: hotel.rooms.length })}</span>
                 </p>
               )}
-              {hotel.priceOnRequest && (
+              {from === null && hotel.priceOnRequest && (
                 <p className="mt-3 text-sm">
                   <span className="font-medium text-ink">{tCard('priceOnRequest')}</span>
                   <span className="text-mute text-xs"> · {tCard('roomTypes', { count: hotel.rooms.length })}</span>
