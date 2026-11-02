@@ -31,7 +31,7 @@ export function SiteFooter() {
 
           {/* Brand column */}
           <div className="md:col-span-1 flex flex-col gap-4">
-            {/* The header's lockup, same 28px height — one file pair, so the
+            {/* The header's lockup at the same height — one file pair, so the
                 logo cannot read differently at the top and bottom of a page. */}
             <Link
               href={`/${locale}`}
