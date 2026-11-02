@@ -485,7 +485,9 @@
       },
       "viewBook": "View & book",
       "datesTitle": "Your dates",
-      "showPrices": "Show prices"
+      "showPrices": "Show prices",
+      "datesBookableOnly": "These dates apply to the rooms you can book online.",
+      "addDatesBookable": "Add your dates to see prices and availability for the rooms you can book online."
     }
   },
   "unit": {
@@ -1397,7 +1399,7 @@
   },
   "offer": {
     "requestOffer": "Request an offer",
-    "cardHint": "This place doesn't publish its prices. Send your dates and we'll reply on WhatsApp with an offer at the best price.",
+    "cardHint": "Send us your dates, and we'll reply with the best price on WhatsApp.",
     "modalTitle": "Request an offer",
     "dates": "Dates",
     "adults": "Adults",

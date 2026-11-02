@@ -2098,7 +2098,7 @@ export async function getHotelPage(
 ): Promise<HotelPage | null> {
   const base = await unstable_cache(
     () => queryHotelBase(slug, locale),
-    ['hotel-page-v9', slug, locale],
+    ['hotel-page-v10', slug, locale],
     { tags: ['units'], revalidate: 600 },
   )().catch((err) => {
     console.error('[getHotelPage]', { slug, message: err instanceof Error ? err.message : String(err) });
@@ -2110,7 +2110,8 @@ export async function getHotelPage(
   if (!checkIn || !checkOut || !base.rooms.length) {
     return {
       ...base,
-      rooms: base.rooms.map((r) => ({ ...r, availability: guests && r.maxGuests !== null && r.maxGuests < guests ? 'guests' : null })),
+      // An on-request room ignores the search: the host confirms availability.
+      rooms: base.rooms.map((r) => ({ ...r, availability: !r.priceOnRequest && guests && r.maxGuests !== null && r.maxGuests < guests ? 'guests' : null })),
     };
   }
 
@@ -2125,14 +2126,19 @@ export async function getHotelPage(
   const rooms = base.rooms.map((r): HotelRoom => ({
     ...r,
     pricing: r.priceOnRequest ? r.pricing : quotes.get(r.id) ?? r.pricing,
-    availability: booked.has(r.id) ? 'booked'
+    // On request: the dates do not apply — no availability is claimed either
+    // way (the host confirms it when replying to the request).
+    availability: r.priceOnRequest ? null
+      : booked.has(r.id) ? 'booked'
       : r.minNights > nights ? 'minNights'
         : guests && r.maxGuests !== null && r.maxGuests < guests ? 'guests'
           : 'ok',
   }));
-  const rank = { ok: 0, guests: 1, minNights: 2, booked: 3 } as const;
+  // Bookable-and-free first, then on-request rooms (no availability), then
+  // the priced rooms these dates do not fit.
+  const rank = (r: HotelRoom) => (r.availability === null ? 0.5 : { ok: 0, guests: 1, minNights: 2, booked: 3 }[r.availability]);
   const per = (r: HotelRoom) => (r.pricing.total_usd !== null && r.pricing.nights ? r.pricing.total_usd / r.pricing.nights : r.pricing.nightly_usd) ?? 1e9;
-  rooms.sort((a, b) => rank[a.availability as keyof typeof rank] - rank[b.availability as keyof typeof rank] || per(a) - per(b));
+  rooms.sort((a, b) => rank(a) - rank(b) || per(a) - per(b));
   return { ...base, rooms };
 }
 

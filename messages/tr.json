@@ -485,7 +485,9 @@
       },
       "viewBook": "Gör ve rezerve et",
       "datesTitle": "Tarihleriniz",
-      "showPrices": "Fiyatları göster"
+      "showPrices": "Fiyatları göster",
+      "datesBookableOnly": "Bu tarihler yalnızca online rezerve edilebilen odalar için geçerlidir.",
+      "addDatesBookable": "Online rezerve edilebilen odaların fiyat ve müsaitliğini görmek için tarihlerinizi ekleyin."
     }
   },
   "unit": {
@@ -1397,7 +1399,7 @@
   },
   "offer": {
     "requestOffer": "Teklif iste",
-    "cardHint": "Bu tesis fiyatlarını yayınlamıyor. Tarihlerinizi gönderin, en iyi fiyatla teklifimizi WhatsApp'tan iletelim.",
+    "cardHint": "Tarihlerinizi gönderin, en iyi fiyatla WhatsApp'tan size dönelim.",
     "modalTitle": "Teklif iste",
     "dates": "Tarihler",
     "adults": "Yetişkin",

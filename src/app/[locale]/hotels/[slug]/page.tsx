@@ -95,6 +95,12 @@ export default async function HotelPage({ params, searchParams }: Props) {
   const city = hotel.city ? await localizedCityName(hotel.city, locale) : null;
   const url = canonical(locale, `/hotels/${slug}`);
   const dated = Boolean(search.checkIn && search.checkOut);
+  // Each room decides for itself. With EVERY room on request there is nothing
+  // the dates could price or check, so no dates box at all; with some, the box
+  // stays but says it is for the bookable rooms only.
+  const onRequestRooms = hotel.rooms.filter((r) => r.priceOnRequest).length;
+  const allOnRequest = hotel.rooms.length > 0 && onRequestRooms === hotel.rooms.length;
+  const mixed = onRequestRooms > 0 && !allOnRequest;
   const roomQuery = buildStaysQuery({ checkIn: search.checkIn, checkOut: search.checkOut, guests: search.guests });
   // "From $X" (and the schema's priceRange) only from rooms WITH a public
   // price — each room decides for itself; a mixed hotel shows its online
@@ -130,6 +136,7 @@ export default async function HotelPage({ params, searchParams }: Props) {
   const DatesForm = () => (
             <form method="get" className="flex flex-col gap-3">
       <p className="text-sm font-medium text-ink">{t('datesTitle')}</p>
+      {mixed && <p className="-mt-2 text-xs text-mute leading-relaxed">{t('datesBookableOnly')}</p>}
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-xs text-mute">
           {tUnit('checkIn')}
@@ -167,7 +174,7 @@ export default async function HotelPage({ params, searchParams }: Props) {
           <UnitGallery media={hotel.media} title={hotel.name} shareUrl={url} shareText={[city, t(`type.${hotel.type}`)].filter(Boolean).join(' · ')} />
         )}
 
-        <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className={`mt-6 grid gap-10 ${allOnRequest ? 'lg:max-w-3xl' : 'lg:grid-cols-[minmax(0,1fr)_340px]'}`}>
           <div className="min-w-0">
             <header className="mb-6">
               <span className="mb-2 inline-flex rounded-[999px] bg-paper-warm px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] rtl:tracking-normal rtl:font-sans text-ink">
@@ -227,16 +234,20 @@ export default async function HotelPage({ params, searchParams }: Props) {
             )}
 
             {/* On a phone the dates come right before the rooms they price. */}
-            <div className="mb-6 rounded-[14px] border border-rule bg-white p-4 lg:hidden">
-              <DatesForm />
-            </div>
+            {!allOnRequest && (
+              <div className="mb-6 rounded-[14px] border border-rule bg-white p-4 lg:hidden">
+                <DatesForm />
+              </div>
+            )}
 
             {/* ── Rooms ─────────────────────────────────────────────────── */}
             <section aria-labelledby="rooms-heading" className="mb-10">
               <h2 id="rooms-heading" className="mb-1 text-xl font-medium tracking-[-0.02em] text-ink">{t('rooms')}</h2>
-              <p className="mb-4 text-sm text-mute">
-                {range ? t('pricesFor', { range, guests: search.guests ?? 1 }) : t('addDates')}
-              </p>
+              {!allOnRequest && (
+                <p className="mb-4 text-sm text-mute">
+                  {range ? t('pricesFor', { range, guests: search.guests ?? 1 }) : t(mixed ? 'addDatesBookable' : 'addDates')}
+                </p>
+              )}
 
               <ul className="flex flex-col gap-3">
                 {hotel.rooms.map((r) => {
@@ -271,12 +282,12 @@ export default async function HotelPage({ params, searchParams }: Props) {
                           {r.maxGuests && <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5" aria-hidden="true" />{t('sleeps', { count: r.maxGuests })}</span>}
                           {r.beds ? <span className="inline-flex items-center gap-1"><BedDouble className="w-3.5 h-3.5" aria-hidden="true" />{tCard('specs.beds', { count: r.beds })}</span> : null}
                         </p>
-                        {r.availability && r.availability !== 'ok' && (
+                        {!r.priceOnRequest && r.availability && r.availability !== 'ok' && (
                           <p className="mt-1 text-xs font-medium text-ink-soft">
                             {t(`unavailable.${r.availability}`, { nights: r.minNights })}
                           </p>
                         )}
-                        {dated && r.availability === 'ok' && <p className="mt-1 text-xs font-medium text-ink">{t('available')}</p>}
+                        {!r.priceOnRequest && dated && r.availability === 'ok' && <p className="mt-1 text-xs font-medium text-ink">{t('available')}</p>}
                         <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
                           <div className="min-w-[8rem] flex-1 text-sm">
                             {r.priceOnRequest && <span className="font-medium text-ink">{tCard('priceOnRequest')}</span>}
@@ -333,9 +344,11 @@ export default async function HotelPage({ params, searchParams }: Props) {
 
           {/* Dates & guests — a plain GET form: the page re-renders with
               every room priced and checked for them. */}
-          <aside className="hidden lg:block lg:sticky lg:top-24 h-fit rounded-[14px] border border-rule bg-white p-5 shadow-[0_2px_20px_rgba(0,0,0,0.05)]">
-            <DatesForm />
-          </aside>
+          {!allOnRequest && (
+            <aside className="hidden lg:block lg:sticky lg:top-24 h-fit rounded-[14px] border border-rule bg-white p-5 shadow-[0_2px_20px_rgba(0,0,0,0.05)]">
+              <DatesForm />
+            </aside>
+          )}
         </div>
       </main>
     </div>
