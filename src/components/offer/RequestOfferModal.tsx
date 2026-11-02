@@ -29,6 +29,11 @@ export interface RequestOfferModalProps {
   siteKey: string;
   initialRange?: DateRange;
   initialAdults?: number;
+  initialChildren?: number;
+  /** Report the picks back, so the booking box behind keeps what was chosen. */
+  onRangeChange?: (range: DateRange) => void;
+  onAdultsChange?: (n: number) => void;
+  onChildrenChange?: (n: number) => void;
   onClose: () => void;
 }
 
@@ -42,13 +47,19 @@ type Sent = { status: 'created' | 'duplicate'; reference: string; whatsappNumber
  * the request by it. Sending it ourselves would need a template; a message the
  * GUEST sends opens the 24-hour window at once and costs nothing.
  */
-export function RequestOfferModal({ unitId, unitTitle, siteKey, initialRange, initialAdults, onClose }: RequestOfferModalProps) {
+export function RequestOfferModal({
+  unitId, unitTitle, siteKey, initialRange, initialAdults, initialChildren,
+  onRangeChange, onAdultsChange, onChildrenChange, onClose,
+}: RequestOfferModalProps) {
   const t = useTranslations('offer');
   const locale = useLocale();
 
-  const [range, setRange] = useState<DateRange>(initialRange ?? { from: undefined });
-  const [adults, setAdults] = useState(initialAdults && initialAdults > 0 ? initialAdults : 2);
-  const [children, setChildren] = useState(0);
+  const [range, setRangeState] = useState<DateRange>(initialRange ?? { from: undefined });
+  const [adults, setAdultsState] = useState(initialAdults && initialAdults > 0 ? initialAdults : 2);
+  const [children, setChildrenState] = useState(initialChildren && initialChildren > 0 ? initialChildren : 0);
+  const setRange = (r: DateRange) => { setRangeState(r); onRangeChange?.(r); };
+  const setAdults = (n: number) => { setAdultsState(n); onAdultsChange?.(n); };
+  const setChildren = (n: number) => { setChildrenState(n); onChildrenChange?.(n); };
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [token, setToken] = useState<string | null>(null);

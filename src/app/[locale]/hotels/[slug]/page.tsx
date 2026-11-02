@@ -244,11 +244,29 @@ export default async function HotelPage({ params, searchParams }: Props) {
                   const bookable = r.availability === null || r.availability === 'ok';
                   return (
                     <li key={r.id} className="flex gap-3 rounded-[14px] border border-rule bg-white p-3">
-                      <div className="relative h-24 w-28 sm:h-28 sm:w-40 shrink-0 overflow-hidden rounded-[10px] bg-paper-warm">
+                      {/* Every room opens its own full page — priced or on
+                          request; the button below is only a shortcut. */}
+                      <Link
+                        href={`/stays/${r.slug ?? r.id}${roomQuery}` as '/stays'}
+                        data-unit={r.id}
+                        data-src="hotel"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        className="relative block h-24 w-28 sm:h-28 sm:w-40 shrink-0 overflow-hidden rounded-[10px] bg-paper-warm"
+                      >
                         {r.cover && <SmartImage src={r.cover} alt={r.title} fill sizes="160px" className="object-cover" />}
-                      </div>
+                      </Link>
                       <div className="flex min-w-0 flex-1 flex-col">
-                        <h3 className="text-sm font-semibold leading-snug text-ink line-clamp-2">{r.title}</h3>
+                        <h3 className="text-sm font-semibold leading-snug text-ink line-clamp-2">
+                          <Link
+                            href={`/stays/${r.slug ?? r.id}${roomQuery}` as '/stays'}
+                            data-unit={r.id}
+                            data-src="hotel"
+                            className="hover:underline underline-offset-2"
+                          >
+                            {r.title}
+                          </Link>
+                        </h3>
                         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-mute">
                           {r.maxGuests && <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5" aria-hidden="true" />{t('sleeps', { count: r.maxGuests })}</span>}
                           {r.beds ? <span className="inline-flex items-center gap-1"><BedDouble className="w-3.5 h-3.5" aria-hidden="true" />{tCard('specs.beds', { count: r.beds })}</span> : null}
