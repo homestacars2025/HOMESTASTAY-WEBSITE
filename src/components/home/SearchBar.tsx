@@ -183,13 +183,27 @@ export function SearchBar({ cities, initial }: SearchBarProps) {
       return;
     }
 
-    const { district, ...refineRest } = initial?.refine ?? {};
-    // The category chip may have changed in place since this bar rendered.
-    const refine = initial?.refine ? withLiveCategory(refineRest) : refineRest;
+    // Start from the search as it is NOW (on /stays: everything in the live
+    // URL — type, price, amenities, sort… — see withLiveCategory) and replace
+    // only what this bar sets: place, dates, guests. A different city resets
+    // only what belongs to the old city (district, area); the page always
+    // restarts at 1 (a new search never carries one).
+    const current = initial?.refine ? withLiveCategory(initial.refine) : {};
+    const {
+      district, area, city: currentCity,
+      checkIn: _in, checkOut: _out, guests: _guests, // eslint-disable-line @typescript-eslint/no-unused-vars
+      ...refine
+    } = current;
+    const nextCity = selectedCity ? selectedCity.name : freePlace;
+    const sameCity = !!selectedCity && (
+      selectedCity.id === initial?.cityId ||
+      (!!currentCity && currentCity.toLowerCase() === selectedCity.name.toLowerCase())
+    );
     const query = buildStaysQuery({
       ...refine,
-      district: selectedCity && selectedCity.id === initial?.cityId ? district : undefined,
-      city: selectedCity ? selectedCity.name : freePlace,
+      district: sameCity ? district : undefined,
+      area: sameCity ? area : undefined,
+      city: nextCity,
       guests,
       checkIn: dateRange.from ? toISODate(dateRange.from) : undefined,
       checkOut: dateRange.to ? toISODate(dateRange.to) : undefined,

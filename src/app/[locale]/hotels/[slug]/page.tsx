@@ -15,7 +15,7 @@ import { graph, breadcrumbSchema, hotelSchema } from '@/lib/seo/schema';
 import { getHotelPage, getPropertyIndex, type HotelRoom } from '@/lib/queries/stays';
 import { localizedCityName } from '@/lib/geo/city-name';
 import { RequestOfferButton } from '@/components/offer/RequestOfferButton';
-import { buildStaysQuery, parseStaysSearchParams } from '@/lib/stays/search-params';
+import { buildStaysQuery, buildStaysQueryWithPage, parseStaysPage, parseStaysSearchParams } from '@/lib/stays/search-params';
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -101,7 +101,16 @@ export default async function HotelPage({ params, searchParams }: Props) {
   const onRequestRooms = hotel.rooms.filter((r) => r.priceOnRequest).length;
   const allOnRequest = hotel.rooms.length > 0 && onRequestRooms === hotel.rooms.length;
   const mixed = onRequestRooms > 0 && !allOnRequest;
-  const roomQuery = buildStaysQuery({ checkIn: search.checkIn, checkOut: search.checkOut, guests: search.guests });
+  // The whole search rides to each room's page (city, type, dates, guests…),
+  // so that page prices for the dates AND its "Back to all stays" returns to
+  // the same filtered list.
+  const roomQuery = buildStaysQueryWithPage(search, parseStaysPage(raw));
+  // Back to the list the guest came from; only a cold visit (no search in the
+  // URL) falls back to this hotel's city.
+  const hasSearch = Object.values(search).some((v) => v !== undefined);
+  const backHref = hasSearch
+    ? `/stays${roomQuery}`
+    : hotel.city ? `/stays${buildStaysQuery({ city: hotel.city })}` : '/stays';
   // "From $X" (and the schema's priceRange) only from rooms WITH a public
   // price — each room decides for itself; a mixed hotel shows its online
   // rooms' "from" and the on-request rooms say so in their own rows.
@@ -163,7 +172,7 @@ export default async function HotelPage({ params, searchParams }: Props) {
       <Header />
       <main className="max-w-screen-xl mx-auto px-4 pt-6 pb-24">
         <Link
-          href={(hotel.city ? `/stays${buildStaysQuery({ ...search, city: hotel.city })}` : '/stays') as '/stays'}
+          href={backHref as '/stays'}
           className="mb-4 inline-flex items-center gap-1 text-sm text-mute hover:text-ink transition-colors duration-[240ms]"
         >
           <ChevronLeft className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />

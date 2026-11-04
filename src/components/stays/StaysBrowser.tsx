@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useLocale, useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, List, Map as MapIcon, X } from 'lucide-react';
 import { UnitCard } from '@/components/home/UnitCard';
 import { CategoryRow, type ChipItem, type ChipKey } from './CategoryRow';
@@ -10,7 +11,7 @@ import { FiltersSheet, type DistrictOption } from './FiltersSheet';
 import { SortMenu } from './SortMenu';
 import { SearchTracker } from '@/components/analytics/SearchTracker';
 import type { Bounds, MapUnit } from './StaysMap';
-import { CATEGORIES } from '@/lib/stays/categories';
+import { CATEGORIES, parseCategory } from '@/lib/stays/categories';
 import { AMENITY_FILTERS, type AmenityFilter, type StaysFilters } from '@/lib/stays/filters';
 import { buildStaysQueryWithPage } from '@/lib/stays/search-params';
 import type { StayCard } from '@/lib/queries/stays';
@@ -68,6 +69,14 @@ function inside(b: Bounds, p: { lat: number; lng: number }): boolean {
  * the sort menu and the search bar navigate as before): availability must be
  * live. Only the category and the map area are client-side.
  */
+// Back / Forward arrival, for scroll restoration: set by popstate (which runs
+// before the restored page mounts), consumed once by the browser below.
+let arrivedByHistory = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => { arrivedByHistory = true; });
+}
+const scrollKey = () => `stays-scroll:${window.location.pathname}${window.location.search}`;
+
 export function StaysBrowser({ cards, filters, initialCategory, initialPage, districts }: StaysBrowserProps) {
   const tCat = useTranslations('categories');
   const t = useTranslations('pages.stays');
@@ -78,6 +87,59 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
   const [activeChip, setActiveChip] = useState<ChipKey>(initialCategory);
   const [category, setCategory] = useState<ChipKey>(initialCategory);
   const [page, setPage] = useState(initialPage);
+
+  // The URL is the source of truth. A chip / page change writes it in place
+  // (replaceState, which Next keeps in sync with useSearchParams), and Back /
+  // Forward can restore a page rendered for an earlier URL — so whenever the
+  // URL's type / page differ from what is shown, the URL wins. Without this a
+  // guest returning from a hotel saw "?type=hotels" with "All" selected.
+  // Scroll: remembered per URL while the guest scrolls; restored ONLY when
+  // they come back with Back / Forward (a fresh visit starts at the top).
+  // sessionStorage can be unavailable (private mode) — then nothing happens.
+  useEffect(() => {
+    if (arrivedByHistory) {
+      arrivedByHistory = false;
+      let y: number | null = null;
+      try { const v = sessionStorage.getItem(scrollKey()); y = v === null ? null : Number(v); } catch { /* unavailable */ }
+      if (y !== null && Number.isFinite(y)) {
+        // Twice: once the list has laid out, once after images reserve space.
+        requestAnimationFrame(() => { window.scrollTo(0, y!); requestAnimationFrame(() => window.scrollTo(0, y!)); });
+      }
+    }
+    // Saved while the GUEST scrolls, and frozen the moment they follow a link:
+    // the page transition moves the old page before it unmounts, and that
+    // position must not overwrite the one they left from.
+    let raf = 0;
+    let leaving = false;
+    const save = () => {
+      try { sessionStorage.setItem(scrollKey(), String(Math.round(window.scrollY))); } catch { /* unavailable */ }
+    };
+    const onScroll = () => {
+      if (raf || leaving) return;
+      raf = requestAnimationFrame(() => { raf = 0; if (!leaving) save(); });
+    };
+    const onClick = (e: MouseEvent) => {
+      if ((e.target as Element | null)?.closest?.('a[href]')) { save(); leaving = true; }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('click', onClick, true);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('click', onClick, true);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const params = useSearchParams();
+  const urlType = params.get('type');
+  const urlPage = params.get('page');
+  useEffect(() => {
+    const fromUrl: ChipKey = parseCategory(urlType) ?? 'all';
+    const pageFromUrl = Math.max(1, Number.parseInt(urlPage ?? '1', 10) || 1);
+    setActiveChip((c) => (c === fromUrl ? c : fromUrl));
+    setCategory((c) => (c === fromUrl ? c : fromUrl));
+    setPage((n) => (n === pageFromUrl ? n : pageFromUrl));
+  }, [urlType, urlPage]);
   const [, startTransition] = useTransition();
   const gridTop = useRef<HTMLDivElement>(null);
 
@@ -160,7 +222,13 @@ export function StaysBrowser({ cards, filters, initialCategory, initialPage, dis
     else url.searchParams.set('type', nextCategory);
     if (nextPage > 1) url.searchParams.set('page', String(nextPage));
     else url.searchParams.delete('page');
-    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}`);
+    // `null`, NOT window.history.state: Next's patched replaceState treats a
+    // state carrying its own marker (__NA) as an internal call and does NOT
+    // record the URL — its router then kept the old address and wrote it back
+    // on its next history update (a navigation, a prefetch), dropping the type
+    // or the city. With null, Next copies its internal state itself and syncs
+    // the URL (and useSearchParams).
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`);
   }
 
   function selectChip(key: ChipKey) {
