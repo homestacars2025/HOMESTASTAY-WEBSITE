@@ -785,7 +785,8 @@
       "myBookings": "My bookings",
       "wallet": "My wallet",
       "account": "Account",
-      "favorites": "Saved"
+      "favorites": "Saved",
+      "hostPortal": "Host portal"
     },
     "authGate": {
       "title": "Sign in to continue",
@@ -1169,7 +1170,8 @@
       "minNights": "This place has a minimum stay of {count, plural, one {# night} other {# nights}}. Please pick a longer range.",
       "phoneTaken": "This phone number is already on another account. Use a different one, or sign in to that account.",
       "modeRejected": "This property has stopped offering the deposit option. Please go back and choose your dates again.",
-      "commitFailed": "We held your dates but couldn't send the request to the host. Please try again."
+      "commitFailed": "We held your dates but couldn't send the request to the host. Please try again.",
+      "ownUnit": "This is your own listing, so it can't be booked from your account. You can book any other stay on Homesta."
     },
     "result": {
       "referenceLabel": "Booking reference",

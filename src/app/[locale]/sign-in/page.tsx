@@ -12,7 +12,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { accountKind } from '@/lib/auth/account-role';
 import { continueUrl } from '@/lib/auth/continue-url';
-import { hostNextPath } from '@/lib/auth/portals';
+import { HOST_DEFAULT_NEXT, hostNextPath } from '@/lib/auth/portals';
 import { HostPortalInterstitial } from '@/components/auth/HostPortalInterstitial';
 
 export async function generateMetadata({
@@ -47,7 +47,10 @@ export default async function SignInPage({
   // Hosts arriving from the portal sign in with email (owners have no auth
   // phone yet), so the portal entry always opens the email form.
   const hostPortal = portal === 'host';
-  const next = hostPortal ? hostNextPath(rawNext) : null;
+  // Always a page for the portal entry (Today when none was asked for): a
+  // portal page in `next` is how /api/auth/continue tells "take me to the
+  // portal" from a host signing in to book as a guest (decision 2026-11-07).
+  const next = hostPortal ? hostNextPath(rawNext) ?? HOST_DEFAULT_NEXT : null;
   // Phone sign-in needs the human check (Cloudflare Turnstile) — every SMS is
   // gated by it. Without the keys the phone tab is not offered at all and the
   // page is email-only, rather than a phone form that cannot send.

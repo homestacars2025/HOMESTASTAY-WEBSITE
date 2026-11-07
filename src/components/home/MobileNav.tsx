@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Menu, X, LogOut, Wallet, BookOpen, UserRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Menu, X, LogOut, Wallet, BookOpen, UserRound, LayoutDashboard } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Wordmark } from '@/components/brand/Wordmark';
 import { NavLinks } from '@/components/home/NavLinks';
 import { LanguageSwitcher } from '@/components/home/LanguageSwitcher';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useAuthUser } from '@/hooks/useAuthUser';
-import { useIsCustomer } from '@/hooks/useIsCustomer';
+import { useAccountKind } from '@/hooks/useIsCustomer';
+import { continueUrl } from '@/lib/auth/continue-url';
+import { HOST_DEFAULT_NEXT } from '@/lib/auth/portals';
 import { createClient } from '@/lib/supabase/client';
 
 function getInitials(user: NonNullable<ReturnType<typeof useAuthUser>>): string {
@@ -34,8 +36,11 @@ export function MobileNav() {
   const tMenu  = useTranslations('auth.userMenu');
   const router = useRouter();
   const user   = useAuthUser();
-  // My bookings and Wallet are the guest area — hidden for hosts and staff.
-  const isCustomer = useIsCustomer(user);
+  // The guest area (Account, My bookings, Wallet) is for guests and hosts (who
+  // book with the same account); hosts also get the portal link.
+  const kind       = useAccountKind(user);
+  const isCustomer = kind === null ? null : kind !== 'other';
+  const locale     = useLocale();
 
   const [open,    setOpen]    = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -128,6 +133,16 @@ export function MobileNav() {
                       carries the SAME links as UserMenu, in the same order.
                       Divergence here is how a feature quietly goes missing on
                       the device it was built for. */}
+                  {kind === 'owner' && (
+                    // A full page load: /api/auth/continue mints the portal handoff.
+                    <a
+                      href={continueUrl(null, locale, HOST_DEFAULT_NEXT)}
+                      className="w-full flex items-center justify-center gap-2 rounded-[999px] border border-rule text-sm font-medium text-ink py-3 hover:bg-paper-warm transition-colors duration-[240ms]"
+                    >
+                      <LayoutDashboard className="w-4 h-4 text-mute shrink-0" />
+                      {tMenu('hostPortal')}
+                    </a>
+                  )}
                   {isCustomer === true && (<>
           <Link
             href="/account"

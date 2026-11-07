@@ -4,7 +4,7 @@ import { Header } from '@/components/home/Header';
 import { CompleteProfileForm } from '@/components/auth/CompleteProfileForm';
 import { createClient } from '@/lib/supabase/server';
 import { profileGap, safeReturnPath } from '@/lib/auth/profile-gap';
-import { accountKind } from '@/lib/auth/account-role';
+import { accountKind, usesGuestArea } from '@/lib/auth/account-role';
 import { continueUrl } from '@/lib/auth/continue-url';
 
 export async function generateMetadata({
@@ -44,10 +44,10 @@ export default async function CompleteProfilePage({
     redirect(`/${locale}/sign-in${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
   }
 
-  // Never shown to hosts or staff: completing a GUEST profile is not their
-  // step. /api/auth/continue hands a host to the portal and points staff at
-  // their own sign-in.
-  if ((await accountKind(user.id)) !== 'customer') {
+  // Never shown to staff: completing a GUEST profile is not their step.
+  // /api/auth/continue points them at their own sign-in. Hosts book with the
+  // same account, so they may finish it like any guest.
+  if (!usesGuestArea(await accountKind(user.id))) {
     redirect(continueUrl(returnUrl || null, locale));
   }
 

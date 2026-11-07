@@ -34,6 +34,17 @@ export async function accountKind(userId: string): Promise<AccountKind> {
   return kindFor(data?.role ?? null, data?.status ?? null);
 }
 
+/**
+ * Whether the account may use the guest side of the site — book, My bookings,
+ * Wallet, Account, Saved. Guests, and hosts too: a host books like anyone else
+ * with the same account (decision 2026-11-07), except their OWN units, which
+ * the database refuses (create_booking_hold → 'cannot_book_own_unit').
+ * Staff and blocked accounts stay out.
+ */
+export function usesGuestArea(kind: AccountKind): boolean {
+  return kind === 'customer' || kind === 'owner';
+}
+
 /** Same rule as HS-HOST isExplicitlyBlocked: only an explicit non-'active' blocks. */
 export function kindFor(role: string | null, status: string | null): AccountKind {
   if (status != null && status !== 'active') return 'blocked';

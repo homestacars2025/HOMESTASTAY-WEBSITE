@@ -785,7 +785,8 @@
       "myBookings": "Rezervasyonlarım",
       "wallet": "Cüzdanım",
       "account": "Hesap",
-      "favorites": "Kaydedilenler"
+      "favorites": "Kaydedilenler",
+      "hostPortal": "Ev sahibi paneli"
     },
     "authGate": {
       "title": "Devam etmek için giriş yapın",
@@ -1169,7 +1170,8 @@
       "minNights": "Bu yerde en az {count, plural, one {# gece} other {# gece}} konaklama şartı var. Lütfen daha uzun bir aralık seçin.",
       "phoneTaken": "Bu telefon numarası başka bir hesapta kayıtlı. Farklı bir numara kullanın veya o hesapla giriş yapın.",
       "modeRejected": "Bu mülk artık kapora seçeneği sunmuyor. Lütfen geri dönüp tarihlerinizi yeniden seçin.",
-      "commitFailed": "Tarihlerinizi tuttuk ancak talep ev sahibine gönderilemedi. Lütfen tekrar deneyin."
+      "commitFailed": "Tarihlerinizi tuttuk ancak talep ev sahibine gönderilemedi. Lütfen tekrar deneyin.",
+      "ownUnit": "Bu sizin kendi ilanınız, bu yüzden hesabınızdan rezervasyon yapılamaz. Homesta’daki diğer tüm konaklamaları rezerve edebilirsiniz."
     },
     "result": {
       "referenceLabel": "Rezervasyon numarası",

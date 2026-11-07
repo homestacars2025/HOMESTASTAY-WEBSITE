@@ -85,6 +85,8 @@ export type HoldResult =
   | { ok: false; status: 'unavailable' }
   /** Unit is not sellable at all — not a dates problem. */
   | { ok: false; status: 'not_bookable' }
+  /** A host booking their own unit — refused by the database ('cannot_book_own_unit'). */
+  | { ok: false; status: 'own_unit' }
   /** Field-level problems. Never a full-page error. */
   | { ok: false; status: 'invalid'; fields: HoldFieldError[] }
   /** We refused to sell rather than mis-charge. See below. */
@@ -215,6 +217,12 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
   });
 
   if (error) {
+    // Hosts book like any guest (decision 2026-11-07), except their own units:
+    // the database refuses those with 'cannot_book_own_unit' (as an error or a
+    // status row — both are read). A plain refusal, not an outage.
+    if (`${error.message} ${error.details ?? ''} ${error.hint ?? ''}`.includes('cannot_book_own_unit')) {
+      return { ok: false, status: 'own_unit' };
+    }
     // A stale FX rate raises inside lock_booking_fx, which aborts the whole
     // transaction — no booking, no customer row, no sale. That is the system
     // working: refusing to sell beats selling at a rate we cannot honour. It
@@ -311,6 +319,7 @@ export async function createHoldAction(data: HoldFormData): Promise<HoldResult> 
 
     case 'unavailable':  return { ok: false, status: 'unavailable' };
     case 'not_bookable': return { ok: false, status: 'not_bookable' };
+    case 'cannot_book_own_unit': return { ok: false, status: 'own_unit' };
     case 'invalid':      return { ok: false, status: 'invalid', fields: [] };
     default:             return { ok: false, status: 'error' };
   }

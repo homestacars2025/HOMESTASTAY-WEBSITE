@@ -11,10 +11,14 @@ import { isHostOtpRequired, mintHostHandoff } from '@/lib/auth/host-otp';
  * lives in one place:
  *
  *   customer → returnUrl (internal paths only) or the home page
- *   owner    → /{locale}/host-verify: a 6-digit email code first. Only a
- *              successful code there mints the one-time magic link (with a
- *              grant) and hands off to the host portal's /api/auth/handoff,
- *              signing the website session out LOCALLY at that moment. Two independent sessions: signing out of
+ *   owner    → with a portal page asked for (`next`, i.e. the sign-in came
+ *              from the host portal or the "Host portal" link): handed to the
+ *              portal — straight away while the login code is switched off,
+ *              else through /{locale}/host-verify (a 6-digit email code first;
+ *              only a successful code mints the one-time magic link with its
+ *              grant). Without one, a host stays here as a guest: hosts book
+ *              with the same account (decision 2026-11-07). The website session
+ *              is kept either way — two independent sessions: signing out of
  *              one never signs the user out of the other.
  *   team / admin → signed out locally, told where their sign-in is
  *   blocked  → signed out locally, told plainly
@@ -91,7 +95,9 @@ export async function GET(request: NextRequest) {
 
   const kind = await accountKind(user.id);
 
-  if (kind === 'customer') {
+  // A host who did not ask for the portal signed in to use the website — to
+  // book like any guest — so they stay, exactly like one.
+  if (kind === 'customer' || (kind === 'owner' && !next)) {
     return to(safeReturnPath(params.get('returnUrl'), locale));
   }
 
@@ -118,7 +124,8 @@ export async function GET(request: NextRequest) {
         await signOutHere();
         return notice('host');
       }
-      await signOutHere();
+      // The website session is kept: a host may also be booking here as a
+      // guest (decision 2026-11-07), and the portal has its own session.
       console.log('[auth/continue] owner handed off to the host portal (code not required)', { userId: user.id });
       return noStore(NextResponse.redirect(url, 303));
     }
@@ -126,8 +133,8 @@ export async function GET(request: NextRequest) {
     // ON: no handoff is minted here. The host proves the inbox with a 6-digit
     // code on /host-verify first, and only a successful verify there mints the
     // magic link (with its one-time grant). The website session stays signed
-    // in until then — the code is bound to it — and is signed out locally at
-    // the moment of the handoff.
+    // in — the code is bound to it — and is kept after the handoff too
+    // (decision 2026-11-07).
     const query = new URLSearchParams({ portal: 'host' });
     if (next) query.set('next', next);
     return to(`/${locale}/host-verify?${query.toString()}`);

@@ -1,11 +1,13 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { useIsCustomer } from '@/hooks/useIsCustomer';
-import { LogOut, ChevronDown, BookOpen, Wallet, UserRound, Heart } from 'lucide-react';
+import { useAccountKind } from '@/hooks/useIsCustomer';
+import { continueUrl } from '@/lib/auth/continue-url';
+import { HOST_DEFAULT_NEXT } from '@/lib/auth/portals';
+import { LogOut, ChevronDown, BookOpen, Wallet, UserRound, Heart, LayoutDashboard } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface UserMenuProps {
@@ -28,8 +30,11 @@ function getDisplayName(user: User): string {
 }
 
 export function UserMenu({ user }: UserMenuProps) {
-  // My bookings and Wallet are the guest area — hidden for hosts and staff.
-  const isCustomer = useIsCustomer(user);
+  // The guest area (Account, Saved, My bookings, Wallet) is for guests and
+  // hosts (who book with the same account); hosts also get the portal link.
+  const kind       = useAccountKind(user);
+  const isCustomer = kind === null ? null : kind !== 'other';
+  const locale   = useLocale();
   const t        = useTranslations('auth.userMenu');
   const router   = useRouter();
   const [open, setOpen] = useState(false);
@@ -79,6 +84,16 @@ export function UserMenu({ user }: UserMenuProps) {
 
       {open && (
         <div className="absolute top-full end-0 mt-2 w-48 bg-white border border-rule rounded-[14px] shadow-[0_4px_24px_rgba(0,0,0,0.10)] py-1.5 z-50">
+          {kind === 'owner' && (
+            // A full page load: /api/auth/continue mints the portal handoff.
+            <a
+              href={continueUrl(null, locale, HOST_DEFAULT_NEXT)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-ink hover:bg-paper-warm transition-colors duration-[240ms]"
+            >
+              <LayoutDashboard className="w-4 h-4 text-mute shrink-0" />
+              {t('hostPortal')}
+            </a>
+          )}
           {isCustomer === true && (<>
           <Link
             href="/account"

@@ -75,8 +75,8 @@ export async function verifyHostCode(code: string, locale: string, next: string 
   });
   if (!url) return { ok: false, error: 'error' };
 
-  // The portal gets its own session from the handoff; this one is done.
-  await who.supabase.auth.signOut({ scope: 'local' });
+  // The portal gets its own session from the handoff. This one is kept: a
+  // host may also be booking on the website as a guest (decision 2026-11-07).
   console.log('[host-verify] owner handed off to the host portal', { userId: who.user.id });
   return { ok: true, url };
 }

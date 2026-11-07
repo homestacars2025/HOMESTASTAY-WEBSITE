@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
-import { accountKind } from '@/lib/auth/account-role';
+import { accountKind, usesGuestArea } from '@/lib/auth/account-role';
 import { continueUrl } from '@/lib/auth/continue-url';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 
@@ -38,12 +38,13 @@ export async function getBookingAccount(): Promise<BookingAccount | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Hosts and staff may not book or top up a wallet with that account. Sent
-  // through /api/auth/continue rather than treated as anonymous: booking
-  // "as a guest" while signed in as a host would still file the booking from
-  // their browser under their details. Covers the checkout and wallet pages
-  // and the Server Actions behind them, which all read identity here.
-  if ((await accountKind(user.id)) !== 'customer') {
+  // Staff and blocked accounts may not book or top up a wallet with that
+  // account; they are sent through /api/auth/continue rather than treated as
+  // anonymous. Hosts book as themselves like any guest (decision 2026-11-07) —
+  // the database alone refuses a host's own units. Covers the checkout and
+  // wallet pages and the Server Actions behind them, which all read identity
+  // here.
+  if (!usesGuestArea(await accountKind(user.id))) {
     redirect(continueUrl(null, await getLocale()));
   }
 

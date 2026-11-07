@@ -181,6 +181,10 @@ export function GuestDetailsForm({
         case 'not_bookable':
           setPageError(t('errors.notBookable'));
           break;
+        case 'own_unit':
+          // A host on their own listing: nothing to retry, say why kindly.
+          setPageError(t('errors.ownUnit'));
+          break;
         case 'rate_unavailable':
           // We refused to sell rather than charge an unverifiable rate.
           setPageError(t('errors.rateUnavailable'));

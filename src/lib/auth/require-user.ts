@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { accountKind } from '@/lib/auth/account-role';
+import { accountKind, usesGuestArea } from '@/lib/auth/account-role';
 import { continueUrl } from '@/lib/auth/continue-url';
 
 /**
@@ -37,11 +37,12 @@ export async function requireConfirmedUser(
     redirect(`/${locale}/sign-in?returnUrl=${returnUrl}`);
   }
 
-  // The customer area is for guests. A host, staff or blocked session is sent
-  // through /api/auth/continue, which hands a host to the portal, points staff
-  // at their sign-in, and signs this website session out for both. First, so
-  // no such account is ever asked to "complete" a guest profile below.
-  if ((await accountKind(user.id)) !== 'customer') {
+  // The customer area is for guests — and hosts, who book with the same
+  // account (decision 2026-11-07). A staff or blocked session is sent through
+  // /api/auth/continue, which points staff at their sign-in and signs this
+  // website session out. First, so no such account is ever asked to
+  // "complete" a guest profile below.
+  if (!usesGuestArea(await accountKind(user.id))) {
     redirect(continueUrl(returnPath, locale));
   }
 
