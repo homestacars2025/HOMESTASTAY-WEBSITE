@@ -1,5 +1,5 @@
 import 'server-only';
-import { accountKind } from '@/lib/auth/account-role';
+import { accountKind, usesGuestArea } from '@/lib/auth/account-role';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 
@@ -28,12 +28,13 @@ export interface AppCaller {
   /** Scoped to this user: RLS applies, auth.uid() is set. */
   supabase: SupabaseClient;
   /**
-   * False for hosts, staff and blocked accounts. The app's API is the guest
-   * area (wallet, payments), which those accounts may not use — callers answer
-   * 403 not_customer, NOT 401, so the app does not mistake a valid session for
-   * an expired one and loop through sign-in.
+   * The website's usesGuestArea() rule: true for guests and hosts (hosts book
+   * and top up with the same account — decision 2026-11-07), false for staff
+   * and blocked accounts. The app's API is the guest area (wallet, payments);
+   * callers answer 403 not_customer, NOT 401, so the app does not mistake a
+   * valid session for an expired one and loop through sign-in.
    */
-  isCustomer: boolean;
+  usesGuestArea: boolean;
 }
 
 /** Reads the bearer token, or null when the header is absent or malformed. */
@@ -92,9 +93,9 @@ export async function authenticate(request: Request): Promise<AppCaller | null> 
     return null;
   }
 
-  const isCustomer = (await accountKind(data.user.id)) === 'customer';
-  if (!isCustomer) {
-    console.warn('[app/auth] not a customer account', { profileId: data.user.id });
+  const guest = usesGuestArea(await accountKind(data.user.id));
+  if (!guest) {
+    console.warn('[app/auth] not a guest-area account', { profileId: data.user.id });
   }
-  return { user: data.user, supabase, isCustomer };
+  return { user: data.user, supabase, usesGuestArea: guest };
 }

@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   if (!caller) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
-  if (!caller.isCustomer) {
+  if (!caller.usesGuestArea) {
     return NextResponse.json({ ok: false, error: 'not_customer' }, { status: 403 });
   }
 
