@@ -786,7 +786,9 @@
       "wallet": "Cüzdanım",
       "account": "Hesap",
       "favorites": "Kaydedilenler",
-      "hostPortal": "Ev sahibi paneli"
+      "hostPortal": "Ev sahibi paneli",
+      "support": "Destek",
+      "supportUnread": "{count, plural, one {# okunmamış yanıt} other {# okunmamış yanıt}}"
     },
     "authGate": {
       "title": "Devam etmek için giriş yapın",
@@ -1105,7 +1107,8 @@
     "socialInstagram": "Instagram'da Homesta Stay",
     "socialFacebook": "Facebook'ta Homesta Stay",
     "socialWhatsapp": "WhatsApp'tan bize ulaşın",
-    "legalInfo": "Şirket Bilgileri"
+    "legalInfo": "Şirket Bilgileri",
+    "contactSupport": "Destekle iletişime geç"
   },
   "booking": {
     "backToListing": "İlana geri dön",
@@ -1441,5 +1444,113 @@
     "whatsappText": "Merhaba Homesta Stay 👋\nFiyat teklifi almak istiyorum:\n\n🏠 Konaklama: {title}\n🛬 Giriş: {checkIn}\n🛫 Çıkış: {checkOut}\n👥 Misafir: {guests}\n🔖 Talep no: {reference}",
     "guestsSummary": "{adults} yetişkin{children, plural, =0 {} other { + # çocuk}}",
     "metaDescriptionOnRequest": "{city} bölgesinde {name}: {rooms} oda tipi, fiyat talep üzerine. Homesta Stay'den teklif isteyin."
+  },
+  "support": {
+    "title": "Destek",
+    "intro": "Bir rezervasyon, ödeme ya da hesabınızla ilgili sorunuz mu var? Ekibimiz burada yanıt verir.",
+    "newRequest": "Yeni talep",
+    "back": "Tüm talepler",
+    "loadError": "Talepleriniz yüklenemedi. Lütfen sayfayı yenileyin.",
+    "untitled": "Destek talebi",
+    "noPreview": "Henüz mesaj yok",
+    "unread": "{count, plural, one {# okunmamış yanıt} other {# okunmamış yanıt}}",
+    "empty": {
+      "title": "Henüz talep yok",
+      "body": "Rezervasyon, ödeme veya hesabınızla ilgili yardım mı lazım? Bir talep açın, ekibimiz sohbette yanıt versin."
+    },
+    "state": {
+      "waiting": "Destek bekleniyor",
+      "in_progress": "İşlemde",
+      "replied": "Destek yanıtladı",
+      "solved": "Çözüldü",
+      "closed": "Kapalı"
+    },
+    "new": {
+      "title": "Yeni talep",
+      "intro": "Neler olduğunu anlatın. Ekibimiz hesabınızdaki sohbette yanıt verir.",
+      "category": "Ne konuda yardıma ihtiyacınız var?",
+      "booking": "Hangi rezervasyon?",
+      "optional": "isteğe bağlı",
+      "noBooking": "Bir rezervasyonla ilgili değil",
+      "nights": "{count, plural, one {# gece} other {# gece}}",
+      "message": "Mesajınız",
+      "placeholder": "Sorunu anlatın — ne oldu ve ne zaman.",
+      "send": "Talebi gönder",
+      "sending": "Gönderiliyor…",
+      "uploading": "Dosyalar yükleniyor…",
+      "filesLater": "Talebiniz gönderildi ama dosyalar eklenemedi. Lütfen onları sohbette ekleyin.",
+      "footnote": "Yanıt verdiğimizde menüdeki Destek’te bir işaret görürsünüz."
+    },
+    "chat": {
+      "staff": "Homesta destek",
+      "you": "Siz",
+      "placeholder": "Bir mesaj yazın…",
+      "send": "Gönder",
+      "sending": "Gönderiliyor…",
+      "failed": "Gönderilemedi",
+      "retry": "Tekrar dene",
+      "solved": "Sorunum çözüldü",
+      "solvedShort": "Çözüldü",
+      "solvedNotice": "Çözüldü olarak işaretlendi. Hâlâ yardım mı lazım? 3 gün içinde aşağıya yazın, talebi yeniden açalım.",
+      "solvedExpired": "Bu talep çözüldü. Daha fazla yardım gerekirse yeni bir talep açın.",
+      "closed": "Bu talep kapatıldı.",
+      "openNew": "Yeni talep aç",
+      "today": "Bugün",
+      "yesterday": "Dün",
+      "files": "{count, plural, one {# dosya} other {# dosya}}",
+      "newMessage": "Homesta destekten yeni mesaj",
+      "loadFailed": "Bu sohbet yüklenemedi. Lütfen sayfayı yenileyin.",
+      "reference": "Referans",
+      "booking": "Rezervasyon {reference}",
+      "sent": "Talebiniz gönderildi.",
+      "etaSoon": "En kısa sürede yanıt vereceğiz.",
+      "eta": {
+        "minute": "{count, plural, one {~# dk içinde yanıt vereceğiz.} other {~# dk içinde yanıt vereceğiz.}}",
+        "hour": "{count, plural, one {~# saat içinde yanıt vereceğiz.} other {~# saat içinde yanıt vereceğiz.}}",
+        "day": "{count, plural, one {~# gün içinde yanıt vereceğiz.} other {~# gün içinde yanıt vereceğiz.}}"
+      },
+      "notFoundTitle": "Talep bulunamadı",
+      "notFoundBody": "Bu talep mevcut değil ya da hesabınıza ait değil."
+    },
+    "rate": {
+      "title": "Sorununuzu çözdük mü?",
+      "subtitle": "Yanıtınız gelişmemize yardımcı olur.",
+      "yes": "Evet",
+      "no": "Hayır",
+      "comment": "Yorum",
+      "commentPh": "Eklemek istediğiniz bir şey var mı? (isteğe bağlı)",
+      "send": "Geri bildirim gönder",
+      "thanks": "Geri bildiriminiz için teşekkürler"
+    },
+    "files": {
+      "attach": "Dosya ekle",
+      "hint": "Fotoğraf, PDF, video veya ses · dosya başına en fazla 15 MB · mesaj başına en fazla 5",
+      "tooBig": "“{name}” 15 MB’tan büyük.",
+      "badType": "“{name}” desteklenen bir dosya türü değil.",
+      "tooMany": "Mesaj başına en fazla {max} dosya ekleyebilirsiniz.",
+      "remove": "{name} dosyasını kaldır",
+      "loading": "Dosya yükleniyor",
+      "photo": "Fotoğraf"
+    },
+    "errors": {
+      "too_many_open_tickets": "10 açık talebiniz var. Lütfen mevcut taleplerinizden birinde devam edin.",
+      "ticket_closed": "Bu talep kapatıldı. Yeni bir talep açın.",
+      "booking_not_yours": "Bu rezervasyon hesabınıza ait değil. Başka bir rezervasyon seçin ya da talebi rezervasyonsuz gönderin.",
+      "message_required": "Lütfen bir mesaj yazın.",
+      "not_signed_in": "Destekle iletişim için lütfen tekrar giriş yapın.",
+      "invalid_category": "Lütfen hangi konuda yardım istediğinizi seçin.",
+      "upload_failed": "Dosyalar yüklenemedi. Lütfen tekrar deneyin.",
+      "generic": "Bir sorun oluştu. Lütfen tekrar deneyin.",
+      "seeRequests": "Taleplerimi gör",
+      "signIn": "Giriş yap"
+    },
+    "help": {
+      "title": "Bu rezervasyonla ilgili yardım mı lazım?",
+      "body": "Destek ekibimiz hesabınızdaki sohbette yanıt verir.",
+      "getHelp": "Yardım al",
+      "cancelRefund": "İptal / iade yardımı",
+      "checkIn": "Giriş yapamıyorum",
+      "payment": "Bu ödemeyle ilgili destekle iletişime geç"
+    }
   }
 }

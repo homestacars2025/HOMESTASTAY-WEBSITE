@@ -27,6 +27,7 @@ import { ArrivalRequestForm } from '@/components/booking/ArrivalRequestForm';
 import { isTlyncConfigured, parseAmountNote } from '@/lib/payment/tlync';
 import { usdToLydRate, convertUsdToLyd } from '@/lib/payment/lyd-fx';
 import { isLibyaEligible } from '@/lib/payment/libya';
+import { BookingHelp, PaymentHelpLink } from '@/components/support/BookingHelp';
 
 /**
  * Booking result.
@@ -365,6 +366,7 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                 <p className="text-[13px] text-ink-soft leading-relaxed mt-1">
                   {t('payFailedRetry')}
                 </p>
+                <PaymentHelpLink bookingId={String(booking.id)} />
               </div>
             </div>
           </div>
@@ -685,6 +687,9 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
             <PolicyText policy={policy} />
           </div>
         )}
+
+        {/* Help with THIS booking — a support request already about it. */}
+        <BookingHelp bookingId={String(booking.id)} checkInRelevant={ownerApproved && !isCanceled} />
 
         <div className="mt-8">
           <Link

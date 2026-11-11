@@ -786,7 +786,9 @@
       "wallet": "My wallet",
       "account": "Account",
       "favorites": "Saved",
-      "hostPortal": "Host portal"
+      "hostPortal": "Host portal",
+      "support": "Support",
+      "supportUnread": "{count, plural, one {# unread reply} other {# unread replies}}"
     },
     "authGate": {
       "title": "Sign in to continue",
@@ -1105,7 +1107,8 @@
     "socialInstagram": "Homesta Stay on Instagram",
     "socialFacebook": "Homesta Stay on Facebook",
     "socialWhatsapp": "Chat with us on WhatsApp",
-    "legalInfo": "Company Information"
+    "legalInfo": "Company Information",
+    "contactSupport": "Contact support"
   },
   "booking": {
     "backToListing": "Back to the listing",
@@ -1441,5 +1444,113 @@
     "whatsappText": "Hello Homesta Stay 👋\nI'd like to get a price offer:\n\n🏠 Stay: {title}\n🛬 Check-in: {checkIn}\n🛫 Check-out: {checkOut}\n👥 Guests: {guests}\n🔖 Request: {reference}",
     "guestsSummary": "{adults, plural, one {# adult} other {# adults}}{children, plural, =0 {} one { + # child} other { + # children}}",
     "metaDescriptionOnRequest": "{name} in {city}: {rooms, plural, one {# room type} other {# room types}}, price on request. Request an offer from Homesta Stay."
+  },
+  "support": {
+    "title": "Support",
+    "intro": "Questions about a booking, a payment or your account? Our team answers right here.",
+    "newRequest": "New request",
+    "back": "All requests",
+    "loadError": "We couldn’t load your requests. Please refresh the page.",
+    "untitled": "Support request",
+    "noPreview": "No messages yet",
+    "unread": "{count, plural, one {# unread reply} other {# unread replies}}",
+    "empty": {
+      "title": "No requests yet",
+      "body": "Need help with a booking, a payment or your account? Start a request and our team will reply in a chat."
+    },
+    "state": {
+      "waiting": "Waiting for support",
+      "in_progress": "In progress",
+      "replied": "Support replied",
+      "solved": "Solved",
+      "closed": "Closed"
+    },
+    "new": {
+      "title": "New request",
+      "intro": "Tell us what’s going on. Our team replies in a chat on your account.",
+      "category": "What do you need help with?",
+      "booking": "Which booking?",
+      "optional": "optional",
+      "noBooking": "Not about a booking",
+      "nights": "{count, plural, one {# night} other {# nights}}",
+      "message": "Your message",
+      "placeholder": "Describe the problem — what happened, and when.",
+      "send": "Send request",
+      "sending": "Sending…",
+      "uploading": "Uploading files…",
+      "filesLater": "Your request was sent, but the files couldn’t be attached. Please add them in the chat.",
+      "footnote": "You’ll see a badge on Support in the menu when we reply."
+    },
+    "chat": {
+      "staff": "Homesta support",
+      "you": "You",
+      "placeholder": "Write a message…",
+      "send": "Send",
+      "sending": "Sending…",
+      "failed": "Not sent",
+      "retry": "Try again",
+      "solved": "My problem is solved",
+      "solvedShort": "Solved",
+      "solvedNotice": "Marked as solved. Still need help? Write below within 3 days and we’ll reopen it.",
+      "solvedExpired": "This request was solved. If you need more help, open a new request.",
+      "closed": "This request is closed.",
+      "openNew": "Open a new request",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "files": "{count, plural, one {# file} other {# files}}",
+      "newMessage": "New message from Homesta support",
+      "loadFailed": "We couldn’t load this conversation. Please refresh the page.",
+      "reference": "Reference",
+      "booking": "Booking {reference}",
+      "sent": "Your request was sent.",
+      "etaSoon": "We’ll reply as soon as we can.",
+      "eta": {
+        "minute": "{count, plural, one {We’ll reply within ~# min.} other {We’ll reply within ~# min.}}",
+        "hour": "{count, plural, one {We’ll reply within ~# hour.} other {We’ll reply within ~# hours.}}",
+        "day": "{count, plural, one {We’ll reply within ~# day.} other {We’ll reply within ~# days.}}"
+      },
+      "notFoundTitle": "Request not found",
+      "notFoundBody": "This request doesn’t exist or isn’t on your account."
+    },
+    "rate": {
+      "title": "Did we solve your problem?",
+      "subtitle": "Your answer helps us improve.",
+      "yes": "Yes",
+      "no": "No",
+      "comment": "Comment",
+      "commentPh": "Anything you’d like to add? (optional)",
+      "send": "Send feedback",
+      "thanks": "Thanks for your feedback"
+    },
+    "files": {
+      "attach": "Attach files",
+      "hint": "Photos, PDF, video or audio · up to 15 MB each · up to 5 per message",
+      "tooBig": "“{name}” is larger than 15 MB.",
+      "badType": "“{name}” isn’t a supported file type.",
+      "tooMany": "You can attach up to {max} files per message.",
+      "remove": "Remove {name}",
+      "loading": "Loading file",
+      "photo": "Photo"
+    },
+    "errors": {
+      "too_many_open_tickets": "You have 10 open requests. Please continue in an existing one.",
+      "ticket_closed": "This request is closed. Open a new one.",
+      "booking_not_yours": "That booking isn’t on your account. Choose another booking, or send the request without one.",
+      "message_required": "Please write a message.",
+      "not_signed_in": "Please sign in again to contact support.",
+      "invalid_category": "Please choose what you need help with.",
+      "upload_failed": "The files couldn’t be uploaded. Please try again.",
+      "generic": "Something went wrong. Please try again.",
+      "seeRequests": "See my requests",
+      "signIn": "Sign in"
+    },
+    "help": {
+      "title": "Need help with this booking?",
+      "body": "Our support team answers in a chat on your account.",
+      "getHelp": "Get help",
+      "cancelRefund": "Cancel / refund help",
+      "checkIn": "Can’t check in",
+      "payment": "Contact support about this payment"
+    }
   }
 }

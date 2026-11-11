@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Menu, X, LogOut, Wallet, BookOpen, UserRound, LayoutDashboard } from 'lucide-react';
+import { Menu, X, LogOut, Wallet, BookOpen, UserRound, LayoutDashboard, LifeBuoy } from 'lucide-react';
+import { useSupportUnread } from '@/lib/support/unread';
 import { useLocale, useTranslations } from 'next-intl';
 import { Wordmark } from '@/components/brand/Wordmark';
 import { NavLinks } from '@/components/home/NavLinks';
@@ -41,6 +42,8 @@ export function MobileNav() {
   const kind       = useAccountKind(user);
   const isCustomer = kind === null ? null : kind !== 'other';
   const locale     = useLocale();
+  // Shared with the desktop menu (one store per tab — see lib/support/unread).
+  const unread     = useSupportUnread(isCustomer === true && user ? user.id : null);
 
   const [open,    setOpen]    = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -168,6 +171,20 @@ export function MobileNav() {
                     <Wallet className="w-4 h-4 text-mute shrink-0" />
                     {tMenu('wallet')}
                   </Link>
+                  <Link
+                    href="/account/support"
+                    onClick={close}
+                    className="w-full flex items-center justify-center gap-2 rounded-[999px] border border-rule text-sm font-medium text-ink py-3 hover:bg-paper-warm transition-colors duration-[240ms]"
+                  >
+                    <LifeBuoy className="w-4 h-4 text-mute shrink-0" />
+                    {tMenu('support')}
+                    {unread > 0 && (
+                      <span className="min-w-5 h-5 px-1.5 rounded-full bg-stay text-white text-[11px] font-semibold tabular-nums flex items-center justify-center">
+                        <span aria-hidden="true">{unread > 9 ? '9+' : unread}</span>
+                        <span className="sr-only">{tMenu('supportUnread', { count: unread })}</span>
+                      </span>
+                    )}
+                  </Link>
                   </>)}
                   <button
                     type="button"
@@ -219,13 +236,16 @@ export function MobileNav() {
       {/* Hamburger trigger */}
       <button
         type="button"
-        aria-label={t('openMenu')}
+        aria-label={unread > 0 ? `${t('openMenu')} — ${tMenu('supportUnread', { count: unread })}` : t('openMenu')}
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-paper-warm transition-colors duration-[240ms]"
+        className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-paper-warm transition-colors duration-[240ms]"
       >
         <Menu className="w-5 h-5 text-ink" />
+        {unread > 0 && (
+          <span aria-hidden="true" className="absolute top-1.5 end-1.5 w-2.5 h-2.5 rounded-full bg-stay ring-2 ring-paper" />
+        )}
       </button>
 
       {overlay}

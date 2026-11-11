@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useAccountKind } from '@/hooks/useIsCustomer';
 import { continueUrl } from '@/lib/auth/continue-url';
 import { HOST_DEFAULT_NEXT } from '@/lib/auth/portals';
-import { LogOut, ChevronDown, BookOpen, Wallet, UserRound, Heart, LayoutDashboard } from 'lucide-react';
+import { LogOut, ChevronDown, BookOpen, Wallet, UserRound, Heart, LayoutDashboard, LifeBuoy } from 'lucide-react';
+import { useSupportUnread } from '@/lib/support/unread';
 import type { User } from '@supabase/supabase-js';
 
 interface UserMenuProps {
@@ -39,6 +40,9 @@ export function UserMenu({ user }: UserMenuProps) {
   const router   = useRouter();
   const [open, setOpen] = useState(false);
   const menuRef  = useRef<HTMLDivElement>(null);
+  // Unread support replies — the sum of requester_unread. Guests only: the
+  // query starts once the account is known to use the guest area.
+  const unread   = useSupportUnread(isCustomer === true ? user.id : null);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -69,10 +73,15 @@ export function UserMenu({ user }: UserMenuProps) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-label={unread > 0 ? `${displayName} — ${t('supportUnread', { count: unread })}` : undefined}
         className="flex items-center gap-2 rounded-[999px] px-3 py-1.5 hover:bg-paper-warm transition-colors duration-[240ms]"
       >
-        <span className="w-7 h-7 rounded-full bg-ink text-white text-[11px] font-semibold flex items-center justify-center shrink-0 select-none">
+        <span className="relative w-7 h-7 rounded-full bg-ink text-white text-[11px] font-semibold flex items-center justify-center shrink-0 select-none">
           {initials}
+          {/* A reply from support is waiting — visible without opening the menu. */}
+          {unread > 0 && (
+            <span aria-hidden="true" className="absolute -top-0.5 -end-0.5 w-2.5 h-2.5 rounded-full bg-stay ring-2 ring-paper" />
+          )}
         </span>
         <span className="text-sm font-medium text-ink max-w-[80px] truncate hidden sm:block">
           {displayName}
@@ -126,6 +135,20 @@ export function UserMenu({ user }: UserMenuProps) {
           >
             <Wallet className="w-4 h-4 text-mute shrink-0" />
             {t('wallet')}
+          </Link>
+          <Link
+            href="/account/support"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-paper-warm transition-colors duration-[240ms]"
+          >
+            <LifeBuoy className="w-4 h-4 text-mute shrink-0" />
+            <span className="flex-1">{t('support')}</span>
+            {unread > 0 && (
+              <span className="min-w-5 h-5 px-1.5 rounded-full bg-stay text-white text-[11px] font-semibold tabular-nums flex items-center justify-center">
+                <span aria-hidden="true">{unread > 9 ? '9+' : unread}</span>
+                <span className="sr-only">{t('supportUnread', { count: unread })}</span>
+              </span>
+            )}
           </Link>
           </>)}
           <button

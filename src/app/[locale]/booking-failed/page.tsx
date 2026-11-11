@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { AlertCircle } from 'lucide-react';
 import { Header } from '@/components/home/Header';
 import { Link } from '@/i18n/navigation';
+import { newRequestHref } from '@/lib/support/model';
 
 /**
  * Payment could not be completed.
@@ -55,6 +56,7 @@ export default async function BookingFailedPage({
   const { locale } = await params;
   const { reason } = await searchParams;
   const t = await getTranslations({ locale, namespace: 'booking.failed' });
+  const tHelp = await getTranslations({ locale, namespace: 'support.help' });
 
   const key = reason && KNOWN.has(reason) ? reason : 'unknown';
   const moneyMoved = MONEY_MOVED.has(key);
@@ -98,6 +100,13 @@ export default async function BookingFailedPage({
             className="inline-flex items-center justify-center border border-rule text-ink rounded-[999px] px-6 py-3 text-sm font-medium min-h-[44px] transition-colors duration-[240ms] hover:bg-paper-warm"
           >
             {t('contactUs')}
+          </Link>
+          {/* A payment request in the guest's support inbox (sign-in first if needed). */}
+          <Link
+            href={newRequestHref({ category: 'guest_payment' })}
+            className="inline-flex items-center justify-center border border-rule text-ink rounded-[999px] px-6 py-3 text-sm font-medium min-h-[44px] transition-colors duration-[240ms] hover:bg-paper-warm"
+          >
+            {tHelp('payment')}
           </Link>
         </div>
       </main>

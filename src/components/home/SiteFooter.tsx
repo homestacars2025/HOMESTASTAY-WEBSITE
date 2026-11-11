@@ -66,6 +66,8 @@ export function SiteFooter() {
             <FooterLink href={`/${locale}/stays`}>{tNav('stays')}</FooterLink>
             <FooterLink href={`/${locale}/blog`}>{tNav('blog')}</FooterLink>
             <FooterLink href={`/${locale}/contact`}>{tNav('contact')}</FooterLink>
+            {/* Signed-out visitors land on sign-in and come straight back here. */}
+            <FooterLink href={`/${locale}/account/support`}>{t('contactSupport')}</FooterLink>
             <FooterLink href={`/${locale}/host`}>{tNav('becomeHost')}</FooterLink>
           </div>
 
