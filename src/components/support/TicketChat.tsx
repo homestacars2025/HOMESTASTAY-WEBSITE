@@ -21,6 +21,7 @@ import {
 } from '@/lib/support/model';
 import { AttachButton, AttachmentGrid, PendingFiles, useFilePicker, useSignedUrls } from './Attachments';
 import { OUTLINE_PILL, PRIMARY_PILL, StatusChip, SupportAvatar } from './parts';
+import { useMounted } from './useMounted';
 
 const POLL_MS = 30_000;
 
@@ -264,9 +265,10 @@ export function TicketChat({
   );
 }
 
-function dayKey(iso: string) {
+/** The calendar day of a timestamp — in UTC until mounted, so server and hydration agree. */
+function dayKey(iso: string, local: boolean) {
   const d = new Date(iso);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return local ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : iso.slice(0, 10);
 }
 
 function MessageList({ messages, onRetry }: { messages: SupportMessage[]; onRetry: (m: SupportMessage) => void }) {
@@ -275,19 +277,21 @@ function MessageList({ messages, onRetry }: { messages: SupportMessage[]; onRetr
   const urls = useSignedUrls(messages.flatMap((m) => m.attachments.map((a) => a.path)));
   const timeFmt = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
   const dayFmt = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+  const mounted = useMounted();
   const now = new Date();
-  const today = dayKey(now.toISOString());
-  const yesterday = dayKey(new Date(now.getTime() - 86_400_000).toISOString());
+  const key = (iso: string) => dayKey(iso, mounted);
+  const today = key(now.toISOString());
+  const yesterday = key(new Date(now.getTime() - 86_400_000).toISOString());
 
   return (
     <ol className="flex flex-col gap-1.5">
       {messages.map((m, i) => {
-        const day = dayKey(m.createdAt);
-        const newDay = i === 0 || dayKey(messages[i - 1].createdAt) !== day;
+        const day = key(m.createdAt);
+        const newDay = i === 0 || key(messages[i - 1].createdAt) !== day;
         const sep = newDay && (
           <li className="flex justify-center py-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal rtl:font-sans text-mute" suppressHydrationWarning>
-              {day === today ? t('today') : day === yesterday ? t('yesterday') : dayFmt.format(new Date(m.createdAt))}
+            <span className="font-mono text-[10px] uppercase tracking-[0.1em] rtl:tracking-normal rtl:font-sans text-mute">
+              {!mounted ? '\u00a0' : day === today ? t('today') : day === yesterday ? t('yesterday') : dayFmt.format(new Date(m.createdAt))}
             </span>
           </li>
         );
@@ -330,8 +334,8 @@ function MessageList({ messages, onRetry }: { messages: SupportMessage[]; onRetr
                 ) : (
                   <AttachmentGrid attachments={m.attachments} urls={urls} mine={mine} />
                 )}
-                <span className="mt-0.5 px-1 text-[11px] text-mute tabular-nums" suppressHydrationWarning>
-                  {m.local === 'sending' ? t('sending') : m.local === 'failed' ? t('failed') : timeFmt.format(new Date(m.createdAt))}
+                <span className="mt-0.5 px-1 text-[11px] text-mute tabular-nums">
+                  {m.local === 'sending' ? t('sending') : m.local === 'failed' ? t('failed') : mounted ? timeFmt.format(new Date(m.createdAt)) : '\u00a0'}
                 </span>
                 {m.local === 'failed' && (
                   <button type="button" onClick={() => onRetry(m)} className="inline-flex min-h-[32px] items-center gap-1 px-1 text-xs font-medium text-stay">

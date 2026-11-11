@@ -9,6 +9,7 @@ import { subscribeAsUser } from '@/lib/support/realtime';
 import { fetchTickets } from '@/lib/support/client';
 import type { SupportTicket } from '@/lib/support/model';
 import { StatusChip, listTime } from './parts';
+import { useMounted } from './useMounted';
 
 const POLL_MS = 60_000;
 
@@ -29,6 +30,7 @@ export function TicketList({
   const t = useTranslations('support');
   const locale = useLocale();
   const [tickets, setTickets] = useState(initial);
+  const mounted = useMounted();
 
   const refresh = useCallback(async () => {
     const next = await fetchTickets();
@@ -72,8 +74,8 @@ export function TicketList({
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-3">
                   <span className={cn('truncate text-[15px] text-ink', unread ? 'font-semibold' : 'font-medium')}>{name}</span>
-                  <span className={cn('shrink-0 text-xs tabular-nums', unread ? 'font-medium text-ink' : 'text-mute')} suppressHydrationWarning>
-                    {listTime(tk.lastMessageAt ?? tk.createdAt, locale)}
+                  <span className={cn('shrink-0 text-xs tabular-nums', unread ? 'font-medium text-ink' : 'text-mute')} >
+                    {mounted ? listTime(tk.lastMessageAt ?? tk.createdAt, locale) : '\u00a0'}
                   </span>
                 </span>
                 <span className="mt-1 flex items-center justify-between gap-3">
