@@ -215,7 +215,7 @@ async function fetchQuotes(
  * The exact unit_info.latitude/longitude, full_address and google_maps_url
  * are never read by this site (they are not readable by anon). Published as
  * is, rounded to 4 decimals (~11 m): at most ~76 m from the home, so the
- * 80 m circle drawn around it (APPROX_RADIUS_M) always contains it.
+ * 300 m circle drawn around it (APPROX_RADIUS_M) always contains it.
  */
 async function viewPoints(unitIds?: string[]): Promise<Map<string, { lat: number; lng: number }>> {
   let q = createPublicClient()

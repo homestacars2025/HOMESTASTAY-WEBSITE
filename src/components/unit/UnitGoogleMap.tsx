@@ -10,13 +10,16 @@ import {
 import { loadGoogleMaps } from '@/lib/maps/google';
 import { GOOGLE_MAP_ID, centredContent } from '@/lib/maps/google-style';
 import { APPROX_RADIUS_M } from '@/lib/geo/blur-constants';
+import {
+  NEARBY_CATEGORIES, NEARBY_MAX_RESULTS, NEARBY_RADIUS_M, NEARBY_TYPES, type NearbyCategory,
+} from '@/lib/maps/nearby';
 import { BrandMark } from '@/components/brand/BrandMark';
 
 /**
  * The unit page map (Google Maps JS) and "What's nearby".
  *
  * PRIVACY: the point arrives already blurred on the server (20–50 m off, 4
- * decimals). The map draws the 80 m circle around it and the Homesta badge
+ * decimals). The map draws the 300 m area circle around it and the Homesta badge
  * CENTRED on it (48–56 px, anchored at its middle, not a pin tip — it marks an
  * area, never a door). Max zoom 16. Other businesses (hotels included) are
  * hidden from the base map, so no competitor shows on our listing.
@@ -26,22 +29,6 @@ import { BrandMark } from '@/components/brand/BrandMark';
  * (id, displayName, primaryType, location, photos). Nothing is requested on
  * page load; results are kept in memory per unit + category for the session.
  */
-
-export type NearbyCategory = 'supermarket' | 'transit' | 'restaurant' | 'pharmacy' | 'hospital' | 'mall' | 'mosque' | 'atm';
-
-export const NEARBY_CATEGORIES: NearbyCategory[] = ['supermarket', 'transit', 'restaurant', 'pharmacy', 'hospital', 'mall', 'mosque', 'atm'];
-
-const TYPES: Record<NearbyCategory, string[]> = {
-  supermarket: ['supermarket', 'grocery_store'],
-  // Rail only: 'transit_station' brings back every bus stop on the street.
-  transit: ['subway_station', 'light_rail_station', 'train_station'],
-  restaurant: ['restaurant'],
-  pharmacy: ['pharmacy'],
-  hospital: ['hospital'],
-  mall: ['shopping_mall'],
-  mosque: ['mosque'],
-  atm: ['atm'],
-};
 
 /** A small mosque (dome + minaret) — lucide has none. */
 const MosqueIcon = (({ className }: { className?: string }) => (
@@ -81,7 +68,6 @@ const cache = new Map<string, NearbyPlace[]>();
 const START_ZOOM = 14;
 const MAX_ZOOM = 16;
 const MIN_DIAMETER_PX = 28;
-const SEARCH_RADIUS_M = 1000;
 
 
 
@@ -240,7 +226,7 @@ export default function UnitGoogleMap({
           fillOpacity: 0.12,
           clickable: false,
         });
-        // The true 80 m, but never under MIN_DIAMETER_PX on screen.
+        // The true radius (APPROX_RADIUS_M), but never under MIN_DIAMETER_PX on screen.
         const resize = () => {
           const z = map.getZoom() ?? START_ZOOM;
           const metresPerPx = (156_543.03392 * Math.cos((latitude * Math.PI) / 180)) / 2 ** z;
@@ -305,9 +291,9 @@ export default function UnitGoogleMap({
       const { Place, SearchNearbyRankPreference } = (await google.maps.importLibrary('places')) as google.maps.PlacesLibrary;
       const { places: found } = await Place.searchNearby({
         fields: ['id', 'displayName', 'primaryType', 'location', 'photos'],
-        locationRestriction: { center: { lat: latitude, lng: longitude }, radius: SEARCH_RADIUS_M },
-        includedPrimaryTypes: TYPES[cat],
-        maxResultCount: 8,
+        locationRestriction: { center: { lat: latitude, lng: longitude }, radius: NEARBY_RADIUS_M },
+        includedPrimaryTypes: NEARBY_TYPES[cat],
+        maxResultCount: NEARBY_MAX_RESULTS,
         rankPreference: SearchNearbyRankPreference.DISTANCE,
         language: locale,
         region: 'tr',
