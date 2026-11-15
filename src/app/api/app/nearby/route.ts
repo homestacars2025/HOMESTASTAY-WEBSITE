@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { allow, clientIp } from '@/lib/security/rate-limit';
-import { isNearbyCategory } from '@/lib/maps/nearby';
+import { isAppNearbyCategory } from '@/lib/maps/nearby';
 import {
   placesConfigured, searchNearbyForUnit, searchTextNearUnit, unitPublicPoint, type NearbyLang,
 } from '@/lib/maps/nearby-server';
@@ -11,6 +11,8 @@ import {
  *
  *   category mode  ?unit=<uuid>&category=<cat>&lang=<en|ar|tr|ru>
  *                  Places Nearby Search, 1 km, 8 nearest — the website chips' search.
+ *                  Also cafe (cafe, coffee_shop) and beach (3 km) for the app's
+ *                  "Explore the area"; those two are not website chips.
  *   text mode      ?unit=<uuid>&query=<text>&lang=…
  *                  Places Text Search, biased 2 km around the same point.
  *
@@ -61,14 +63,14 @@ async function handle(req: Request, params: Record<string, unknown>, cdnCacheabl
   const lang: NearbyLang = LANGS.has(langIn) ? langIn : 'en';
 
   if (!unit || (!category && !query)) return fail(400, 'unit required');
-  if (category && !isNearbyCategory(category)) return fail(400, 'unknown category');
+  if (category && !isAppNearbyCategory(category)) return fail(400, 'unknown category');
   if (!category && query.length > QUERY_MAX) return fail(400, 'query too long');
 
   try {
     const point = await unitPublicPoint(unit);
     if (!point) return fail(404, 'unit not found');
 
-    const places = isNearbyCategory(category)
+    const places = isAppNearbyCategory(category)
       ? await searchNearbyForUnit(unit, point, category, lang)
       : await searchTextNearUnit(unit, point, query, lang);
 

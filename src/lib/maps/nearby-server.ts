@@ -2,15 +2,15 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { createPublicClient } from '@/lib/supabase/public';
 import {
-  NEARBY_MAX_RESULTS, NEARBY_RADIUS_M, NEARBY_TEXT_BIAS_M, NEARBY_TYPES, type NearbyCategory,
+  NEARBY_MAX_RESULTS, NEARBY_TEXT_BIAS_M, NEARBY_TYPES, nearbyRadiusM, type AppNearbyCategory,
 } from '@/lib/maps/nearby';
 
 /**
  * "What's nearby" on the SERVER, for the mobile app (app/api/app/nearby).
  *
  * The same search the website's chips run in the browser (UnitGoogleMap):
- * Places API (New), centred on the unit's PUBLIC point, 1 km, 8 results,
- * nearest first. Plus a Text Search for the app's "search near this place"
+ * Places API (New), centred on the unit's PUBLIC point, 1 km (beach 3 km),
+ * 8 results, nearest first. Plus a Text Search for the app's "search near this place"
  * box, biased to 2 km around the same point.
  *
  * PRIVACY: the point is public_units_view.latitude/longitude, read here with
@@ -101,14 +101,14 @@ async function places(endpoint: 'searchNearby' | 'searchText', body: Record<stri
  * re-blurred unit never serves results drawn around its old point.
  */
 const nearbyCached = unstable_cache(
-  (_unitId: string, lat: number, lng: number, category: NearbyCategory, lang: NearbyLang) =>
+  (_unitId: string, lat: number, lng: number, category: AppNearbyCategory, lang: NearbyLang) =>
     places('searchNearby', {
       includedPrimaryTypes: NEARBY_TYPES[category],
       maxResultCount: NEARBY_MAX_RESULTS,
       rankPreference: 'DISTANCE',
       languageCode: lang,
       regionCode: 'tr',
-      locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: NEARBY_RADIUS_M } },
+      locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: nearbyRadiusM(category) } },
     }),
   ['app-nearby-v1'],
   { revalidate: CACHE_SECONDS },
@@ -127,7 +127,7 @@ const textCached = unstable_cache(
   { revalidate: CACHE_SECONDS },
 );
 
-export function searchNearbyForUnit(unitId: string, point: { lat: number; lng: number }, category: NearbyCategory, lang: NearbyLang) {
+export function searchNearbyForUnit(unitId: string, point: { lat: number; lng: number }, category: AppNearbyCategory, lang: NearbyLang) {
   return nearbyCached(unitId, point.lat, point.lng, category, lang);
 }
 
