@@ -257,9 +257,7 @@
       "headline": "List your property with Homesta Stay",
       "subline": "Earn more with curated guests, fast bookings, and real support.",
       "trust": {
-        "free": "Free to list",
-        "guests": "We handle guests",
-        "bookings": "Fast bookings"
+        "tursab": "Homesta is a licensed travel agency — TÜRSAB licence no. {number}"
       },
       "form": {
         "nameLabel": "Full name",
@@ -335,19 +333,26 @@
         }
       },
       "become": {
-        "cta": "Become a host",
+        "cta": "List your property",
         "ctaOwner": "Open your host portal",
         "working": "Setting up your host account…",
-        "noteSignedOut": "Create your account with your email — one code and you're in. Then add your first property.",
-        "noteSignedIn": "Your account becomes a host account and you go straight to adding your first property.",
         "helpLink": "Want help listing? Leave your number",
         "helpTitle": "Leave your number — we'll help you list",
         "error": {
           "generic": "Something went wrong. Please try again.",
           "notAllowed": "This account can't become a host. Please use a personal account.",
           "rateLimited": "Too many tries. Please wait a few minutes and try again."
-        }
-      }
+        },
+        "free": "Free to join",
+        "opening": "Opening your host portal…"
+      },
+      "benefits": {
+        "free": "Joining is free — we take no commission from you. The price you set is what you earn.",
+        "dashboard": "A full dashboard: bookings, calendar, prices, messages and payouts in one place.",
+        "sync": "Sync with other platforms: connect your Airbnb, Booking.com and other calendars — no double bookings.",
+        "airbnb": "Copy your Airbnb listing in 3 seconds — paste the link and the photos and details come in automatically."
+      },
+      "guide": "Download the host guide (PDF, Turkish)"
     },
     "terms": {
       "metaTitle": "Terms of Service — Homesta Stay",

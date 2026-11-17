@@ -257,9 +257,7 @@
       "headline": "Mülkünüzü Homesta Stay ile listeleyin",
       "subline": "Seçkin misafirler, hızlı rezervasyonlar ve gerçek destek ile daha fazla kazanın.",
       "trust": {
-        "free": "Ücretsiz listeleme",
-        "guests": "Misafirlerle biz ilgileniriz",
-        "bookings": "Hızlı rezervasyonlar"
+        "tursab": "Homesta lisanslı bir seyahat acentesidir — TÜRSAB Belge No: {number}"
       },
       "form": {
         "nameLabel": "Ad soyad",
@@ -335,19 +333,26 @@
         }
       },
       "become": {
-        "cta": "Ev sahibi ol",
+        "cta": "Mülkünüzü listeleyin",
         "ctaOwner": "Ev sahibi paneline git",
         "working": "Ev sahibi hesabınız hazırlanıyor…",
-        "noteSignedOut": "E-postanla hesabını oluştur — tek bir kodla hazırsın. Sonra ilk mülkünü ekle.",
-        "noteSignedIn": "Hesabın ev sahibi hesabına dönüşür ve doğrudan ilk mülkünü eklemeye geçersin.",
         "helpLink": "İlan vermek için yardım mı istiyorsun? Numaranı bırak",
         "helpTitle": "Numaranı bırak — ilanını birlikte hazırlayalım",
         "error": {
           "generic": "Bir şeyler ters gitti. Lütfen tekrar dene.",
           "notAllowed": "Bu hesap ev sahibi olamaz. Lütfen kişisel bir hesap kullan.",
           "rateLimited": "Çok fazla deneme. Lütfen birkaç dakika bekleyip tekrar dene."
-        }
-      }
+        },
+        "free": "Ücretsiz katılım",
+        "opening": "Ev sahibi paneliniz açılıyor…"
+      },
+      "benefits": {
+        "free": "Katılım tamamen ücretsiz — ev sahibinden komisyon almıyoruz. Belirlediğiniz fiyat size kalır.",
+        "dashboard": "Tam kontrol paneli: rezervasyonlar, takvim, fiyatlar, mesajlar ve ödemeler tek yerde.",
+        "sync": "Diğer platformlarla senkronizasyon: Airbnb, Booking ve diğer ilanlarınızın takvimini bağlayın, çift rezervasyon olmasın.",
+        "airbnb": "Airbnb ilanınızı 3 saniyede kopyalayın — linki yapıştırın, fotoğraflar ve bilgiler otomatik gelsin."
+      },
+      "guide": "Ev sahibi rehberini indir (PDF)"
     },
     "terms": {
       "metaTitle": "Hizmet Şartları — Homesta Stay",

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import { becomeHost } from '@/app/[locale]/host/become-actions';
 import { continueUrl } from '@/lib/auth/continue-url';
@@ -84,6 +85,17 @@ export function BecomeHostCta({ mode, autoStart }: Props) {
 
   const button =
     'inline-flex min-h-12 w-full items-center justify-center rounded-[999px] bg-stay px-8 text-base font-medium text-white transition-opacity duration-[240ms] hover:opacity-90 disabled:opacity-60 sm:w-auto';
+
+  // Resuming after sign-up: a loader, never a button to tap. The button only
+  // comes back if something went wrong, with the reason above it.
+  if (autoStart && !error) {
+    return (
+      <div role="status" className="flex flex-col items-center gap-4 py-16 text-center">
+        <Loader2 size={28} strokeWidth={1.75} className="animate-spin text-stay" aria-hidden="true" />
+        <p className="text-base text-ink">{t('opening')}</p>
+      </div>
+    );
+  }
 
   if (mode === 'owner') {
     return <a href={continueUrl(null, locale, '/today')} className={button}>{t('ctaOwner')}</a>;

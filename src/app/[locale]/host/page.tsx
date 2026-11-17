@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { Tag, Users, Zap } from 'lucide-react';
+import { CalendarSync, Copy, FileDown, HandCoins, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { HOST_GUIDE_PDF_URL, TURSAB_LICENSE_NO } from '@/lib/config/host';
 import { canonical, hreflangAlternates } from '@/lib/config/urls';
 import { SITE_NAME, ogLocale, ogAlternateLocales, defaultOgImages } from '@/lib/config/seo';
 import { Header } from '@/components/home/Header';
@@ -54,10 +55,11 @@ export async function generateMetadata({
   };
 }
 
-const TRUST_POINTS = [
-  { key: 'free',     Icon: Tag   },
-  { key: 'guests',   Icon: Users },
-  { key: 'bookings', Icon: Zap   },
+/** One line each, above the button. The Airbnb import gets its own card. */
+const BENEFITS = [
+  { key: 'free',      Icon: HandCoins       },
+  { key: 'dashboard', Icon: LayoutDashboard },
+  { key: 'sync',      Icon: CalendarSync    },
 ] as const;
 
 /**
@@ -94,6 +96,19 @@ export default async function HostPage({
   // Turnstile guards the public form (the server fails closed without it).
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
+  // Straight back from the email code: no page to read, no tap — just the
+  // hand-off (become_host → portal) behind a quiet "opening…" line.
+  if (autoStart) {
+    return (
+      <div className="min-h-screen bg-paper">
+        <Header />
+        <main className="max-w-xl mx-auto px-4 pt-32 pb-20">
+          <BecomeHostCta mode="customer" autoStart />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-paper">
       <Header />
@@ -102,7 +117,7 @@ export default async function HostPage({
 
         {/* ── Hero ─────────────────────────────────────────────────────── */}
         <FadeUp>
-          <section className="mb-10">
+          <section className="mb-8">
             {/* Eyebrow badge */}
             <span className="inline-flex items-center rounded-[999px] border border-stay/30 bg-stay/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.09em] text-stay mb-5">
               {t('title')}
@@ -112,22 +127,27 @@ export default async function HostPage({
               {t('headline')}
             </h1>
 
-            <p className="text-base text-mute leading-relaxed mb-8">
+            <p className="text-base text-mute leading-relaxed">
               {t('subline')}
             </p>
-
-            {/* Trust row */}
-            <div className="flex flex-wrap gap-x-6 gap-y-3">
-              {TRUST_POINTS.map(({ key, Icon }) => (
-                <div key={key} className="flex items-center gap-2">
-                  <Icon size={15} strokeWidth={1.75} className="text-stay shrink-0" aria-hidden="true" />
-                  <span className="text-sm font-medium text-ink-soft">
-                    {t(`trust.${key}`)}
-                  </span>
-                </div>
-              ))}
-            </div>
           </section>
+        </FadeUp>
+
+        {/* ── Benefits ─────────────────────────────────────────────────── */}
+        <FadeUp delay={0.04}>
+          <ul className="mb-4 flex flex-col gap-4">
+            {BENEFITS.map(({ key, Icon }) => (
+              <li key={key} className="flex items-start gap-3">
+                <Icon size={20} strokeWidth={1.75} className="mt-0.5 shrink-0 text-ink" aria-hidden="true" />
+                <span className="text-[15px] leading-snug text-ink-soft">{t(`benefits.${key}`)}</span>
+              </li>
+            ))}
+          </ul>
+          {/* The Airbnb import — the one that saves the most time, so it stands out. */}
+          <div className="mb-8 flex items-start gap-3 rounded-[14px] border border-rule bg-paper-warm p-4">
+            <Copy size={20} strokeWidth={1.75} className="mt-0.5 shrink-0 text-ink" aria-hidden="true" />
+            <p className="text-[15px] leading-snug text-ink">{t('benefits.airbnb')}</p>
+          </div>
         </FadeUp>
 
         {/* ── The one action ───────────────────────────────────────────── */}
@@ -135,14 +155,40 @@ export default async function HostPage({
           {applicant.kind === 'staff' ? (
             <p className="text-sm text-ink-soft leading-relaxed text-center py-6">{t('staffNote')}</p>
           ) : (
-            <section aria-label={t('become.cta')} className="flex flex-col gap-4">
-              <BecomeHostCta mode={ctaMode} autoStart={autoStart} />
+            <section aria-label={t('become.cta')} className="flex flex-col items-stretch gap-2 sm:items-start">
+              <BecomeHostCta mode={ctaMode} autoStart={false} />
               {ctaMode !== 'owner' && (
-                <p className="text-sm text-mute">{t(ctaMode === 'signed-out' ? 'become.noteSignedOut' : 'become.noteSignedIn')}</p>
+                <p className="text-center text-sm text-mute sm:text-start">{t('become.free')}</p>
               )}
             </section>
           )}
         </FadeUp>
+
+        {/* ── Trust: TÜRSAB licence + the host guide (each only once known) ── */}
+        {(TURSAB_LICENSE_NO || HOST_GUIDE_PDF_URL) && (
+          <section className="mt-10 flex flex-col gap-4 border-t border-rule pt-8">
+            {TURSAB_LICENSE_NO && (
+              <div className="flex items-start gap-3">
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-[999px] border border-ink/15 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-ink">
+                  <ShieldCheck size={14} strokeWidth={1.75} aria-hidden="true" />
+                  TÜRSAB
+                </span>
+                <p className="text-sm leading-snug text-ink-soft">{t('trust.tursab', { number: TURSAB_LICENSE_NO })}</p>
+              </div>
+            )}
+            {HOST_GUIDE_PDF_URL && (
+              <a
+                href={HOST_GUIDE_PDF_URL}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex min-h-11 items-center justify-center gap-2 self-stretch rounded-[999px] border border-rule px-6 text-sm font-medium text-ink transition-colors duration-[240ms] hover:bg-paper-warm sm:self-start"
+              >
+                <FileDown size={16} strokeWidth={1.75} aria-hidden="true" />
+                {t('guide')}
+              </a>
+            )}
+          </section>
+        )}
 
         {/* ── Secondary: the old lead form, unchanged ───────────────────── */}
         {applicant.kind !== 'staff' && ctaMode !== 'owner' && (
