@@ -10,8 +10,11 @@ export const ADMIN_PORTAL_URL   = 'https://admin.homestastay.com/login';
  * Portal pages a handoff may land on — the same allow-list the portal's
  * /api/auth/handoff enforces (HS-HOST src/lib/auth/gateway.ts). Anything else
  * is dropped and the portal opens its default, Today.
+ *
+ * '/units/new' (the add-a-unit wizard) is where a self-serve host lands right
+ * after become_host — until the portal allows it too, it falls back to Today.
  */
-export const HOST_NEXT_PATHS = ['/today', '/inbox', '/units', '/bookings', '/calendar', '/accounting', '/profile'] as const;
+export const HOST_NEXT_PATHS = ['/today', '/inbox', '/units', '/units/new', '/bookings', '/calendar', '/accounting', '/profile'] as const;
 export type HostNextPath = (typeof HOST_NEXT_PATHS)[number];
 
 export function hostNextPath(raw: string | null | undefined): HostNextPath | null {

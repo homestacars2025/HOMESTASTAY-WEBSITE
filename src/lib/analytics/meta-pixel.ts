@@ -35,6 +35,7 @@ export type MetaStandardEvent =
   | 'ViewContent'
   | 'Search'
   | 'Lead'
+  | 'CompleteRegistration'
   | 'InitiateCheckout'
   | 'Purchase';
 
@@ -206,21 +207,32 @@ export interface LeadInput {
   source: string;
   value?: number;
   currency?: string;
+  /** Dedupe id — the same event can never count twice (e.g. a retried tap). */
+  eventId?: string;
 }
 
 /**
  * A guest or prospective host gave us their details.
  *
- * ⚠️ NOT CALLED ANYWHERE YET, by instruction. Wire it only once the firing
- * point is agreed — a Lead fired on form *render* instead of successful submit
- * quietly ruins the campaign data it exists to produce.
+ * Fired ONLY after a successful outcome, never on render — a Lead on render
+ * quietly ruins the campaign data it exists to produce. Today: 'host', when
+ * become_host() turns the account into a host (components/host/BecomeHostCta).
  */
 export function trackLead(input: LeadInput): void {
   send('Lead', {
     content_category: input.source,
     value: input.value,
     currency: input.value !== undefined ? input.currency ?? 'USD' : undefined,
-  });
+  }, input.eventId);
+}
+
+/**
+ * An account was created. Fired by the flow that created it, once it is
+ * certain — today the self-serve host path (BecomeHostCta), for an account
+ * made on the way there. eventId = the account, so it counts once.
+ */
+export function trackCompleteRegistration(input: { source: string; eventId: string }): void {
+  send('CompleteRegistration', { content_name: input.source }, input.eventId);
 }
 
 export interface PurchaseInput {

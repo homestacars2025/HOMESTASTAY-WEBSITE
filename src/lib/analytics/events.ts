@@ -13,6 +13,8 @@
  * on the server from the session, never sent from here.
  */
 
+import { saveAttributionCookie } from '@/lib/analytics/attribution';
+
 export type SearchEventName =
   | 'search' | 'results_shown' | 'unit_click' | 'unit_view'
   | 'reserve_click' | 'whatsapp_click' | 'favorite';
@@ -62,6 +64,9 @@ function sessionId(): string {
  * later internal page does not overwrite where the guest came from.
  */
 export function captureLanding(): void {
+  // The 30-day cookie first, on EVERY landing with tags (not just the tab's
+  // first page): it is what survives sign-up and reaches become_host.
+  saveAttributionCookie();
   const s = store();
   if (!s || s.getItem(UTM_KEY) !== null) return;
   const params = new URLSearchParams(window.location.search);

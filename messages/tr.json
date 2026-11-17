@@ -333,6 +333,20 @@
           "body": "Başvurunuz bu sefer onaylanmadı. Sorularınız varsa ekibimiz yardımcı olmaktan memnuniyet duyar.",
           "cta": "Bize ulaşın"
         }
+      },
+      "become": {
+        "cta": "Ev sahibi ol",
+        "ctaOwner": "Ev sahibi paneline git",
+        "working": "Ev sahibi hesabınız hazırlanıyor…",
+        "noteSignedOut": "E-postanla hesabını oluştur — tek bir kodla hazırsın. Sonra ilk mülkünü ekle.",
+        "noteSignedIn": "Hesabın ev sahibi hesabına dönüşür ve doğrudan ilk mülkünü eklemeye geçersin.",
+        "helpLink": "İlan vermek için yardım mı istiyorsun? Numaranı bırak",
+        "helpTitle": "Numaranı bırak — ilanını birlikte hazırlayalım",
+        "error": {
+          "generic": "Bir şeyler ters gitti. Lütfen tekrar dene.",
+          "notAllowed": "Bu hesap ev sahibi olamaz. Lütfen kişisel bir hesap kullan.",
+          "rateLimited": "Çok fazla deneme. Lütfen birkaç dakika bekleyip tekrar dene."
+        }
       }
     },
     "terms": {

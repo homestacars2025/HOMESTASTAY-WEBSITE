@@ -58,3 +58,17 @@ export const isGoogleAuthEnabled = unstable_cache(
   ['auth-provider-settings'],
   { revalidate: 300 },
 );
+
+/**
+ * Is this request from an in-app browser that Google refuses to sign in?
+ *
+ * Google blocks OAuth in embedded webviews ("403 disallowed_useragent"), and
+ * Instagram / Facebook / Messenger open every ad and link in one. Our hosts
+ * and guests arrive from Meta ads, so there the Google button would be a dead
+ * end — it is not shown; email and phone work as usual.
+ */
+const IN_APP_UA = /\b(Instagram|FBAN|FBAV|FB_IAB|FBIOS|Messenger|MessengerLiteForiOS)\b/i;
+
+export function isInAppBrowser(userAgent: string | null | undefined): boolean {
+  return IN_APP_UA.test(userAgent ?? '');
+}

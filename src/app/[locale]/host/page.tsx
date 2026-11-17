@@ -11,6 +11,10 @@ import { createClient } from '@/lib/supabase/server';
 import { HOSTS_WHATSAPP } from '@/lib/config/social';
 import { accountKind } from '@/lib/auth/account-role';
 import { getHostGeoData } from '@/lib/data/cities';
+import { cookies } from 'next/headers';
+import { Link } from '@/i18n/navigation';
+import { BecomeHostCta } from '@/components/host/BecomeHostCta';
+import { HOST_INTENT_COOKIE } from '@/lib/host/self-serve';
 
 // Listed in sitemap.xml but had no canonical and no hreflang. This is also the
 // page owners search for ("list my property Istanbul"), so it is worth ranking
@@ -56,25 +60,39 @@ const TRUST_POINTS = [
   { key: 'bookings', Icon: Zap   },
 ] as const;
 
-export default async function HostPage({ params }: { params: Promise<{ locale: string }> }) {
+/**
+ * "List your property" — self-serve first (decision 2026-11-17).
+ *
+ * One action: Become a host (components/host/BecomeHostCta → become_host →
+ * the portal's add-a-unit wizard). The old lead form is kept, unchanged, one
+ * small link away ("Want help listing? Leave your number" → ?help=1).
+ */
+export default async function HostPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ help?: string; start?: string }>;
+}) {
   const { locale } = await params;
+  const { help, start } = await searchParams;
+  const showHelp = help === '1';
 
-  const [t, geoData, applicant] = await Promise.all([
+  const [t, geoData, applicant, jar] = await Promise.all([
     getTranslations({ locale, namespace: 'pages.host' }),
     // Names come localised from geo_cities/geo_districts, so every city in the
-    // table is covered rather than the six that had message keys.
-    getHostGeoData(locale),
+    // table is covered rather than the six that had message keys. Only the
+    // help form needs them.
+    showHelp ? getHostGeoData(locale) : Promise.resolve({ cities: [], districtsByCityId: {} }),
     readApplicant(),
+    cookies(),
   ]);
+  // Back from sign-up: finish by itself, but only in the browser that tapped.
+  const autoStart = start === '1' && applicant.kind === 'account' && !applicant.owner
+    && jar.get(HOST_INTENT_COOKIE)?.value === '1';
+  const ctaMode = applicant.kind === 'signed-out' ? 'signed-out' : applicant.kind === 'account' && applicant.owner ? 'owner' : 'customer';
   // Turnstile guards the public form (the server fails closed without it).
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
-
-  const localizedCities = geoData.cities.map((c) => ({
-    id:            c.id,
-    name:          c.name,
-    localizedName: c.localizedName,
-    hasDistricts:  c.hasDistricts,
-  }));
 
   return (
     <div className="min-h-screen bg-paper">
@@ -112,28 +130,57 @@ export default async function HostPage({ params }: { params: Promise<{ locale: s
           </section>
         </FadeUp>
 
-        {/* ── Divider ───────────────────────────────────────────────────── */}
-        <div className="h-px bg-rule mb-10" aria-hidden="true" />
-
-        {/* ── Form ─────────────────────────────────────────────────────── */}
+        {/* ── The one action ───────────────────────────────────────────── */}
         <FadeUp delay={0.06}>
           {applicant.kind === 'staff' ? (
             <p className="text-sm text-ink-soft leading-relaxed text-center py-6">{t('staffNote')}</p>
-          ) : applicant.kind === 'account' && applicant.state ? (
-            <HostApplicationStatus state={applicant.state} />
           ) : (
-            /* Open to everyone — no account needed to apply. A signed-in
-               visitor's lead is linked to their account on the server. */
-            <HostForm
-              cities={localizedCities}
-              districtsByCityId={geoData.districtsByCityId}
-              prefill={applicant.kind === 'account' ? applicant.prefill : EMPTY_PREFILL}
-              signedIn={applicant.kind === 'account'}
-              siteKey={siteKey}
-              hostsWhatsapp={HOSTS_WHATSAPP}
-            />
+            <section aria-label={t('become.cta')} className="flex flex-col gap-4">
+              <BecomeHostCta mode={ctaMode} autoStart={autoStart} />
+              {ctaMode !== 'owner' && (
+                <p className="text-sm text-mute">{t(ctaMode === 'signed-out' ? 'become.noteSignedOut' : 'become.noteSignedIn')}</p>
+              )}
+            </section>
           )}
         </FadeUp>
+
+        {/* ── Secondary: the old lead form, unchanged ───────────────────── */}
+        {applicant.kind !== 'staff' && ctaMode !== 'owner' && (
+          <div id="help" className="mt-12 scroll-mt-24">
+            {!showHelp ? (
+              <Link
+                href={{ pathname: '/host', query: { help: '1' }, hash: 'help' }}
+                className="text-sm text-ink-soft underline underline-offset-4 transition-colors duration-[240ms] hover:text-ink"
+              >
+                {t('become.helpLink')}
+              </Link>
+            ) : (
+              <>
+                <div className="h-px bg-rule mb-10" aria-hidden="true" />
+                <h2 className="mb-6 text-lg font-medium tracking-[-0.025em] text-ink">{t('become.helpTitle')}</h2>
+                {applicant.kind === 'account' && applicant.state ? (
+                  <HostApplicationStatus state={applicant.state} />
+                ) : (
+                  /* Open to everyone — no account needed. A signed-in
+                     visitor's lead is linked to their account on the server. */
+                  <HostForm
+                    cities={geoData.cities.map((c) => ({
+                      id:            c.id,
+                      name:          c.name,
+                      localizedName: c.localizedName,
+                      hasDistricts:  c.hasDistricts,
+                    }))}
+                    districtsByCityId={geoData.districtsByCityId}
+                    prefill={applicant.kind === 'account' ? applicant.prefill : EMPTY_PREFILL}
+                    signedIn={applicant.kind === 'account'}
+                    siteKey={siteKey}
+                    hostsWhatsapp={HOSTS_WHATSAPP}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        )}
 
       </main>
     </div>
@@ -145,7 +192,7 @@ const EMPTY_PREFILL = { name: '', phone: '', email: '' };
 type Applicant =
   | { kind: 'signed-out' }
   | { kind: 'staff' }
-  | { kind: 'account'; state: HostApplicationState | null; prefill: { name: string; phone: string; email: string } };
+  | { kind: 'account'; owner: boolean; state: HostApplicationState | null; prefill: { name: string; phone: string; email: string } };
 
 /**
  * Who is looking at /host, and where their application stands.
@@ -182,6 +229,7 @@ async function readApplicant(): Promise<Applicant> {
   const name = [profile?.first_name, profile?.last_name].filter((v) => typeof v === 'string' && v.trim()).join(' ');
   return {
     kind: 'account',
+    owner: kind === 'owner',
     state,
     prefill: { name, phone: typeof profile?.phone === 'string' ? profile.phone : '', email: user.email ?? '' },
   };

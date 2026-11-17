@@ -4,7 +4,8 @@ import { SignUpForm } from '@/components/auth/SignUpForm';
 import { PhoneSignInForm } from '@/components/auth/PhoneSignInForm';
 import { GoogleButton, AuthDivider } from '@/components/auth/GoogleButton';
 import { MethodSwitchButton } from '@/components/auth/MethodSwitchLink';
-import { isGoogleAuthEnabled } from '@/lib/auth/providers';
+import { headers } from 'next/headers';
+import { isGoogleAuthEnabled, isInAppBrowser } from '@/lib/auth/providers';
 import { safeReturnPath } from '@/lib/auth/profile-gap';
 import { isTurnstileConfigured } from '@/lib/security/turnstile';
 
@@ -32,7 +33,8 @@ export default async function SignUpPage({
 }) {
   // Resolved on the server: the button is hidden unless the provider is
   // actually enabled — see lib/auth/providers for what happens when it is not.
-  const googleEnabled = await isGoogleAuthEnabled();
+  // Not inside Instagram/Facebook's in-app browser, where Google refuses.
+  const googleEnabled = (await isGoogleAuthEnabled()) && !isInAppBrowser((await headers()).get('user-agent'));
   const { locale } = await params;
   const { returnUrl: rawReturnUrl, method } = await searchParams;
   const returnUrl = safeReturnPath(rawReturnUrl) || undefined;

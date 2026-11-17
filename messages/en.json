@@ -333,6 +333,20 @@
           "body": "Your application wasn’t approved this time. If you have questions, our team is happy to help.",
           "cta": "Contact us"
         }
+      },
+      "become": {
+        "cta": "Become a host",
+        "ctaOwner": "Open your host portal",
+        "working": "Setting up your host account…",
+        "noteSignedOut": "Create your account with your email — one code and you're in. Then add your first property.",
+        "noteSignedIn": "Your account becomes a host account and you go straight to adding your first property.",
+        "helpLink": "Want help listing? Leave your number",
+        "helpTitle": "Leave your number — we'll help you list",
+        "error": {
+          "generic": "Something went wrong. Please try again.",
+          "notAllowed": "This account can't become a host. Please use a personal account.",
+          "rateLimited": "Too many tries. Please wait a few minutes and try again."
+        }
       }
     },
     "terms": {
