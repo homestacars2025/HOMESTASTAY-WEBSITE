@@ -18,7 +18,7 @@ import { AWAITING_PAYMENT, PAID_STATES, UUID_RE, isTransferOrder, parseTransfer 
  *     transferId,
  *     state: 'paid' | 'pending' | 'processing' | 'failed' | 'expired' | 'canceled' | 'refund' | 'other',
  *     transferStatus,           // the raw transfer_bookings status
- *     payment: { merchantOrderId, status, responseCode, responseMessage } | null,
+ *     payment: { merchantOrderId, gateway, status, responseCode, responseMessage } | null,
  *     transfer: <transfer_get's own JSON, unchanged>
  *   }
  *   401 unauthorized · 403 not_customer · 404 not_found
@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
       transferStatus: transfer.status,
       payment: payment && {
         merchantOrderId: payment.merchantOrderId,
+        gateway: payment.gateway,
         status: payment.status,
         responseCode: payment.responseCode,
         responseMessage: payment.responseMessage,

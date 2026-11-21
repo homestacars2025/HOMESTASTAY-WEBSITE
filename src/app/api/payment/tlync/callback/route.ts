@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
 import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
 import { isWalletOrder } from '@/lib/wallet/topup';
+import { isTransferOrder } from '@/lib/transfers/model';
+import { settleTransferTlync } from '@/lib/transfers/tlync';
 
 /**
  * TLYNC's server-to-server callback (backend_url).
@@ -112,6 +114,29 @@ export async function POST(request: NextRequest) {
       contentType, payloadKeys: Object.keys(payload), body: raw.slice(0, 1000),
     });
     return NextResponse.json({ ok: false, error: 'no_ref' }, { status: 400 });
+  }
+
+  // ── Airport transfer? (TRF… — minted by transfer_payment_init) ──────────
+  // First, before any booking or wallet table is read — the same routing rule
+  // as the shared Kuveyt callback. settleTransferTlync asks the receipt too.
+  if (isTransferOrder(customRef)) {
+    const t = await settleTransferTlync(createAdminClient(), { customRef, transactionRef, trigger: 'callback' });
+    console.log('[tlync/callback] transfer outcome', { customRef, ...t });
+    switch (t.status) {
+      case 'paid':
+      case 'already_paid':
+      case 'not_completed':
+      case 'refund_required':
+        return NextResponse.json({ ok: true, status: t.status });
+      case 'receipt_unavailable':
+        return NextResponse.json({ ok: false, error: t.status }, { status: 502 });
+      case 'unknown_ref':
+        return NextResponse.json({ ok: false, error: t.status }, { status: 404 });
+      case 'write_failed':
+        return NextResponse.json({ ok: false, error: t.status }, { status: 500 });
+      default:
+        return NextResponse.json({ ok: false, error: t.status }, { status: 409 });
+    }
   }
 
   // ── Booking or wallet top-up? ─────────────────────────────────────────────

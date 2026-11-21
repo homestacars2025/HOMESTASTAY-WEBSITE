@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { isInternalSecret } from '@/lib/security/internal-secret';
 import { settleTlyncPayment } from '@/lib/payment/tlync-settle';
 import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
+import { settleTransferTlync } from '@/lib/transfers/tlync';
 
 /**
  * The TLYNC reconciliation sweep — the safety net under both other paths.
@@ -124,13 +125,61 @@ export async function POST(request: NextRequest) {
   // runs.
   const wallet = await sweepWalletTopups(supabase, since, MAX_BATCH - refs.length);
 
+  // ── And airport transfers (TRF…) ──────────────────────────────────────────
+  // After bookings and top-ups in the budget; a transfer guest who paid and
+  // closed the tab is exactly who this catches.
+  const transfers = await sweepTransfers(supabase, since, MAX_BATCH - refs.length - wallet.swept);
+
   return NextResponse.json({
     ok: true,
     swept: refs.length,
     settled: settled.length,
     outcomes: results,
     wallet,
+    transfers,
   });
+}
+
+async function sweepTransfers(
+  supabase: ReturnType<typeof createAdminClient>,
+  since: string,
+  budget: number,
+): Promise<{ swept: number; settled: number; outcomes: Record<string, number> }> {
+  const empty = { swept: 0, settled: 0, outcomes: {} };
+  if (budget <= 0) return empty;
+
+  // Every TLYNC attempt not yet resolved either way. 'failed' is only ever
+  // written where no hosted page was issued (initiate refused/unreachable), so
+  // it is excluded; everything else non-paid gets asked. A late payment on an
+  // expired transfer is caught too — transfer_complete_payment then flags it
+  // for a refund instead of losing it.
+  const { data, error } = await supabase
+    .from('transfer_payments')
+    .select('merchant_order_id, created_at')
+    .eq('payment_gateway', 'tlync')
+    .not('status', 'in', '(paid,failed,refunded)')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(budget);
+
+  if (error) {
+    console.error('[tlync/reconcile] could not list unresolved transfer attempts', { message: error.message, code: error.code });
+    return empty;
+  }
+
+  const refs = (data ?? [])
+    .map((row) => row.merchant_order_id as string | null)
+    .filter((ref): ref is string => Boolean(ref));
+
+  const outcomes: Record<string, number> = {};
+  let settled = 0;
+  for (const customRef of refs) {
+    const outcome = await settleTransferTlync(supabase, { customRef, trigger: 'reconcile' });
+    outcomes[outcome.status] = (outcomes[outcome.status] ?? 0) + 1;
+    if (outcome.status === 'paid') settled += 1;
+  }
+  if (settled > 0) console.warn('[tlync/reconcile] settled transfers the guest never came back for', { count: settled });
+  return { swept: refs.length, settled, outcomes };
 }
 
 async function sweepWalletTopups(

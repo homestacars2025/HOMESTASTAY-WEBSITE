@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
   const { data: payment, error: payErr } = await admin
     .from('transfer_payments')
-    .select('status, amount_try')
+    .select('status, amount_try, payment_gateway')
     .eq('merchant_order_id', merchantOrderId)
     .maybeSingle();
   if (payErr || !payment) {
@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
     return back('server');
   }
   if (!PENDING.has(String(payment.status))) return back('expired');
+  // A TLYNC attempt never goes to the card bank (it is priced in LYD).
+  if (payment.payment_gateway === 'tlync') return back('server');
 
   const amountTry = num(payment.amount_try);
   if (amountTry === null || amountTry <= 0) {

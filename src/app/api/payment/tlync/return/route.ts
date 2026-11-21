@@ -5,6 +5,9 @@ import { settleWalletTopup } from '@/lib/payment/wallet-tlync-settle';
 import { isAppOrder, isWalletOrder } from '@/lib/wallet/topup';
 import { appReturnUrl, parseAppReturnUrl } from '@/lib/app/deep-link';
 import { routing } from '@/i18n/routing';
+import { isTransferOrder } from '@/lib/transfers/model';
+import { settleTransferTlync } from '@/lib/transfers/tlync';
+import { appTransferReturnUrl } from '@/lib/transfers/pay-session';
 
 /**
  * Where TLYNC sends the guest's browser back (frontend_url).
@@ -53,6 +56,33 @@ async function handle(request: NextRequest) {
     NextResponse.redirect(new URL(path, request.url), { status: 303 });
 
   if (!customRef) return to(`/${locale}/booking-failed?reason=session`);
+
+  // ── An airport transfer (TRF…) ────────────────────────────────────────────
+  // Settled from the receipt FIRST; only the destination differs between app
+  // and web. The app's returnUrl is re-validated (it travelled via TLYNC).
+  if (isTransferOrder(customRef)) {
+    const t = await settleTransferTlync(createAdminClient(), { customRef, trigger: 'return' });
+    console.log('[tlync/return] transfer outcome', { customRef, ...t });
+
+    const hint =
+      t.status === 'paid' || t.status === 'already_paid' ? 'success'
+      : t.status === 'refund_required' ? 'refund'
+      : t.status === 'not_completed' ? 'failed'
+      : t.status === 'unknown_ref' || t.status === 'wrong_gateway' ? 'failed'
+      : 'pending';
+
+    if (!t.transferId) return to(`/${locale}/account/transfers`);
+
+    const appBase = parseAppReturnUrl(url.searchParams.get('app'));
+    if (appBase || url.searchParams.get('via') === 'app') {
+      const deepLink = appTransferReturnUrl(t.transferId, hint, customRef, appBase);
+      if (deepLink) return NextResponse.redirect(deepLink, { status: 303 });
+    }
+    const q = new URLSearchParams({ r: hint });
+    if (t.status === 'not_completed') q.set('reason', 'tlync_cancelled');
+    if (url.searchParams.get('via') === 'app') q.set('app', '1');
+    return to(`/${locale}/transfers/pay/${t.transferId}/done?${q}`);
+  }
 
   // ── A wallet top-up lands here too ────────────────────────────────────────
   // Same 'WT-' prefix, same rule as everywhere else: the return is a browser

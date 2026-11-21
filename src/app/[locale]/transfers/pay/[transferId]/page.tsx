@@ -93,8 +93,9 @@ export default async function TransferPayPage({ params, searchParams }: Props) {
   let attemptToken: string | null = null;
   if (viaAttempt && attemptIn) {
     const row = await readPaymentAttempt(admin, viaAttempt.merchantOrderId);
-    if (row && PAYABLE_ATTEMPT.has(row.status) && row.amountTry && row.amountTry > 0) {
-      attempt = { status: 'ok', merchantOrderId: row.merchantOrderId, amountTry: row.amountTry, amountUsd: row.amountUsd, reference: null };
+    // A card attempt only — a TLYNC attempt is never re-priced into a card form.
+    if (row && row.gateway !== 'tlync' && PAYABLE_ATTEMPT.has(row.status) && row.amountTry && row.amountTry > 0) {
+      attempt = { status: 'ok', merchantOrderId: row.merchantOrderId, amountTry: row.amountTry, amountLyd: null, amountUsd: row.amountUsd, reference: null };
       attemptToken = attemptIn;
     }
   }
@@ -110,10 +111,12 @@ export default async function TransferPayPage({ params, searchParams }: Props) {
   }
 
   const options = await getTransferOptions().catch(() => null);
+  if (attempt.amountTry === null) throw new Error('transfer_payment_init: no TRY amount');
+  const amountTry = attempt.amountTry;
   const usd = attempt.amountUsd ?? transfer.priceUsd;
-  const amountLabel = formatMoney(attempt.amountTry, 'TRY', locale);
+  const amountLabel = formatMoney(amountTry, 'TRY', locale);
   const usdLabel = formatMoney(usd, 'USD', locale);
-  const rateLabel = usd ? formatMoney(attempt.amountTry / usd, 'TRY', locale) : '';
+  const rateLabel = usd ? formatMoney(amountTry / usd, 'TRY', locale) : '';
   const freeHours = options?.freeCancelHours ?? 24;
 
   attemptToken ??= mintAttemptToken({

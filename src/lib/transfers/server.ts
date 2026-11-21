@@ -138,19 +138,39 @@ export async function cancelTransfer(asUser: SupabaseClient, transferId: string,
 }
 
 export type PaymentInit =
-  | { status: 'ok'; merchantOrderId: string; amountTry: number; amountUsd: number | null; reference: string | null }
+  | {
+      status: 'ok';
+      merchantOrderId: string;
+      /** Kuveyt attempts: the TRY the bank charges. Null on a TLYNC attempt. */
+      amountTry: number | null;
+      /** TLYNC attempts: the LYD TLYNC charges. Null on a Kuveyt attempt. */
+      amountLyd: number | null;
+      amountUsd: number | null;
+      reference: string | null;
+    }
   | { status: 'not_payable'; transferStatus: string | null }
   | { status: 'expired' | 'not_found' | 'forbidden' | 'error' };
+
+export type PaymentGateway =
+  | { gateway: 'kuveyt' }
+  /** The SAME rate the stay TLYNC flow uses (lib/payment/lyd-fx usdToLydRate). */
+  | { gateway: 'tlync'; fxRateLyd: number };
 
 /**
  * A new payment attempt (service role, AFTER the caller's ownership has been
  * checked). The amount is the database's — this is the only source of the
- * TRY figure sent to the bank.
+ * TRY / LYD figure sent to the gateway.
  */
-export async function initTransferPayment(admin: SupabaseClient, transferId: string): Promise<PaymentInit> {
-  const { data, error } = await admin.rpc('transfer_payment_init', { p_transfer_id: transferId, p_gateway: 'kuveyt' });
+export async function initTransferPayment(
+  admin: SupabaseClient,
+  transferId: string,
+  gw: PaymentGateway = { gateway: 'kuveyt' },
+): Promise<PaymentInit> {
+  const args: Record<string, unknown> = { p_transfer_id: transferId, p_gateway: gw.gateway };
+  if (gw.gateway === 'tlync') args.p_fx_rate_lyd = gw.fxRateLyd;
+  const { data, error } = await admin.rpc('transfer_payment_init', args);
   if (error) {
-    console.error('[transfers] transfer_payment_init failed', { code: error.code, message: error.message });
+    console.error('[transfers] transfer_payment_init failed', { gateway: gw.gateway, code: error.code, message: error.message });
     return { status: 'error' };
   }
   const d = one(data);
@@ -158,11 +178,13 @@ export async function initTransferPayment(admin: SupabaseClient, transferId: str
     case 'ok': {
       const moid = str(d.merchant_order_id);
       const amountTry = num(d.amount_try);
-      if (!moid || amountTry === null || amountTry <= 0) {
-        console.error('[transfers] transfer_payment_init ok without order id / amount', { transferId });
+      const amountLyd = num(d.amount_lyd);
+      const amount = gw.gateway === 'tlync' ? amountLyd : amountTry;
+      if (!moid || amount === null || amount <= 0) {
+        console.error('[transfers] transfer_payment_init ok without order id / amount', { transferId, gateway: gw.gateway });
         return { status: 'error' };
       }
-      return { status: 'ok', merchantOrderId: moid, amountTry, amountUsd: num(d.amount_usd), reference: str(d.reference) };
+      return { status: 'ok', merchantOrderId: moid, amountTry, amountLyd, amountUsd: num(d.amount_usd), reference: str(d.reference) };
     }
     case 'not_payable': return { status: 'not_payable', transferStatus: str(d.transfer_status) };
     case 'expired':
@@ -170,7 +192,7 @@ export async function initTransferPayment(admin: SupabaseClient, transferId: str
     case 'forbidden':
       return { status: d.status };
     default:
-      console.error('[transfers] transfer_payment_init unexpected answer', { status: d.status });
+      console.error('[transfers] transfer_payment_init unexpected answer', { status: d.status, gateway: gw.gateway });
       return { status: 'error' };
   }
 }
@@ -182,7 +204,10 @@ export interface PaymentAttempt {
   /** pending | initiated | paid | failed | … as the table stores it. */
   status: string;
   amountTry: number | null;
+  amountLyd: number | null;
   amountUsd: number | null;
+  /** kuveyt | tlync (transfer_payments.payment_gateway). */
+  gateway: string | null;
   /** The transfer this attempt pays — the FK is read defensively by name. */
   transferId: string | null;
   responseCode: string | null;
@@ -208,7 +233,9 @@ export async function readPaymentAttempt(admin: SupabaseClient, merchantOrderId:
     merchantOrderId,
     status: str(row.status) ?? 'unknown',
     amountTry: num(row.amount_try),
+    amountLyd: num(row.amount_lyd),
     amountUsd: num(row.amount_usd),
+    gateway: str(row.payment_gateway),
     transferId: str(row.transfer_id) ?? str(row.transfer_booking_id) ?? str(row.booking_id),
     responseCode: str(row.response_code),
     responseMessage: str(row.response_message),
