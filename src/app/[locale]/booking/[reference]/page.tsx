@@ -1,3 +1,4 @@
+import { TransferEntryCard } from '@/components/transfers/TransferEntryCard';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -436,6 +437,9 @@ export default async function BookingResultPage({ params, searchParams }: PagePr
                 )}
               </div>
             )}
+
+            {/* An airport transfer to this stay — linked to it (stay_booking_id). */}
+            {!ownerRejected && !isCanceled && <TransferEntryCard locale={locale} stayBookingId={String(booking.id)} />}
 
             {/* Cash still due to the owner — its own block, not a footnote.
                 Dollars lead: that is the sum owed. The lira line is today's

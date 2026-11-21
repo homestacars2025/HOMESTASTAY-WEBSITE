@@ -807,7 +807,8 @@
       "favorites": "Saved",
       "hostPortal": "Host portal",
       "support": "Support",
-      "supportUnread": "{count, plural, one {# unread reply} other {# unread replies}}"
+      "supportUnread": "{count, plural, one {# unread reply} other {# unread replies}}",
+      "myTransfers": "My transfers"
     },
     "authGate": {
       "title": "Sign in to continue",
@@ -1571,5 +1572,248 @@
       "checkIn": "Can’t check in",
       "payment": "Contact support about this payment"
     }
+  },
+  "transfers": {
+    "page": {
+      "metaTitle": "Istanbul Airport Transfer (IST & SAW) — Fixed Price | Homesta Stay",
+      "metaDescription": "Book a private transfer between Istanbul Airport or Sabiha Gökçen and any Istanbul district. Fixed price, paid online, free cancellation up to 24 hours before pickup.",
+      "eyebrow": "Airport transfer",
+      "h1": "Private airport transfers in Istanbul",
+      "intro": "A private car between Istanbul Airport (IST) or Sabiha Gökçen (SAW) and your district, at a fixed price from {price}. Pay online, get your driver's details before you land, and cancel free of charge up to {hours} hours before pickup.",
+      "unavailable": "Transfer booking is not available right now. Please try again in a few minutes.",
+      "faqTitle": "Questions about airport transfers",
+      "faq": {
+        "price": {
+          "q": "How much is a transfer from Istanbul Airport?",
+          "a": "Prices are fixed per route and start from {price}. The exact price for your district is shown before you pay — no meter, no surcharge for traffic."
+        },
+        "cancel": {
+          "q": "Can I cancel my transfer?",
+          "a": "Yes. Cancellation is free up to {hours} hours before the pickup time, from My transfers."
+        },
+        "lead": {
+          "q": "How far in advance do I need to book?",
+          "a": "At least {lead} hours before pickup, so we can assign a driver."
+        },
+        "capacity": {
+          "q": "How many passengers and bags fit?",
+          "a": "Up to {passengers} passengers and {luggage} pieces of luggage. Up to {seats} child seats are available on request."
+        },
+        "flight": {
+          "q": "Why do you ask for my flight number?",
+          "a": "So your driver can follow your landing time and wait at the right terminal if your flight is early or late."
+        }
+      }
+    },
+    "book": {
+      "progress": "Step {n} of {total}",
+      "back": "Back",
+      "continue": "Continue",
+      "steps": {
+        "airport": "Which airport?",
+        "direction": "Arriving or departing?",
+        "district": "Where in Istanbul?",
+        "when": "When?",
+        "party": "Who's travelling?",
+        "contact": "Your details",
+        "summary": "Review and pay"
+      },
+      "direction": {
+        "arrival": "Arriving",
+        "arrivalSub": "From {airport} to your address",
+        "departure": "Departing",
+        "departureSub": "From your address to {airport}"
+      },
+      "districtSearch": "Search a district",
+      "from": "from {price}",
+      "quoting": "Checking the price…",
+      "price": "Price",
+      "addressPickup": "Pickup address (optional)",
+      "addressDropoff": "Drop-off address (optional)",
+      "addressPlaceholder": "Hotel or street address",
+      "date": "Date",
+      "timeLanding": "Landing time",
+      "timePickup": "Pickup time",
+      "istanbulTimeNote": "Istanbul time. Book at least {hours} hours ahead.",
+      "flight": "Flight number",
+      "flightNoteArrival": "Your driver follows the flight and adjusts to delays.",
+      "flightNoteDeparture": "Optional — helps us plan the pickup.",
+      "passengers": "Passengers",
+      "luggage": "Luggage",
+      "childSeats": "Child seats",
+      "childSeatsHint": "Free, on request",
+      "name": "Full name",
+      "phone": "Phone (WhatsApp)",
+      "phoneSearch": "Search country",
+      "phoneNote": "Your driver will contact you on this number.",
+      "notes": "Notes for the driver (optional)",
+      "notesPlaceholder": "e.g. a large suitcase, a stroller",
+      "signInBody": "Sign in or create an account to finish your booking. Your choices are kept.",
+      "signIn": "Sign in to continue",
+      "istanbulTime": "Istanbul time",
+      "partyLine": "{p, plural, one {# passenger} other {# passengers}} · {l, plural, one {# bag} other {# bags}} · {c, plural, =0 {no child seat} one {# child seat} other {# child seats}}",
+      "total": "Total",
+      "fullPayment": "Full payment now, by card.",
+      "freeCancel": "Free cancellation up to {hours} hours before pickup.",
+      "creating": "Creating your booking…",
+      "pay": "Pay {price}",
+      "errors": {
+        "when": "Please choose a date and time.",
+        "tooSoon": "Please book at least {hours} hours before pickup.",
+        "flight": "That doesn't look like a flight number (e.g. TK 1234).",
+        "contact": "Please enter your name and a valid phone number.",
+        "invalid": "Some details are not valid. Please check them and try again.",
+        "notServed": "We don't serve this route yet.",
+        "rateLimited": "Too many bookings in a short time. Please try again later.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "pay": {
+      "eyebrow": "Airport transfer",
+      "title": "Pay for your transfer",
+      "failedTitle": "The payment didn't go through",
+      "errors": {
+        "declined": "Your bank declined the payment. You can try again or use another card.",
+        "card": "Please check the card details.",
+        "contact": "Please enter a valid phone number.",
+        "bank": "We couldn't reach the bank. Nothing was charged — please try again.",
+        "session": "Your payment session expired. Please try again.",
+        "server": "Something went wrong on our side. Nothing was charged.",
+        "unknown": "We couldn't confirm the payment. Please try again.",
+        "expired": "This payment attempt has expired. Please try again."
+      },
+      "fullPayment": "Full payment — nothing to pay to the driver.",
+      "freeCancel": "Free cancellation up to {hours} hours before pickup.",
+      "holdUntil": "Reserved for you until {time} (Istanbul time).",
+      "expiredTitle": "This reservation expired",
+      "expiredBody": "It wasn't paid in time, so the car was released. Please book again — it only takes a minute.",
+      "bookAgain": "Book again"
+    },
+    "summary": {
+      "landing": "Landing",
+      "pickup": "Pickup",
+      "istanbulTime": "Istanbul time",
+      "flight": "Flight",
+      "passengers": "Passengers",
+      "luggage": "Luggage",
+      "childSeats": "Child seats",
+      "total": "Paid in full"
+    },
+    "done": {
+      "success": {
+        "title": "Payment received — we're assigning your driver",
+        "body": "You'll get the driver's name, car and phone number before pickup, in My transfers and by message."
+      },
+      "failed": {
+        "title": "The payment didn't go through",
+        "body": "Nothing was charged. You can try again — the price stays the same while your reservation is held."
+      },
+      "pending": {
+        "title": "We're confirming your payment",
+        "body": "This can take a moment. Please don't pay again — we'll update your transfer as soon as the bank confirms."
+      },
+      "refund": {
+        "title": "Your payment arrived after the reservation expired",
+        "body": "Your money is safe: our team will refund it to your card. Contact us if you'd like to book again."
+      },
+      "reference": "Reference {ref}",
+      "backToApp": "Back to the Homesta app",
+      "retry": "Try again",
+      "myTransfers": "My transfers",
+      "contact": "Contact us"
+    },
+    "account": {
+      "title": "My transfers",
+      "loadError": "We couldn't load your transfers. Please refresh the page.",
+      "empty": "No transfers yet.",
+      "book": "Book an airport transfer",
+      "driver": "Your driver",
+      "whatsappDriver": "WhatsApp the driver",
+      "payNow": "Pay now",
+      "payBy": "Pay by {time} (Istanbul time) to keep this reservation.",
+      "cancel": "Cancel transfer",
+      "cancelFree": "Cancellation is free — you'll get a full refund.",
+      "cancelNotFree": "It's less than the free-cancellation window before pickup, so this may not be refunded.",
+      "reason": "Reason (optional)",
+      "confirmCancel": "Yes, cancel",
+      "keep": "Keep it",
+      "cancelled": "Your transfer is cancelled.",
+      "cancelledRefund": "Your transfer is cancelled. The refund is on its way to your card.",
+      "tooLate": "It's too late to cancel online (less than {hours} hours before pickup). Please contact us.",
+      "notCancellable": "This transfer can no longer be cancelled.",
+      "cancelError": "We couldn't cancel it. Please try again."
+    },
+    "status": {
+      "pending_payment": "Awaiting payment",
+      "paid": "Paid — assigning your driver",
+      "unassigned": "Paid — assigning your driver",
+      "offered": "Paid — assigning your driver",
+      "assigned": "Driver assigned",
+      "en_route": "Driver on the way",
+      "arrived": "Driver has arrived",
+      "picked_up": "On the road",
+      "completed": "Completed",
+      "no_show": "Passenger did not show",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "refund_pending": "Refund in progress",
+      "refunded": "Refunded",
+      "payment_failed": "Payment failed"
+    },
+    "entry": {
+      "title": "Need a ride from the airport?",
+      "body": "Book a private transfer to your stay at a fixed price.",
+      "cta": "Book a transfer"
+    }
+  },
+  "driver": {
+    "pickupAt": "Pickup",
+    "istanbulTime": "Istanbul time",
+    "status": {
+      "pending_payment": "Awaiting payment",
+      "paid": "Paid — assigning your driver",
+      "unassigned": "Paid — assigning your driver",
+      "offered": "Paid — assigning your driver",
+      "assigned": "Driver assigned",
+      "en_route": "Driver on the way",
+      "arrived": "Driver has arrived",
+      "picked_up": "On the road",
+      "completed": "Completed",
+      "no_show": "Passenger did not show",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "refund_pending": "Refund in progress",
+      "refunded": "Refunded",
+      "payment_failed": "Payment failed"
+    },
+    "errors": {
+      "transition": "That step isn't possible now — the page shows the current status.",
+      "link": "This link is no longer valid.",
+      "invalid": "Something is wrong with this link.",
+      "error": "Couldn't save. Check your connection and try again."
+    },
+    "actions": {
+      "en_route": "I'm on my way",
+      "arrived": "I've arrived",
+      "picked_up": "Passenger picked up",
+      "completed": "Completed",
+      "no_show": "Passenger didn't show"
+    },
+    "finished": "This transfer is finished. Thank you!",
+    "customer": "Passenger",
+    "call": "Call",
+    "pickup": "Pickup",
+    "dropoff": "Drop-off",
+    "navigate": "Navigate (Google Maps)",
+    "flight": "Flight",
+    "flightStatus": "Flight status",
+    "passengers": "Passengers",
+    "luggage": "Luggage",
+    "childSeats": "Child seats",
+    "notes": "Notes",
+    "invalidTitle": "Link not valid",
+    "invalidBody": "This transfer link is not valid. Please check the WhatsApp message or contact Homesta.",
+    "notActiveTitle": "This transfer is not active",
+    "notActiveBody": "It has been completed, cancelled or reassigned. Contact Homesta if you think this is a mistake."
   }
 }

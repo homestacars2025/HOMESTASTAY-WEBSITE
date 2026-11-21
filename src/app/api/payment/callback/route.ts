@@ -9,6 +9,8 @@ import { sendBookingConfirmation } from '@/lib/booking/confirmation-email';
 import { performRefund } from '@/lib/payment/refund-service';
 import { isAppOrder, isWalletOrder, loadTopupIntentByOrder } from '@/lib/wallet/topup';
 import { appReturnUrl } from '@/lib/app/deep-link';
+import { isTransferOrder } from '@/lib/transfers/model';
+import { handleTransferPayment } from '@/lib/transfers/callback';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -119,6 +121,16 @@ export async function POST(request: NextRequest) {
   // 'WT-' prefix on the order id is the discriminator, and this is the first
   // decision made after the id is in hand — before any booking table is read,
   // so a top-up never touches the booking path at all.
+  // Airport transfers: "TRF…" order ids (written by transfer_payment_init) go
+  // to their own branch — same 3DS verdict / ProvisionGate / paid-RPC steps,
+  // against transfer_payments and transfer_complete_payment (lib/transfers/
+  // callback). Checked first, so a transfer never touches a stay or wallet table.
+  if (isTransferOrder(merchantOrderId)) {
+    return handleTransferPayment({
+      request, supabase, merchantOrderId, md, responseCode, responseMessage,
+    });
+  }
+
   if (isWalletOrder(merchantOrderId)) {
     return handleWalletTopup({
       request, supabase, merchantOrderId, md, responseCode, responseMessage,

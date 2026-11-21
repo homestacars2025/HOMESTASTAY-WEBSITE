@@ -56,6 +56,21 @@ const HTML_LIMITED_BOTS =
   /[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|GPTBot|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|ClaudeBot|Claude-User|Claude-SearchBot|anthropic-ai|Amazonbot|Bytespider|CCBot|cohere-ai|Diffbot|meta-externalagent|Applebot-Extended|Snapchat|Pinterest|Iframely|Embedly/i;
 
 const nextConfig: NextConfig = {
+  /**
+   * The drivers' subdomain (transfer.homestastay.com, see middleware.ts) is
+   * private working pages: never indexed, whatever path — including static
+   * files and robots.txt, which the middleware does not see.
+   */
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'transfer.homestastay.com' }],
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ];
+  },
+
   // Resolve the workspace-root warning from the parent-dir package-lock.json
   /**
    * Server Action request bodies.

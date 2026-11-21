@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Menu, X, LogOut, Wallet, BookOpen, UserRound, LayoutDashboard, LifeBuoy } from 'lucide-react';
+import { Menu, X, LogOut, Wallet, BookOpen, Plane, UserRound, LayoutDashboard, LifeBuoy } from 'lucide-react';
 import { useSupportUnread } from '@/lib/support/unread';
 import { useLocale, useTranslations } from 'next-intl';
 import { Wordmark } from '@/components/brand/Wordmark';
@@ -162,6 +162,14 @@ export function MobileNav() {
                   >
                     <BookOpen className="w-4 h-4 text-mute shrink-0" />
                     {tMenu('myBookings')}
+                  </Link>
+                  <Link
+                    href="/account/transfers"
+                    onClick={close}
+                    className="w-full flex items-center justify-center gap-2 rounded-[999px] border border-rule text-sm font-medium text-ink py-3 hover:bg-paper-warm transition-colors duration-[240ms]"
+                  >
+                    <Plane className="w-4 h-4 text-mute shrink-0" />
+                    {tMenu('myTransfers')}
                   </Link>
                   <Link
                     href="/wallet"

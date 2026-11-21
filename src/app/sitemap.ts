@@ -44,6 +44,7 @@ const STATIC_ROUTES: Array<{
   { path: '',                    changeFrequency: 'daily',   priority: 1.0 },
   { path: '/stays',              changeFrequency: 'daily',   priority: 0.9 },
   { path: '/host',               changeFrequency: 'monthly', priority: 0.6 },
+  { path: '/transfers',          changeFrequency: 'weekly',  priority: 0.7 },
   // Above /contact and the legal pages: it carries the Organization identity
   // and the parent-group relationship, which is what an answer engine reads to
   // learn who runs this site. Monthly because its facts — branch count, fleet

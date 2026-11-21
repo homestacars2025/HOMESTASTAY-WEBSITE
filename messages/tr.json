@@ -807,7 +807,8 @@
       "favorites": "Kaydedilenler",
       "hostPortal": "Ev sahibi paneli",
       "support": "Destek",
-      "supportUnread": "{count, plural, one {# okunmamış yanıt} other {# okunmamış yanıt}}"
+      "supportUnread": "{count, plural, one {# okunmamış yanıt} other {# okunmamış yanıt}}",
+      "myTransfers": "Transferlerim"
     },
     "authGate": {
       "title": "Devam etmek için giriş yapın",
@@ -1571,5 +1572,248 @@
       "checkIn": "Giriş yapamıyorum",
       "payment": "Bu ödemeyle ilgili destekle iletişime geç"
     }
+  },
+  "transfers": {
+    "page": {
+      "metaTitle": "İstanbul Havalimanı Transferi (IST & SAW) — Sabit Fiyat | Homesta Stay",
+      "metaDescription": "İstanbul Havalimanı veya Sabiha Gökçen ile İstanbul'un tüm ilçeleri arasında özel transfer. Sabit fiyat, online ödeme, alıştan 24 saat öncesine kadar ücretsiz iptal.",
+      "eyebrow": "Havalimanı transferi",
+      "h1": "İstanbul'da özel havalimanı transferi",
+      "intro": "İstanbul Havalimanı (IST) veya Sabiha Gökçen (SAW) ile ilçeniz arasında özel araç, sabit fiyatla (başlangıç {price}). Online ödeyin, inmeden önce şoför bilgilerinizi alın ve alıştan {hours} saat öncesine kadar ücretsiz iptal edin.",
+      "unavailable": "Transfer rezervasyonu şu anda kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin.",
+      "faqTitle": "Havalimanı transferi hakkında sorular",
+      "faq": {
+        "price": {
+          "q": "İstanbul Havalimanı'ndan transfer ne kadar?",
+          "a": "Fiyatlar güzergâha göre sabittir; başlangıç fiyatı {price}. İlçenizin kesin fiyatı ödemeden önce gösterilir — taksimetre yok, trafik farkı yok."
+        },
+        "cancel": {
+          "q": "Transferimi iptal edebilir miyim?",
+          "a": "Evet. Alış saatinden {hours} saat öncesine kadar Transferlerim sayfasından ücretsiz iptal edebilirsiniz."
+        },
+        "lead": {
+          "q": "Ne kadar önceden rezervasyon yapmalıyım?",
+          "a": "Şoför atayabilmemiz için alıştan en az {lead} saat önce."
+        },
+        "capacity": {
+          "q": "Kaç yolcu ve bavul sığar?",
+          "a": "En fazla {passengers} yolcu ve {luggage} bavul. İstek üzerine en fazla {seats} çocuk koltuğu."
+        },
+        "flight": {
+          "q": "Uçuş numaramı neden istiyorsunuz?",
+          "a": "Şoförünüz iniş saatinizi takip edebilsin ve uçuşunuz erken ya da geç kalırsa doğru terminalde beklesin diye."
+        }
+      }
+    },
+    "book": {
+      "progress": "Adım {n} / {total}",
+      "back": "Geri",
+      "continue": "Devam",
+      "steps": {
+        "airport": "Hangi havalimanı?",
+        "direction": "Varış mı, gidiş mi?",
+        "district": "İstanbul'da nereye?",
+        "when": "Ne zaman?",
+        "party": "Kimler yolculuk ediyor?",
+        "contact": "Bilgileriniz",
+        "summary": "Kontrol edin ve ödeyin"
+      },
+      "direction": {
+        "arrival": "Varış",
+        "arrivalSub": "{airport} → adresiniz",
+        "departure": "Gidiş",
+        "departureSub": "Adresiniz → {airport}"
+      },
+      "districtSearch": "İlçe arayın",
+      "from": "başlangıç {price}",
+      "quoting": "Fiyat kontrol ediliyor…",
+      "price": "Fiyat",
+      "addressPickup": "Alış adresi (isteğe bağlı)",
+      "addressDropoff": "Bırakış adresi (isteğe bağlı)",
+      "addressPlaceholder": "Otel veya sokak adresi",
+      "date": "Tarih",
+      "timeLanding": "İniş saati",
+      "timePickup": "Alış saati",
+      "istanbulTimeNote": "İstanbul saati. En az {hours} saat önceden rezervasyon yapın.",
+      "flight": "Uçuş numarası",
+      "flightNoteArrival": "Şoförünüz uçuşu takip eder ve rötarlara göre ayarlar.",
+      "flightNoteDeparture": "İsteğe bağlı — alışı planlamamıza yardımcı olur.",
+      "passengers": "Yolcu",
+      "luggage": "Bavul",
+      "childSeats": "Çocuk koltuğu",
+      "childSeatsHint": "Ücretsiz, istek üzerine",
+      "name": "Ad soyad",
+      "phone": "Telefon (WhatsApp)",
+      "phoneSearch": "Ülke arayın",
+      "phoneNote": "Şoförünüz size bu numaradan ulaşacak.",
+      "notes": "Şoföre not (isteğe bağlı)",
+      "notesPlaceholder": "ör. büyük bavul, bebek arabası",
+      "signInBody": "Rezervasyonu tamamlamak için giriş yapın veya hesap oluşturun. Seçimleriniz korunur.",
+      "signIn": "Devam etmek için giriş yapın",
+      "istanbulTime": "İstanbul saati",
+      "partyLine": "{p} yolcu · {l} bavul · {c, plural, =0 {çocuk koltuğu yok} other {# çocuk koltuğu}}",
+      "total": "Toplam",
+      "fullPayment": "Tam ödeme, şimdi kartla.",
+      "freeCancel": "Alıştan {hours} saat öncesine kadar ücretsiz iptal.",
+      "creating": "Rezervasyonunuz oluşturuluyor…",
+      "pay": "{price} öde",
+      "errors": {
+        "when": "Lütfen tarih ve saat seçin.",
+        "tooSoon": "Lütfen alıştan en az {hours} saat önce rezervasyon yapın.",
+        "flight": "Bu bir uçuş numarasına benzemiyor (ör. TK 1234).",
+        "contact": "Lütfen adınızı ve geçerli bir telefon numarası girin.",
+        "invalid": "Bazı bilgiler geçersiz. Lütfen kontrol edip tekrar deneyin.",
+        "notServed": "Bu güzergâhta henüz hizmet vermiyoruz.",
+        "rateLimited": "Kısa sürede çok fazla rezervasyon. Lütfen daha sonra tekrar deneyin.",
+        "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+      }
+    },
+    "pay": {
+      "eyebrow": "Havalimanı transferi",
+      "title": "Transfer ödemesi",
+      "failedTitle": "Ödeme gerçekleşmedi",
+      "errors": {
+        "declined": "Bankanız ödemeyi reddetti. Tekrar deneyebilir veya başka bir kart kullanabilirsiniz.",
+        "card": "Lütfen kart bilgilerini kontrol edin.",
+        "contact": "Lütfen geçerli bir telefon numarası girin.",
+        "bank": "Bankaya ulaşılamadı. Ücret alınmadı — lütfen tekrar deneyin.",
+        "session": "Ödeme oturumunuzun süresi doldu. Lütfen tekrar deneyin.",
+        "server": "Bizim tarafımızda bir sorun oluştu. Ücret alınmadı.",
+        "unknown": "Ödeme doğrulanamadı. Lütfen tekrar deneyin.",
+        "expired": "Bu ödeme denemesinin süresi doldu. Lütfen tekrar deneyin."
+      },
+      "fullPayment": "Tam ödeme — şoföre ayrıca ödeme yok.",
+      "freeCancel": "Alıştan {hours} saat öncesine kadar ücretsiz iptal.",
+      "holdUntil": "{time} saatine kadar sizin için ayrıldı (İstanbul saati).",
+      "expiredTitle": "Bu rezervasyonun süresi doldu",
+      "expiredBody": "Zamanında ödenmediği için araç serbest bırakıldı. Lütfen yeniden rezervasyon yapın — bir dakika sürer.",
+      "bookAgain": "Yeniden rezervasyon yap"
+    },
+    "summary": {
+      "landing": "İniş",
+      "pickup": "Alış",
+      "istanbulTime": "İstanbul saati",
+      "flight": "Uçuş",
+      "passengers": "Yolcu",
+      "luggage": "Bavul",
+      "childSeats": "Çocuk koltuğu",
+      "total": "Tamamı ödenir"
+    },
+    "done": {
+      "success": {
+        "title": "Ödeme alındı — şoförünüzü atıyoruz",
+        "body": "Şoförün adı, aracı ve telefonu alıştan önce Transferlerim sayfasında ve mesajla size iletilecek."
+      },
+      "failed": {
+        "title": "Ödeme gerçekleşmedi",
+        "body": "Ücret alınmadı. Tekrar deneyebilirsiniz — rezervasyonunuz tutulduğu sürece fiyat aynı kalır."
+      },
+      "pending": {
+        "title": "Ödemeniz doğrulanıyor",
+        "body": "Bu biraz sürebilir. Lütfen tekrar ödeme yapmayın — banka onaylar onaylamaz transferinizi güncelleyeceğiz."
+      },
+      "refund": {
+        "title": "Ödemeniz rezervasyon süresi dolduktan sonra ulaştı",
+        "body": "Paranız güvende: ekibimiz kartınıza iade edecek. Yeniden rezervasyon için bize ulaşabilirsiniz."
+      },
+      "reference": "Referans {ref}",
+      "backToApp": "Homesta uygulamasına dön",
+      "retry": "Tekrar dene",
+      "myTransfers": "Transferlerim",
+      "contact": "Bize ulaşın"
+    },
+    "account": {
+      "title": "Transferlerim",
+      "loadError": "Transferleriniz yüklenemedi. Lütfen sayfayı yenileyin.",
+      "empty": "Henüz transfer yok.",
+      "book": "Havalimanı transferi ayırt",
+      "driver": "Şoförünüz",
+      "whatsappDriver": "Şoföre WhatsApp'tan yaz",
+      "payNow": "Şimdi öde",
+      "payBy": "Bu rezervasyonu korumak için {time} saatine kadar ödeyin (İstanbul saati).",
+      "cancel": "Transferi iptal et",
+      "cancelFree": "İptal ücretsiz — tam iade alırsınız.",
+      "cancelNotFree": "Alışa ücretsiz iptal süresinden az kaldı, bu nedenle iade yapılmayabilir.",
+      "reason": "Sebep (isteğe bağlı)",
+      "confirmCancel": "Evet, iptal et",
+      "keep": "Vazgeç",
+      "cancelled": "Transferiniz iptal edildi.",
+      "cancelledRefund": "Transferiniz iptal edildi. İade kartınıza gönderiliyor.",
+      "tooLate": "Online iptal için çok geç (alışa {hours} saatten az kaldı). Lütfen bize ulaşın.",
+      "notCancellable": "Bu transfer artık iptal edilemez.",
+      "cancelError": "İptal edilemedi. Lütfen tekrar deneyin."
+    },
+    "status": {
+      "pending_payment": "Ödeme bekleniyor",
+      "paid": "Ödendi — şoför atanıyor",
+      "unassigned": "Ödendi — şoför atanıyor",
+      "offered": "Ödendi — şoför atanıyor",
+      "assigned": "Şoför atandı",
+      "en_route": "Şoför yolda",
+      "arrived": "Şoför vardı",
+      "picked_up": "Yolculuk sürüyor",
+      "completed": "Tamamlandı",
+      "no_show": "Yolcu gelmedi",
+      "cancelled": "İptal edildi",
+      "expired": "Süresi doldu",
+      "refund_pending": "İade işleniyor",
+      "refunded": "İade edildi",
+      "payment_failed": "Ödeme başarısız"
+    },
+    "entry": {
+      "title": "Havalimanından ulaşım mı lazım?",
+      "body": "Konaklamanıza sabit fiyatlı özel transfer ayırtın.",
+      "cta": "Transfer ayırt"
+    }
+  },
+  "driver": {
+    "pickupAt": "Alış",
+    "istanbulTime": "İstanbul saati",
+    "status": {
+      "pending_payment": "Ödeme bekleniyor",
+      "paid": "Ödendi — şoför atanıyor",
+      "unassigned": "Ödendi — şoför atanıyor",
+      "offered": "Ödendi — şoför atanıyor",
+      "assigned": "Şoför atandı",
+      "en_route": "Şoför yolda",
+      "arrived": "Şoför vardı",
+      "picked_up": "Yolculuk sürüyor",
+      "completed": "Tamamlandı",
+      "no_show": "Yolcu gelmedi",
+      "cancelled": "İptal edildi",
+      "expired": "Süresi doldu",
+      "refund_pending": "İade işleniyor",
+      "refunded": "İade edildi",
+      "payment_failed": "Ödeme başarısız"
+    },
+    "errors": {
+      "transition": "Bu adım şu an mümkün değil — sayfa güncel durumu gösteriyor.",
+      "link": "Bu bağlantı artık geçerli değil.",
+      "invalid": "Bu bağlantıda bir sorun var.",
+      "error": "Kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin."
+    },
+    "actions": {
+      "en_route": "Yola çıktım",
+      "arrived": "Vardım",
+      "picked_up": "Müşteri alındı",
+      "completed": "Tamamlandı",
+      "no_show": "Müşteri gelmedi"
+    },
+    "finished": "Bu transfer tamamlandı. Teşekkürler!",
+    "customer": "Müşteri",
+    "call": "Ara",
+    "pickup": "Alış noktası",
+    "dropoff": "Bırakış noktası",
+    "navigate": "Yol tarifi (Google Haritalar)",
+    "flight": "Uçuş",
+    "flightStatus": "Uçuş durumu",
+    "passengers": "Yolcu",
+    "luggage": "Bavul",
+    "childSeats": "Çocuk koltuğu",
+    "notes": "Notlar",
+    "invalidTitle": "Bağlantı geçersiz",
+    "invalidBody": "Bu transfer bağlantısı geçerli değil. Lütfen WhatsApp mesajını kontrol edin veya Homesta ile iletişime geçin.",
+    "notActiveTitle": "Bu transfer aktif değil",
+    "notActiveBody": "Tamamlanmış, iptal edilmiş veya başka şoföre verilmiş. Bir hata olduğunu düşünüyorsanız Homesta ile iletişime geçin."
   }
 }

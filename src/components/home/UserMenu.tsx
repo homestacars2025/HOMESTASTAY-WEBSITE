@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAccountKind } from '@/hooks/useIsCustomer';
 import { continueUrl } from '@/lib/auth/continue-url';
 import { HOST_DEFAULT_NEXT } from '@/lib/auth/portals';
-import { LogOut, ChevronDown, BookOpen, Wallet, UserRound, Heart, LayoutDashboard, LifeBuoy } from 'lucide-react';
+import { LogOut, ChevronDown, BookOpen, Plane, Wallet, UserRound, Heart, LayoutDashboard, LifeBuoy } from 'lucide-react';
 import { useSupportUnread } from '@/lib/support/unread';
 import type { User } from '@supabase/supabase-js';
 
@@ -127,6 +127,14 @@ export function UserMenu({ user }: UserMenuProps) {
           >
             <BookOpen className="w-4 h-4 text-mute shrink-0" />
             {t('myBookings')}
+          </Link>
+          <Link
+            href="/account/transfers"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-paper-warm transition-colors duration-[240ms]"
+          >
+            <Plane className="w-4 h-4 text-mute shrink-0" />
+            {t('myTransfers')}
           </Link>
           <Link
             href="/wallet"
