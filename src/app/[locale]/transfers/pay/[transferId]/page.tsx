@@ -8,8 +8,12 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireConfirmedUser } from '@/lib/auth/require-user';
 import { Link } from '@/i18n/navigation';
-import { getTransfer, getTransferOptions, initTransferPayment } from '@/lib/transfers/server';
-import { mintAttemptToken, ownsTransfer, readAppTransferToken } from '@/lib/transfers/pay-session';
+import {
+  PAYABLE_ATTEMPT, getTransfer, getTransferOptions, initTransferPayment, readPaymentAttempt,
+} from '@/lib/transfers/server';
+import {
+  mintAttemptToken, ownsTransfer, readAppTransferToken, readAttemptToken,
+} from '@/lib/transfers/pay-session';
 import {
   AWAITING_PAYMENT, PAID_STATES, UUID_RE, formatIstanbul, formatMoney, parseTransfer, type TransferView,
 } from '@/lib/transfers/model';
@@ -18,14 +22,16 @@ import {
  * /[locale]/transfers/pay/[transferId] — pay a transfer, from the website or
  * the app (the URL the app opens: HOMESTA-APP transferPayUrl).
  *
- *   who      the website session (cookie), or ?t= — the app's 15-minute pay
- *            token from /api/app/transfers/pay-link (the phone's browser has
- *            no website session; same answer as wallet top-ups). Neither →
- *            sign in, and back here.
- *   amount   EVERY VIEW opens a new attempt (transfer_payment_init, service
+ *   who      the website session (cookie); or, from the app (the phone's
+ *            browser has no website session — the wallet top-up answer):
+ *              ?a=  the attempt /api/app/transfers/pay/start opened (30 min),
+ *              ?t=  the 15-minute pay token from /api/app/transfers/pay-link.
+ *            Neither → sign in, and back here.
+ *   amount   transfer_payments, written by transfer_payment_init (service
  *            role, after the ownership check): the TRY figure shown and charged
- *            is the database's. A failed payment comes back here (?error=) and
- *            the reload IS the retry, with a fresh attempt.
+ *            is the database's. ?a= reuses its attempt while still payable;
+ *            otherwise every view opens a fresh one, so the reload after a
+ *            failure IS the retry.
  *   states   paid → the success page; expired / cancelled → "book again".
  *
  * Card data goes straight to /api/payment/transfer/start, the same 3-D Secure
@@ -38,14 +44,14 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 type Props = {
   params: Promise<{ locale: string; transferId: string }>;
-  searchParams: Promise<{ t?: string; error?: string }>;
+  searchParams: Promise<{ t?: string; a?: string; error?: string }>;
 };
 
 const ERRORS = new Set(['declined', 'card', 'contact', 'bank', 'session', 'server', 'unknown', 'expired']);
 
 export default async function TransferPayPage({ params, searchParams }: Props) {
   const { locale, transferId } = await params;
-  const { t: token, error } = await searchParams;
+  const { t: token, a: attemptIn, error } = await searchParams;
   if (!UUID_RE.test(transferId)) notFound();
 
   const t = await getTranslations({ locale, namespace: 'transfers.pay' });
@@ -56,12 +62,16 @@ export default async function TransferPayPage({ params, searchParams }: Props) {
   let profileId: string;
   let transfer: TransferView | null;
   let phone = '';
-  const app = readAppTransferToken(token);
-  const fromApp = Boolean(app && app.transferId === transferId);
+  const tokenClaims = readAppTransferToken(token);
+  const viaToken = tokenClaims && tokenClaims.transferId === transferId ? tokenClaims : null;
+  const attemptClaims = readAttemptToken(attemptIn);
+  const viaAttempt = attemptClaims && attemptClaims.app && attemptClaims.transferId === transferId ? attemptClaims : null;
+  const appProfile = viaAttempt?.profileId ?? viaToken?.profileId ?? null;
+  const fromApp = Boolean(appProfile);
 
-  if (fromApp && app) {
-    if (!(await ownsTransfer(admin, transferId, app.profileId))) notFound();
-    profileId = app.profileId;
+  if (appProfile) {
+    if (!(await ownsTransfer(admin, transferId, appProfile))) notFound();
+    profileId = appProfile;
     transfer = (await getTransfer(admin, transferId)) ?? (await readTransferRow(admin, transferId));
   } else {
     const user = await requireConfirmedUser(locale, path);
@@ -77,8 +87,18 @@ export default async function TransferPayPage({ params, searchParams }: Props) {
   if (PAID_STATES.has(transfer.status)) redirect(`/${locale}${done}`);
   if (!AWAITING_PAYMENT.has(transfer.status)) return <Expired locale={locale} />;
 
-  // ── A fresh attempt — the amount comes from here, and only here ──────────
-  const attempt = await initTransferPayment(admin, transferId);
+  // ── The attempt — the amount comes from here, and only here ──────────────
+  // The app's attempt while the bank can still take it; otherwise a fresh one.
+  let attempt: Awaited<ReturnType<typeof initTransferPayment>> | null = null;
+  let attemptToken: string | null = null;
+  if (viaAttempt && attemptIn) {
+    const row = await readPaymentAttempt(admin, viaAttempt.merchantOrderId);
+    if (row && PAYABLE_ATTEMPT.has(row.status) && row.amountTry && row.amountTry > 0) {
+      attempt = { status: 'ok', merchantOrderId: row.merchantOrderId, amountTry: row.amountTry, amountUsd: row.amountUsd, reference: null };
+      attemptToken = attemptIn;
+    }
+  }
+  attempt ??= await initTransferPayment(admin, transferId);
   if (attempt.status === 'not_payable') {
     if (attempt.transferStatus && PAID_STATES.has(attempt.transferStatus)) redirect(`/${locale}${done}`);
     return <Expired locale={locale} />;
@@ -96,7 +116,9 @@ export default async function TransferPayPage({ params, searchParams }: Props) {
   const rateLabel = usd ? formatMoney(attempt.amountTry / usd, 'TRY', locale) : '';
   const freeHours = options?.freeCancelHours ?? 24;
 
-  const attemptToken = mintAttemptToken({ transferId, merchantOrderId: attempt.merchantOrderId, profileId, app: fromApp });
+  attemptToken ??= mintAttemptToken({
+    transferId, merchantOrderId: attempt.merchantOrderId, profileId, app: fromApp, returnUrl: viaAttempt?.returnUrl ?? null,
+  });
 
   return (
     <div className="min-h-screen bg-paper">
@@ -130,7 +152,7 @@ export default async function TransferPayPage({ params, searchParams }: Props) {
           rateLabel={rateLabel}
           phone={phone}
           action="/api/payment/transfer/start"
-          hiddenFields={{ attempt: attemptToken, ...(fromApp && token ? { t: token } : {}) }}
+          hiddenFields={{ attempt: attemptToken, ...(viaToken && token ? { t: token } : {}) }}
         />
       </main>
     </div>

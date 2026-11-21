@@ -174,3 +174,43 @@ export async function initTransferPayment(admin: SupabaseClient, transferId: str
       return { status: 'error' };
   }
 }
+
+// ── One payment attempt (transfer_payments), service role ───────────────────
+
+export interface PaymentAttempt {
+  merchantOrderId: string;
+  /** pending | initiated | paid | failed | … as the table stores it. */
+  status: string;
+  amountTry: number | null;
+  amountUsd: number | null;
+  /** The transfer this attempt pays — the FK is read defensively by name. */
+  transferId: string | null;
+  responseCode: string | null;
+  responseMessage: string | null;
+}
+
+/** Attempt statuses that can still go to the bank. */
+export const PAYABLE_ATTEMPT = new Set(['pending', 'initiated']);
+
+export async function readPaymentAttempt(admin: SupabaseClient, merchantOrderId: string): Promise<PaymentAttempt | null> {
+  const { data, error } = await admin
+    .from('transfer_payments')
+    .select('*')
+    .eq('merchant_order_id', merchantOrderId)
+    .maybeSingle();
+  if (error) {
+    console.error('[transfers] transfer_payments read failed', { merchantOrderId, code: error.code });
+    return null;
+  }
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  return {
+    merchantOrderId,
+    status: str(row.status) ?? 'unknown',
+    amountTry: num(row.amount_try),
+    amountUsd: num(row.amount_usd),
+    transferId: str(row.transfer_id) ?? str(row.transfer_booking_id) ?? str(row.booking_id),
+    responseCode: str(row.response_code),
+    responseMessage: str(row.response_message),
+  };
+}

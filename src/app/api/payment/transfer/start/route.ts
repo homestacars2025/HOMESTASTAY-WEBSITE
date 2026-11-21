@@ -40,13 +40,19 @@ export async function POST(request: NextRequest) {
   const localeIn = str(form.get('locale'));
   const locale = LOCALES.has(localeIn) ? localeIn : 'en';
   const appToken = str(form.get('t'));
+  const rawAttempt = str(form.get('attempt'));
 
-  const claims = readAttemptToken(str(form.get('attempt')));
+  const claims = readAttemptToken(rawAttempt);
 
   const back = (reason: string) => {
     if (!claims) return NextResponse.redirect(new URL(`/${locale}/transfers`, request.url), { status: 303 });
     const q = new URLSearchParams({ error: reason });
-    if (claims.app && appToken) q.set('t', appToken);
+    // Back to the page with the app's capability, so a retry needs no sign-in:
+    // the pay-link token (?t=) or the attempt itself (?a=, from pay/start).
+    if (claims.app) {
+      if (appToken) q.set('t', appToken);
+      else q.set('a', rawAttempt);
+    }
     return NextResponse.redirect(new URL(`/${locale}/transfers/pay/${claims.transferId}?${q}`, request.url), { status: 303 });
   };
 
@@ -136,7 +142,7 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
     });
-    res.cookies.set(TRANSFER_RETURN_COOKIE, str(form.get('attempt')), {
+    res.cookies.set(TRANSFER_RETURN_COOKIE, rawAttempt, {
       httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: TRANSFER_RETURN_COOKIE_MAX_AGE_S,
     });
     return res;

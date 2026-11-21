@@ -80,25 +80,35 @@ export interface AttemptClaims {
   profileId: string;
   /** Opened from the app: the result goes back to it by deep link. */
   app: boolean;
+  /**
+   * The return URL the app sent to /api/app/transfers/pay/start, ALREADY
+   * validated by parseAppReturnUrl (custom schemes only). Re-validated at the
+   * return route anyway. Null → APP_TRANSFER_RETURN_URL / APP_RETURN_URL_BASE.
+   */
+  returnUrl: string | null;
 }
+
+const enc = (v: string) => Buffer.from(v, 'utf8').toString('base64url');
+const dec = (v: string) => Buffer.from(v, 'base64url').toString('utf8');
 
 export function mintAttemptToken(c: AttemptClaims): string {
   const exp = Date.now() + ATTEMPT_TTL_MS;
-  const body = `${c.transferId}.${c.merchantOrderId}.${c.profileId}.${c.app ? 1 : 0}.${exp}`;
+  const ret = c.returnUrl ? enc(c.returnUrl) : '-';
+  const body = `${c.transferId}.${c.merchantOrderId}.${c.profileId}.${c.app ? 1 : 0}.${ret}.${exp}`;
   return `${body}.${sign(`${ATTEMPT_PURPOSE}.${body}`)}`;
 }
 
 export function readAttemptToken(raw: string | null | undefined): AttemptClaims | null {
   try {
     const parts = (raw ?? '').split('.');
-    if (parts.length !== 6) return null;
-    const [transferId, merchantOrderId, profileId, app, exp, sig] = parts;
-    const body = `${transferId}.${merchantOrderId}.${profileId}.${app}.${exp}`;
+    if (parts.length !== 7) return null;
+    const [transferId, merchantOrderId, profileId, app, ret, exp, sig] = parts;
+    const body = `${transferId}.${merchantOrderId}.${profileId}.${app}.${ret}.${exp}`;
     if (!same(sign(`${ATTEMPT_PURPOSE}.${body}`), sig)) return null;
     if (!(Number(exp) > Date.now())) return null;
     if (!UUID_RE.test(transferId) || !UUID_RE.test(profileId) || !isTransferOrder(merchantOrderId)) return null;
     if (!/^[A-Za-z0-9_-]{4,64}$/.test(merchantOrderId)) return null;
-    return { transferId, merchantOrderId, profileId, app: app === '1' };
+    return { transferId, merchantOrderId, profileId, app: app === '1', returnUrl: ret === '-' ? null : dec(ret) };
   } catch {
     return null;
   }
@@ -130,13 +140,19 @@ export async function ownsTransfer(admin: SupabaseClient, transferId: string, pr
 const ALLOWED_SCHEMES = new Set(['homesta:', 'exp:']);
 
 /**
- * homesta://transfers/pay/return?transfer=<id>&r=<hint> — APP_TRANSFER_RETURN_URL
- * when set, else the scheme of APP_RETURN_URL_BASE (the wallet's) with this
+ * <app returnUrl>?transfer=<id>&order=<TRF…>&r=<hint> — the returnUrl the app
+ * sent to /api/app/transfers/pay/start; else APP_TRANSFER_RETURN_URL; else the scheme of APP_RETURN_URL_BASE (the wallet's) with this
  * path. Carries no secret and no verdict: the app re-reads transfer_get.
  * Null when neither is configured → the web result page instead.
  */
-export function appTransferReturnUrl(transferId: string, hint: string): string | null {
-  const explicit = process.env.APP_TRANSFER_RETURN_URL?.trim();
+export function appTransferReturnUrl(
+  transferId: string,
+  hint: string,
+  merchantOrderId?: string | null,
+  /** The app's own returnUrl, already validated by parseAppReturnUrl. */
+  overrideBase?: string | null,
+): string | null {
+  const explicit = overrideBase?.trim() || process.env.APP_TRANSFER_RETURN_URL?.trim();
   let base = explicit;
   if (!base) {
     const wallet = process.env.APP_RETURN_URL_BASE?.trim();
@@ -151,6 +167,7 @@ export function appTransferReturnUrl(transferId: string, hint: string): string |
     const url = new URL(base);
     if (!ALLOWED_SCHEMES.has(url.protocol)) return null;
     url.searchParams.set('transfer', transferId);
+    if (merchantOrderId) url.searchParams.set('order', merchantOrderId);
     url.searchParams.set('r', hint);
     return url.toString();
   } catch {

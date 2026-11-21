@@ -3,6 +3,7 @@ import {
   TRANSFER_RETURN_COOKIE, appTransferReturnUrl, readAttemptToken,
 } from '@/lib/transfers/pay-session';
 import { UUID_RE } from '@/lib/transfers/model';
+import { parseAppReturnUrl } from '@/lib/app/deep-link';
 
 /**
  * GET /api/payment/transfer/return?order=TRF…&r=success|failed|pending|refund
@@ -12,7 +13,7 @@ import { UUID_RE } from '@/lib/transfers/model';
  * app started this payment. This request is a top-level GET (the callback's
  * 303), which DOES carry the Lax return cookie set when the card went to the
  * bank. If it belongs to this order and says "app", the phone's browser is
- * sent back into the app (homesta://transfers/pay/return?transfer=…&r=…, no
+ * sent back into the app (its returnUrl + ?transfer=…&order=…&r=…, no
  * secret, no verdict — the app re-reads transfer_get). Otherwise the website
  * result page. Under /api, so the locale middleware leaves it alone.
  */
@@ -41,7 +42,9 @@ export async function GET(request: NextRequest) {
   };
 
   if (mine?.app && transferId) {
-    const deepLink = appTransferReturnUrl(transferId, r);
+    // The app's own returnUrl first (validated again: it sat in a cookie),
+    // then the configured scheme. openAuthSessionAsync matches by prefix.
+    const deepLink = appTransferReturnUrl(transferId, r, order, parseAppReturnUrl(mine.returnUrl));
     if (deepLink) return done(NextResponse.redirect(deepLink, { status: 303 }));
   }
 
